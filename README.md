@@ -386,14 +386,37 @@ En `apps/server/wrangler.jsonc`:
 
 ### Cliente (Vercel)
 
-Importá el repo. El `vercel.json` de la raíz ya define el build del monorepo. Agregá la variable de
-entorno:
+Importá el repo y agregá la variable de entorno:
 
 ```
 VITE_SERVER_URL = wabbr-server.<tu-cuenta>.workers.dev
 ```
 
-(sin `https://` ni `wss://`: PartySocket arma el protocolo solo).
+Sin `https://` ni `wss://`: PartySocket arma el protocolo solo, y usa `ws://` únicamente para
+localhost y direcciones de red local. Ojo que **Vite hornea esta variable dentro del bundle al
+compilar**, no la lee en vivo: si la cambiás después, hay que volver a desplegar.
+
+#### Por qué hay dos `vercel.json`
+
+Uno en la raíz y otro en `apps/client/`, con la misma intención escrita de dos formas. No es un
+descuido: **Vercel busca el `vercel.json` dentro del Root Directory del proyecto**, no en la raíz del
+repo. Si ese ajuste apunta a `apps/client`, el archivo de la raíz queda invisible, Vercel cae en el
+preset de Vite y busca la salida en `dist` de la raíz, donde no hay nada:
+
+```
+Error: No Output Directory named "dist" found after the Build completed.
+```
+
+El build había funcionado; lo que falla es dónde se busca el resultado. Con los dos archivos, el
+despliegue sale bien tenga el Root Directory en la raíz o en `apps/client`:
+
+| Root Directory | Archivo que lee | Build | Salida |
+|---|---|---|---|
+| *(vacío)* | `vercel.json` | `npm run build --workspace @wabbr/client` | `apps/client/dist` |
+| `apps/client` | `apps/client/vercel.json` | `npm run build` | `dist` |
+
+En los dos casos `npm install` resuelve el monorepo entero: npm sube solo hasta el `package.json` con
+`workspaces` y de ahí saca `@wabbr/shared`, que el cliente necesita para compilar.
 
 ## Costos
 

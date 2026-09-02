@@ -46,12 +46,18 @@ const stats = {
   phases: [],
   kills: 0,
   errors: [],
-  firstTick: null,
-  firstTickAt: 0,
-  lastTick: 0,
-  lastTickAt: 0,
-  firstServerNow: null,
-  lastServerNow: 0,
+  /**
+   * Ticks acumulados sumando avances, no `último - primero`: cuando la partida
+   * termina y la sala vuelve al lobby, el contador del servidor arranca de cero
+   * otra vez. Restando las puntas, una corrida que alcanza a jugar dos partidas
+   * reporta un ritmo absurdo y hace fallar la prueba sin que pase nada malo.
+   */
+  ticks: 0,
+  playMs: 0,
+  prevTick: null,
+  prevTickAt: 0,
+  serverMs: 0,
+  prevServerNow: 0,
 };
 
 let winner = null;
@@ -169,14 +175,16 @@ function makeBot(index) {
     for (const ev of msg.ev ?? []) if (ev.t === "kill") stats.kills++;
 
     if (msg.phase === "playing") {
-      if (stats.firstTick === null) {
-        stats.firstTick = msg.tick;
-        stats.firstTickAt = now;
+      // Un tick menor que el anterior es una partida nueva: no se cuenta el
+      // salto hacia atrás ni el rato que la sala pasó fuera de "playing".
+      if (stats.prevTick !== null && msg.tick > stats.prevTick) {
+        stats.ticks += msg.tick - stats.prevTick;
+        stats.playMs += now - stats.prevTickAt;
+        stats.serverMs += msg.now - stats.prevServerNow;
       }
-      stats.lastTick = msg.tick;
-      stats.lastTickAt = now;
-      if (stats.firstServerNow === null) stats.firstServerNow = msg.now;
-      stats.lastServerNow = msg.now;
+      stats.prevTick = msg.tick;
+      stats.prevTickAt = now;
+      stats.prevServerNow = msg.now;
     }
   });
 
@@ -192,15 +200,14 @@ const sockets = Array.from({ length: BOTS }, (_, i) => makeBot(i));
 setTimeout(() => {
   for (const ws of sockets) ws.close();
 
-  const elapsed = (stats.lastTickAt - stats.firstTickAt) / 1000;
-  const ticks = stats.lastTick - (stats.firstTick ?? 0);
-  const tickRate = elapsed > 0 ? ticks / elapsed : 0;
+  const elapsed = stats.playMs / 1000;
+  const tickRate = elapsed > 0 ? stats.ticks / elapsed : 0;
 
   console.log("\n--- resultados ---");
   console.log(`fases:                 ${stats.phases.join(" -> ") || "(ninguna)"}`);
   console.log(`tick del servidor:     ${tickRate.toFixed(2)}/s (objetivo 20)`);
-  const serverElapsed = (stats.lastServerNow - (stats.firstServerNow ?? 0)) / 1000;
-  console.log(`reloj del servidor:    avanzó ${serverElapsed.toFixed(2)}s mientras acá pasaban ${elapsed.toFixed(2)}s`);
+  const serverElapsed = stats.serverMs / 1000;
+  console.log(`reloj del servidor:    avanzó ${serverElapsed.toFixed(2)}s en ${elapsed.toFixed(2)}s de juego reales`);
   console.log(`snapshots recibidos:   ${stats.snapshots}`);
   console.log(`snapshot promedio:     ${Math.round(stats.bytes / Math.max(stats.snapshots, 1))} bytes`);
   console.log(`snapshot más grande:   ${stats.maxBytes} bytes`);

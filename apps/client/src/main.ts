@@ -35,5 +35,29 @@ const ui = new UI({
 
 game = new Game(ui);
 
-await game.init();
-ui.showScreen("menu");
+/*
+ * OJO: acá NO puede ir `await game.init()` en el nivel superior del módulo.
+ *
+ * Un `await` de nivel superior deja el módulo de entrada "evaluándose" hasta que
+ * la promesa se resuelve, y en ESM cualquier módulo que dependa de él tiene que
+ * esperar a que termine. En producción Rollup mete el núcleo de PixiJS dentro
+ * del mismo chunk de entrada y deja el renderizador en un chunk aparte, así que
+ * se arma un abrazo mortal: la entrada espera a `init()`, `init()` espera al
+ * chunk del renderizador, y ese chunk espera a que la entrada termine de
+ * evaluarse. La promesa no se resuelve nunca.
+ *
+ * El síntoma es feo de diagnosticar porque no hay error ni petición fallida: el
+ * chunk se descarga con 200, y la página queda sin canvas y sin explicación. En
+ * desarrollo no pasa, porque Vite sirve los módulos sin empaquetar.
+ */
+ui.setEntryEnabled(false);
+game.init().then(
+  () => {
+    ui.setEntryEnabled(true);
+    ui.showScreen("menu");
+  },
+  (err) => {
+    console.error("No arrancó el juego:", err);
+    ui.showError("No se pudo iniciar el juego. Probá recargar la página.");
+  },
+);

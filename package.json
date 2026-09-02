@@ -17,7 +17,8 @@
     "test:watch": "vitest",
     "shots": "node scripts/shot.mjs",
     "bots": "node scripts/bot.mjs",
-    "typecheck": "npm run typecheck --workspace @wabbr/shared && npm run typecheck --workspace @wabbr/server && npm run typecheck --workspace @wabbr/client"
+    "typecheck": "npm run typecheck --workspace @wabbr/shared && npm run typecheck --workspace @wabbr/server && npm run typecheck --workspace @wabbr/client",
+    "smoke": "node scripts/smoke-build.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.4.0",

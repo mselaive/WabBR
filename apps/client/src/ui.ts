@@ -33,6 +33,9 @@ export class UI {
     connecting: el("screenConnecting"),
   };
 
+  private readonly btnCreate = el<HTMLButtonElement>("btnCreate");
+  private readonly btnJoin = el<HTMLButtonElement>("btnJoin");
+
   private readonly nameInput = el<HTMLInputElement>("nameInput");
   private readonly codeInput = el<HTMLInputElement>("codeInput");
   private readonly menuError = el("menuError");
@@ -81,12 +84,12 @@ export class UI {
     const room = new URLSearchParams(location.search).get("room");
     if (room) this.codeInput.value = room.toUpperCase();
 
-    el("btnCreate").addEventListener("click", () => {
+    this.btnCreate.addEventListener("click", () => {
       this.hideError();
       this.cb.onCreate(this.playerName());
     });
 
-    el("btnJoin").addEventListener("click", () => this.tryJoin());
+    this.btnJoin.addEventListener("click", () => this.tryJoin());
     this.codeInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") this.tryJoin();
     });
@@ -145,6 +148,16 @@ export class UI {
     this.overlay.hidden = name === null;
     this.hud.hidden = name !== null;
     document.body.classList.toggle("playing", name === null);
+  }
+
+  /**
+   * Habilita crear y unirse. Arrancan apagados: el menú es visible desde el
+   * primer instante, pero `Game.init()` es asíncrono y hasta que termina no hay
+   * renderizador. Entrar antes revienta con un error que no dice nada.
+   */
+  setEntryEnabled(enabled: boolean): void {
+    this.btnCreate.disabled = !enabled;
+    this.btnJoin.disabled = !enabled;
   }
 
   showError(message: string): void {

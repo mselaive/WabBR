@@ -293,6 +293,25 @@ npm run bots -- --bots 8 --seconds 40
 Conecta jugadores falsos, juega una partida entera y reporta el ritmo y el tamaño de los snapshots.
 Sirve para medir antes de invitar gente.
 
+### Humo sobre el build de producción
+
+```bash
+npm run smoke
+```
+
+Compila el cliente, lo sirve y comprueba una sola cosa: que aparezca el canvas.
+
+Parece poco, pero cubre un agujero que costó caro. Todo lo demás —tests, capturas, bots— prueba el
+**servidor de desarrollo**, donde Vite sirve los módulos sueltos. Al empaquetar, Rollup los agrupa en
+chunks y cambia el orden de evaluación, y ahí vive una familia de fallas que en dev no existe.
+
+La que nos tocó: un `await` de nivel superior en `main.ts`. Deja el módulo de entrada evaluándose
+hasta que la promesa se resuelve, y en ESM los chunks que dependen de él tienen que esperar. Como
+Rollup mete el núcleo de PixiJS en el chunk de entrada y el renderizador en otro, se armaba un abrazo
+mortal: la entrada esperaba a `init()`, `init()` esperaba al chunk del renderizador, y ese chunk
+esperaba a que la entrada terminara. Sin error, sin petición fallida, con el chunk descargado en 200
+y la página en blanco. Llegó hasta producción.
+
 ## Desplegar
 
 ### Servidor (Cloudflare)

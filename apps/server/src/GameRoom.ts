@@ -98,6 +98,12 @@ export class GameRoom extends Server<Env> {
   private events: SimEvent[] = [];
   private nextPlayerId = 1;
   private hostId = -1;
+  /**
+   * Nombres echados por el host, en minúsculas. Bloqueo blando: sin cuentas no
+   * hay identidad estable, así que cambiando el nombre se puede volver a entrar.
+   * Alcanza para lo que molesta, que es el que reentra de un clic.
+   */
+  private kicked = new Set<string>();
   private loop: ReturnType<typeof setInterval> | null = null;
   private emptyTicks = 0;
   /** Último tick en que cada observador vio a cada objetivo, para el margen de gracia. */
@@ -122,6 +128,16 @@ export class GameRoom extends Server<Env> {
 
     const url = new URL(ctx.request.url);
     const name = sanitizeName(url.searchParams.get("name"));
+
+    if (this.kicked.has(name.trim().toLowerCase())) {
+      this.sendTo(conn, {
+        t: "err",
+        code: "kicked",
+        message: "El host te sacó de esta sala.",
+      });
+      conn.close(4000, "kicked");
+      return;
+    }
 
     const playerId = this.nextPlayerId++;
     const seat: Seat = {
@@ -229,6 +245,39 @@ export class GameRoom extends Server<Env> {
         if (this.seats.size < MIN_PLAYERS) return;
         this.state.phase = "countdown";
         this.state.phaseTicksLeft = COUNTDOWN_TICKS;
+        return;
+      }
+
+      case "kick": {
+        // Sólo el host, sólo en el lobby y no contra sí mismo. En partida echar
+        // a alguien sería un arma más: se decide antes de empezar.
+        if (seat.playerId !== this.hostId) return;
+        if (this.state.phase !== "lobby") return;
+        if (typeof msg.id !== "number" || msg.id === this.hostId) return;
+
+        const target = this.seats.get(msg.id);
+        if (!target) return;
+
+        // Bloqueo blando por nombre, para que no vuelva a entrar de un clic.
+        // Cambiando el nombre entra igual: sin cuentas no hay identidad real, y
+        // esto alcanza para el caso que molesta.
+        this.kicked.add(target.meta.name.trim().toLowerCase());
+
+        for (const c of this.getConnections<ConnState>()) {
+          if (c.state?.playerId !== msg.id) continue;
+          // Primero el aviso y después el cierre: si no, el otro ve caerse la
+          // conexión y cree que se rompió algo.
+          this.sendTo(c, {
+            t: "err",
+            code: "kicked",
+            message: "El host te sacó de la sala.",
+          });
+          c.close(4000, "kicked");
+        }
+
+        // onClose va a llamar a removeSeat igual, pero no dependemos de que el
+        // cierre llegue: el asiento se libera acá.
+        this.removeSeat(msg.id);
         return;
       }
 

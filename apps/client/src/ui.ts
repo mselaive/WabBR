@@ -8,6 +8,7 @@ export interface UICallbacks {
   onReady: (ready: boolean) => void;
   onStart: () => void;
   onLeave: () => void;
+  onKick: (id: number) => void;
 }
 
 const NAME_KEY = "wabbr:name";
@@ -207,6 +208,19 @@ export class UI {
         state.className = p.ready ? "tag ready" : "tag";
         state.textContent = p.ready ? "LISTO" : "esperando";
         li.append(state);
+
+        // El host puede echar a cualquiera menos a sí mismo. El servidor lo
+        // vuelve a comprobar: esconder el botón no es un control de acceso.
+        if (hostId === localId && p.id !== hostId) {
+          const kick = document.createElement("button");
+          kick.className = "kick";
+          kick.type = "button";
+          kick.textContent = "✕";
+          kick.title = `Echar a ${p.name}`;
+          kick.setAttribute("aria-label", `Echar a ${p.name}`);
+          kick.addEventListener("click", () => this.cb.onKick(p.id));
+          li.append(kick);
+        }
 
         return li;
       }),

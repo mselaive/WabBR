@@ -630,6 +630,11 @@ export class Game {
     this.net?.send({ t: "start" });
   }
 
+  /** Echar a alguien del lobby. El servidor comprueba que seas el host. */
+  kick(id: number): void {
+    this.net?.send({ t: "kick", id });
+  }
+
   destroy(): void {
     this.detachInput?.();
     this.disconnect();

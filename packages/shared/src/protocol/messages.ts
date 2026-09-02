@@ -43,7 +43,14 @@ export interface StartMsg {
   t: "start";
 }
 
-export type ClientMsg = JoinMsg | ReadyMsg | InputMsg | PingMsg | StartMsg;
+/** Solo el host, y sólo desde el lobby: en partida sería un arma más. */
+export interface KickMsg {
+  t: "kick";
+  /** A quién echar. */
+  id: number;
+}
+
+export type ClientMsg = JoinMsg | ReadyMsg | InputMsg | PingMsg | StartMsg | KickMsg;
 
 export const BTN_SHOOT = 1;
 export const BTN_RELOAD = 2;
@@ -172,7 +179,7 @@ export interface PongMsg {
 
 export interface ErrorMsg {
   t: "err";
-  code: "room_full" | "bad_name" | "in_progress" | "bad_msg";
+  code: "room_full" | "bad_name" | "in_progress" | "bad_msg" | "kicked";
   message: string;
 }
 

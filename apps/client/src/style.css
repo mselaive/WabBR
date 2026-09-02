@@ -474,6 +474,29 @@ input:focus {
   color: var(--gold);
 }
 
+/* Echar a alguien: discreto hasta que lo apuntás, para no invitar al clic. */
+.kick {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.kick:hover,
+.kick:focus-visible {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: #ff5c5c1a;
+}
+
 .lobby-actions {
   display: flex;
   gap: 10px;

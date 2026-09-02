@@ -38,6 +38,16 @@ Con dos jugadores listos arranca la partida.
 
 No ves a través de las paredes: mirá la sección de línea de vista.
 
+### El lobby
+
+El que crea la sala es el host: puede forzar el arranque sin esperar a que todos marquen listo, y
+puede **echar a cualquiera** con la ✕ de su fila. Si el host se va, el puesto pasa al siguiente.
+
+Al echado lo devuelve al menú con el motivo, y no puede volver a entrar con el mismo nombre. Es un
+bloqueo blando y a propósito: sin cuentas no hay identidad estable, así que cambiando el nombre entra
+igual. Cubre lo que molesta —el que reentra de un clic— y no pretende ser más que eso. Sólo funciona
+en el lobby: en partida, echar sería un arma más.
+
 ## El mapa
 
 Arena circular de 3000 px de diámetro, generada con semilla fija en
@@ -315,6 +325,18 @@ Abre dos jugadores en Chromium con Playwright, juega una ronda, recoge loot y
 deja las capturas en `.shots/`. Además reporta cualquier error de consola: en un
 juego de canvas un error de render no se ve como un error, se ve como una
 pantalla vacía.
+
+### Echar del lobby
+
+```bash
+npm run kick
+```
+
+Mezcla navegador y sockets pelados a propósito. El navegador comprueba lo que ve el jugador —que el
+botón aparezca sólo en la lista del host, que al echado lo devuelva al menú con el motivo—; los
+sockets pelados comprueban el servidor, que es lo único que cuenta: **esconder un botón no es un
+control de acceso**, y un cliente modificado manda lo que quiera. La prueba manda un `kick` desde
+alguien que no es host y verifica que no pase nada.
 
 ### Bots headless
 

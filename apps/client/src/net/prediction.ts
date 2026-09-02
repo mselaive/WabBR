@@ -29,6 +29,13 @@ export class Predictor {
   /** Corrección pendiente de absorber, para que la reconciliación no se vea como un tirón. */
   private errX = 0;
   private errY = 0;
+  /**
+   * Posición antes del último paso de simulación. La simulación avanza 20 veces
+   * por segundo y la pantalla dibuja 60: sin interpolar entre estas dos, dos de
+   * cada tres cuadros repiten la posición anterior y moverse se ve a los saltos.
+   */
+  private prevX = 0;
+  private prevY = 0;
 
   constructor(id: number) {
     this.state = createPlayer(id);
@@ -44,11 +51,15 @@ export class Predictor {
     this.pending.length = 0;
     this.errX = 0;
     this.errY = 0;
+    this.prevX = x;
+    this.prevY = y;
   }
 
   /** Un input nuevo: se aplica ya mismo y se guarda hasta que el servidor lo confirme. */
   apply(input: PlayerInput, arena: ArenaMap): void {
     this.pending.push(input);
+    this.prevX = this.state.x;
+    this.prevY = this.state.y;
     stepPlayerMovement(this.state, input, arena);
   }
 
@@ -70,6 +81,9 @@ export class Predictor {
     this.state.boostTicks = server.boostTicks;
 
     for (const input of this.pending) {
+      // Igual que en apply(): el tramo a interpolar es el del último paso.
+      this.prevX = this.state.x;
+      this.prevY = this.state.y;
       stepPlayerMovement(this.state, input, arena);
     }
 
@@ -81,6 +95,10 @@ export class Predictor {
       // Respawn, empujón fuerte o desincronización grande: mostrar la verdad y listo.
       this.errX = 0;
       this.errY = 0;
+      // Un teletransporte no es un tramo recorrido: si quedara el punto de
+      // partida viejo, el muñeco se vería deslizar desde donde ya no está.
+      this.prevX = this.state.x;
+      this.prevY = this.state.y;
     } else if (d2 > IGNORE_THRESHOLD * IGNORE_THRESHOLD) {
       // Guardamos la diferencia como offset visual y la vamos licuando.
       this.errX = dx;
@@ -88,14 +106,28 @@ export class Predictor {
     }
   }
 
-  /** Posición a dibujar: la predicha más lo que queda del error, que se va a cero. */
-  renderPosition(dtSeconds: number): { x: number; y: number } {
+  /**
+   * Posición a dibujar: interpolada entre el paso anterior y el actual, más lo
+   * que queda del error de reconciliación, que se va licuando a cero.
+   *
+   * `alpha` es cuánto se avanzó del tick en curso (0 a 1). Dibujar así deja la
+   * imagen hasta un tick por detrás del estado predicho —50 ms como mucho—, que
+   * es imperceptible al lado del salto de dibujar sólo 20 posiciones por
+   * segundo. Extrapolar hacia adelante evitaría ese retraso, pero mete el
+   * muñeco dentro de las paredes cada vez que el input se corta de golpe.
+   */
+  renderPosition(dtSeconds: number, alpha: number): { x: number; y: number } {
     const k = Math.exp(-dtSeconds / ERROR_DECAY_TAU);
     this.errX *= k;
     this.errY *= k;
     if (Math.abs(this.errX) < 0.05) this.errX = 0;
     if (Math.abs(this.errY) < 0.05) this.errY = 0;
-    return { x: this.state.x + this.errX, y: this.state.y + this.errY };
+
+    const t = alpha < 0 ? 0 : alpha > 1 ? 1 : alpha;
+    return {
+      x: this.prevX + (this.state.x - this.prevX) * t + this.errX,
+      y: this.prevY + (this.state.y - this.prevY) * t + this.errY,
+    };
   }
 
   get pendingCount(): number {

@@ -388,8 +388,11 @@ export class Game {
     const frame = this.snapshots.sample(performance.now() - INTERP_DELAY_MS);
     if (!frame) return;
 
+    // Cuánto se avanzó del tick en curso: con esto el muñeco se dibuja entre dos
+    // pasos de simulación en vez de saltar de uno al otro.
+    const alpha = this.inputAccumulator / MS_PER_TICK;
     const localPredicted =
-      this.predictor && this.lastLocal?.alive ? this.predictor.renderPosition(dt) : null;
+      this.predictor && this.lastLocal?.alive ? this.predictor.renderPosition(dt, alpha) : null;
 
     const aim = this.currentAim();
     this.world.update(

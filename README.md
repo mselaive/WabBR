@@ -256,9 +256,26 @@ movimiento llega con el retraso del ping. Acá hay tres piezas:
    la diferencia se absorbe en ~60 ms en vez de saltar.
 3. **Interpolación** (`net/interpolation.ts`): los demás jugadores se dibujan 100 ms en el pasado,
    interpolando entre snapshots, así se mueven suave aunque lleguen a 20 Hz.
+4. **Interpolación del propio** (`renderPosition`): la simulación avanza 20 veces por segundo y la
+   pantalla dibuja 60 o más, así que el jugador local también se dibuja entre dos pasos, no en el
+   último. Sin esto sólo se movía 20 veces por segundo y se veía a los tirones —el resto se veía
+   suave y el tuyo no, que es justo el que mirás.
 
 Para probarlo sin desplegar nada, agregá `?lag=200` a la URL: simula 200 ms de ida y vuelta.
 Tu personaje tiene que seguir respondiendo al instante.
+
+Y para medirlo:
+
+```bash
+WABBR_HEADED=1 npm run smoothness
+```
+
+Camina en línea recta y cuenta qué porcentaje de cuadros no avanzó nada. Necesita ventana real y GPU:
+en headless con renderizado por software el navegador dibuja a 4 cuadros por segundo y la medición
+habla del emulador, no del juego. El script lo detecta y avisa en vez de dar un veredicto falso.
+
+Medido a 145 fps: **77% de cuadros quietos** dibujando la posición simulada tal cual, **0,3%**
+interpolando entre pasos.
 
 ## Tests
 

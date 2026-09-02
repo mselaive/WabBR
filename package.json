@@ -18,7 +18,8 @@
     "shots": "node scripts/shot.mjs",
     "bots": "node scripts/bot.mjs",
     "typecheck": "npm run typecheck --workspace @wabbr/shared && npm run typecheck --workspace @wabbr/server && npm run typecheck --workspace @wabbr/client",
-    "smoke": "node scripts/smoke-build.mjs"
+    "smoke": "node scripts/smoke-build.mjs",
+    "smoothness": "node scripts/smoothness.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.4.0",

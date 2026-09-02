@@ -1042,7 +1042,9 @@ export class WorldView {
     return {
       visible: view.root.visible,
       alpha: view.root.alpha,
-      mundo: { x: Math.round(view.root.x), y: Math.round(view.root.y) },
+      // Sin redondear: los scripts miden movimiento entre cuadros y un redondeo
+      // a enteros haría parecer inmóvil lo que se mueve de a poco.
+      mundo: { x: view.root.x, y: view.root.y },
       pantalla: {
         x: Math.round(view.root.getGlobalPosition().x),
         y: Math.round(view.root.getGlobalPosition().y),

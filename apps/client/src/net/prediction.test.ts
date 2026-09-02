@@ -162,7 +162,30 @@ describe("reconciliación", () => {
     client.reset(WORLD_CENTER_X, WORLD_CENTER_Y);
     const far = createPlayer(1, WORLD_CENTER_X + 500, WORLD_CENTER_Y);
     client.reconcile(snapshotOf(far, 0), arena);
-    const pos = client.renderPosition(1 / 60);
-    expect(Math.hypot(pos.x - far.x, pos.y - far.y)).toBeLessThan(1);
+
+    // En cualquier punto del tick: un salto no deja tramo que interpolar, así
+    // que no puede verse al muñeco deslizándose desde donde ya no está.
+    for (const alpha of [0, 0.5, 1]) {
+      const pos = client.renderPosition(1 / 60, alpha);
+      expect(Math.hypot(pos.x - far.x, pos.y - far.y)).toBeLessThan(1);
+    }
+  });
+
+  it("dibuja posiciones intermedias entre dos pasos de simulación", () => {
+    const client = new Predictor(1);
+    client.reset(WORLD_CENTER_X, WORLD_CENTER_Y);
+
+    const antes = client.renderPosition(0, 1).x;
+    client.apply(
+      { seq: 1, moveX: 1, moveY: 0, aim: 0, shoot: false, reload: false, sprint: false, act: 0 },
+      arena,
+    );
+    const despues = client.renderPosition(0, 1).x;
+    expect(despues).toBeGreaterThan(antes);
+
+    // A mitad de tick tiene que estar a mitad de camino. Sin esto la pantalla
+    // dibuja 20 posiciones por segundo aunque vaya a 60 cuadros.
+    const medio = client.renderPosition(0, 0.5).x;
+    expect(medio).toBeCloseTo((antes + despues) / 2, 4);
   });
 });

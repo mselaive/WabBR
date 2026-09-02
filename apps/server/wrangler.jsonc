@@ -10,9 +10,15 @@
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["GameRoom"] }],
   "observability": { "enabled": true },
   "vars": {
-    // Orígenes permitidos para conectarse, separados por coma.
-    // En producción poné acá tu dominio de Vercel. Vacío = permitir todo (solo dev).
-    "ALLOWED_ORIGINS": "",
+    // Orígenes permitidos para conectarse, separados por coma. Vacío = permitir
+    // todo. Sirve para que una página cualquiera de internet no pueda abrir
+    // conexiones contra tus salas y gastarte la cuota.
+    //
+    // El comodín cubre los deploys de preview que Vercel crea en cada push: sin
+    // él solo andaría el dominio de producción. Los localhost están para que
+    // `wrangler dev` siga funcionando, porque estas mismas variables se usan en
+    // desarrollo; no debilitan nada, esto no es autenticación.
+    "ALLOWED_ORIGINS": "https://wab-br-client-lpyv.vercel.app,https://*.vercel.app,http://localhost:5173,http://127.0.0.1:5173",
     // Región donde se crea el Durable Object: sam (Sudamérica), enam, wnam,
     // weur, eeur, apac, oc, afr, me. Vacío = cerca del primero que entra.
     "DO_LOCATION_HINT": "sam"

@@ -1,0 +1,550 @@
+import { Server, type Connection, type ConnectionContext, type WSMessage } from "partyserver";
+import {
+  ACT_NONE,
+  BTN_RELOAD,
+  BTN_SHOOT,
+  BTN_SPRINT,
+  COUNTDOWN_TICKS,
+  EMPTY_ROOM_SHUTDOWN_TICKS,
+  MAX_INPUT_BUFFER,
+  MAX_PLAYERS,
+  MIN_PLAYERS,
+  MS_PER_TICK,
+  PLAYER_COLORS,
+  createGameState,
+  createPlayer,
+  decodeClient,
+  encodeServer,
+  getArena,
+  hasLineOfSight,
+  packBullet,
+  packGrenade,
+  packItem,
+  packPlayer,
+  packSnapshotArrays,
+  sanitizeName,
+  startMatch,
+  findPlayer,
+  step,
+  unpackAim,
+  type ClientMsg,
+  type GameState,
+  type PlayerInput,
+  type PlayerMeta,
+  type PlayerState,
+  type ServerMsg,
+  type SnapBullet,
+  type SnapGrenade,
+  type SnapPlayer,
+  type SnapStanding,
+  type SimEvent,
+} from "@wabbr/shared";
+
+export interface Env {
+  GameRoom: DurableObjectNamespace<GameRoom>;
+  ALLOWED_ORIGINS?: string;
+  DO_LOCATION_HINT?: string;
+}
+
+interface ConnState {
+  playerId: number;
+}
+
+/** Todo lo que el servidor sabe de un jugador sentado en la sala. */
+interface Seat {
+  playerId: number;
+  connId: string;
+  meta: PlayerMeta;
+  /** Inputs pendientes. Se consume exactamente uno por tick. */
+  queue: PlayerInput[];
+  /** Último input consumido: se repite si la cola quedó vacía por jitter. */
+  last: PlayerInput;
+}
+
+/** Cada cuánto se le da una oportunidad de correr al loop (no es el ritmo del tick). */
+const PUMP_INTERVAL_MS = 10;
+/** Techo de tiempo que se intenta recuperar de una sola vez. */
+const MAX_CATCHUP_MS = 250;
+const MAX_TICKS_PER_PUMP = 5;
+/**
+ * Ticks que se sigue viendo a alguien después de perderlo de vista. Sin este
+ * margen, caminar al lado de una columna hace parpadear al otro jugador.
+ */
+const SIGHT_GRACE_TICKS = 6;
+
+const NEUTRAL_INPUT: PlayerInput = {
+  seq: 0,
+  moveX: 0,
+  moveY: 0,
+  aim: 0,
+  shoot: false,
+  reload: false,
+  sprint: false,
+  act: ACT_NONE,
+};
+
+/**
+ * Una partida = un Durable Object. Mantiene el estado autoritativo y corre el
+ * loop de simulación a 20 Hz mientras haya alguien conectado.
+ *
+ * Hibernación desactivada a propósito: la hibernación descarta los timers, y
+ * acá el timer *es* el juego.
+ */
+export class GameRoom extends Server<Env> {
+  static override options = { hibernate: false };
+
+  private state: GameState = createGameState(1);
+  private seats = new Map<number, Seat>();
+  private events: SimEvent[] = [];
+  private nextPlayerId = 1;
+  private hostId = -1;
+  private loop: ReturnType<typeof setInterval> | null = null;
+  private emptyTicks = 0;
+  /** Último tick en que cada observador vio a cada objetivo, para el margen de gracia. */
+  private lastSeen = new Map<number, Map<number, number>>();
+  private lastPumpAt = 0;
+  /** Tiempo real todavía no convertido en ticks. */
+  private accumulator = 0;
+  private readonly arena = getArena();
+
+  // ------------------------------------------------------------ conexiones
+
+  override onConnect(conn: Connection<ConnState>, ctx: ConnectionContext): void {
+    if (this.seats.size >= MAX_PLAYERS) {
+      this.sendTo(conn, {
+        t: "err",
+        code: "room_full",
+        message: `La sala está llena (${MAX_PLAYERS} jugadores).`,
+      });
+      conn.close(4000, "room full");
+      return;
+    }
+
+    const url = new URL(ctx.request.url);
+    const name = sanitizeName(url.searchParams.get("name"));
+
+    const playerId = this.nextPlayerId++;
+    const seat: Seat = {
+      playerId,
+      connId: conn.id,
+      meta: { id: playerId, name, colorIndex: this.freeColorIndex(), ready: false },
+      queue: [],
+      last: { ...NEUTRAL_INPUT },
+    };
+    this.seats.set(playerId, seat);
+    conn.setState({ playerId });
+
+    // Un jugador que entra en plena partida mira como espectador y juega la próxima.
+    this.state.players.push(createPlayer(playerId));
+
+    if (this.hostId === -1) this.hostId = playerId;
+
+    this.sendTo(conn, {
+      t: "welcome",
+      you: playerId,
+      room: this.name,
+      hostId: this.hostId,
+      roster: this.roster(),
+      phase: this.state.phase,
+    });
+    this.broadcastRoster();
+    // Quien entra en plena partida necesita saber qué hay tirado en el piso.
+    if (this.state.phase === "playing") this.sendTo(conn, this.itemsMessage());
+    this.ensureLoop();
+  }
+
+  override onMessage(conn: Connection<ConnState>, raw: WSMessage): void {
+    if (typeof raw !== "string") return;
+    const msg = decodeClient(raw);
+    if (!msg) return;
+
+    const playerId = conn.state?.playerId;
+    if (playerId === undefined) return;
+    const seat = this.seats.get(playerId);
+    if (!seat) return;
+
+    this.handle(conn, seat, msg);
+  }
+
+  override onClose(conn: Connection<ConnState>): void {
+    const playerId = conn.state?.playerId;
+    if (playerId === undefined) return;
+    this.removeSeat(playerId);
+  }
+
+  override onError(conn: Connection<ConnState>): void {
+    const playerId = conn.state?.playerId;
+    if (playerId !== undefined) this.removeSeat(playerId);
+  }
+
+  /** Chequeo de salud / existencia de sala, útil para el lobby del cliente. */
+  override onRequest(): Response {
+    return Response.json({
+      room: this.name,
+      phase: this.state.phase,
+      players: this.seats.size,
+      max: MAX_PLAYERS,
+    });
+  }
+
+  // ------------------------------------------------------------ mensajes
+
+  private handle(conn: Connection<ConnState>, seat: Seat, msg: ClientMsg): void {
+    switch (msg.t) {
+      case "in": {
+        // Descartar reenvíos y paquetes fuera de orden: el seq solo avanza.
+        if (typeof msg.seq !== "number" || msg.seq <= seat.last.seq) return;
+        if (seat.queue.length > 0 && msg.seq <= seat.queue[seat.queue.length - 1]!.seq) return;
+
+        seat.queue.push({
+          seq: msg.seq,
+          // Clamp a -1/0/1: el cliente no decide su propia velocidad.
+          moveX: clampAxis(msg.mx),
+          moveY: clampAxis(msg.my),
+          aim: unpackAim(typeof msg.aim === "number" ? msg.aim : 0),
+          shoot: (msg.btn & BTN_SHOOT) !== 0,
+          reload: (msg.btn & BTN_RELOAD) !== 0,
+          sprint: (msg.btn & BTN_SPRINT) !== 0,
+          // Acción puntual (recoger, cambiar de arma, curarse). Se valida en la
+          // simulación: acá sólo nos aseguramos de que sea un número sano.
+          act: typeof msg.act === "number" && msg.act >= 0 && msg.act < 32 ? msg.act | 0 : 0,
+        });
+
+        // Si la cola se desborda es que el cliente manda de más o vamos atrasados:
+        // se tiran los más viejos, que ya no le importan a nadie.
+        while (seat.queue.length > MAX_INPUT_BUFFER) seat.queue.shift();
+        return;
+      }
+
+      case "ready": {
+        seat.meta.ready = msg.ready === true;
+        this.broadcastRoster();
+        return;
+      }
+
+      case "start": {
+        // Solo el host, solo desde el lobby y con gente suficiente.
+        if (seat.playerId !== this.hostId) return;
+        if (this.state.phase !== "lobby") return;
+        if (this.seats.size < MIN_PLAYERS) return;
+        this.state.phase = "countdown";
+        this.state.phaseTicksLeft = COUNTDOWN_TICKS;
+        return;
+      }
+
+      case "ping": {
+        this.sendTo(conn, { t: "pong", c: msg.c, s: Date.now() });
+        return;
+      }
+
+      case "join":
+        // El nombre ya viene en la query de conexión; se acepta para compatibilidad.
+        seat.meta.name = sanitizeName(msg.name);
+        this.broadcastRoster();
+        return;
+    }
+  }
+
+  // ------------------------------------------------------------ loop
+
+  private ensureLoop(): void {
+    if (this.loop) return;
+    this.emptyTicks = 0;
+    this.lastPumpAt = Date.now();
+    this.accumulator = 0;
+    // El timer se dispara más seguido que el tick a propósito: los timers del
+    // runtime no son precisos (medido: setInterval(50) dispara cada ~62 ms), así
+    // que el ritmo real lo marca el reloj y el timer sólo da oportunidades de correr.
+    this.loop = setInterval(() => {
+      try {
+        this.pump();
+      } catch (err) {
+        console.error("tick error", err);
+      }
+    }, PUMP_INTERVAL_MS);
+  }
+
+  private stopLoop(): void {
+    if (!this.loop) return;
+    clearInterval(this.loop);
+    this.loop = null;
+  }
+
+  /**
+   * Corre los ticks que hagan falta para alcanzar el reloj y manda UN snapshot.
+   * Simular contra el reloj (y no contra el timer) es lo que mantiene la partida
+   * a 20 Hz reales: si no, todo el juego correría en cámara lenta.
+   */
+  private pump(): void {
+    const now = Date.now();
+    let delta = now - this.lastPumpAt;
+    this.lastPumpAt = now;
+
+    // Si el runtime nos dejó dormidos, no intentamos recuperar todo el tiempo
+    // perdido de golpe: preferimos perder simulación antes que trabar la sala.
+    if (delta > MAX_CATCHUP_MS) delta = MAX_CATCHUP_MS;
+    this.accumulator += delta;
+    if (this.accumulator < MS_PER_TICK) return;
+
+    let ran = 0;
+    while (this.accumulator >= MS_PER_TICK && ran < MAX_TICKS_PER_PUMP) {
+      this.accumulator -= MS_PER_TICK;
+      ran++;
+      if (!this.tick()) return;
+    }
+    if (this.accumulator > MS_PER_TICK) this.accumulator = 0;
+
+    this.broadcastSnapshot();
+  }
+
+  /** Un tick de simulación. Devuelve false si la sala se apagó. */
+  private tick(): boolean {
+    const s = this.state;
+
+    if (this.seats.size === 0) {
+      // Sala vacía: apagar el loop para no seguir gastando duration en Cloudflare.
+      if (++this.emptyTicks > EMPTY_ROOM_SHUTDOWN_TICKS) {
+        this.stopLoop();
+        this.resetToLobby();
+        return false;
+      }
+      return true;
+    }
+    this.emptyTicks = 0;
+
+    // Arranque automático cuando todos marcaron "listo".
+    if (s.phase === "lobby" && this.seats.size >= MIN_PLAYERS) {
+      let allReady = true;
+      for (const seat of this.seats.values()) if (!seat.meta.ready) allReady = false;
+      if (allReady) {
+        s.phase = "countdown";
+        s.phaseTicksLeft = COUNTDOWN_TICKS;
+      }
+    }
+
+    // Un input por tick y por jugador. Si la cola está vacía se repite el último,
+    // así el movimiento no se corta por un paquete perdido.
+    const inputs = new Map<number, PlayerInput>();
+    for (const seat of this.seats.values()) {
+      const next = seat.queue.shift();
+      if (next) seat.last = next;
+      const input = seat.last;
+      inputs.set(seat.playerId, input);
+
+      // Moverse y disparar se repiten sin problema, pero una acción es de un
+      // solo tick: si no la borráramos, un input repetido por falta de paquetes
+      // recogería el mismo objeto una y otra vez.
+      if (input.act !== ACT_NONE) seat.last = { ...input, act: ACT_NONE };
+    }
+
+    step(s, inputs, this.events, this.arena);
+
+    // Transiciones que dependen del contador que acaba de decrementar step().
+    if (s.phase === "countdown" && s.phaseTicksLeft <= 0) {
+      startMatch(s, (Date.now() ^ (this.seats.size << 16)) | 1, this.arena);
+      this.broadcast(encodeServer({ t: "start", seed: s.rng }));
+      this.broadcastItems();
+    } else if (s.phase === "ended" && s.phaseTicksLeft <= 0) {
+      this.resetToLobby();
+    }
+
+    return true;
+  }
+
+  /**
+   * ¿El observador ve al objetivo? Con margen de gracia: si lo perdió de vista
+   * hace menos de `SIGHT_GRACE_TICKS`, se lo sigue mandando. Sin eso, caminar
+   * al lado de una columna hace que el otro parpadee.
+   */
+  private canSee(viewer: PlayerState | undefined, target: PlayerState): boolean {
+    // Sin observador vivo (espectador, lobby) se ve todo: ya está muerto y así
+    // mirar la partida sigue teniendo sentido.
+    if (!viewer || !viewer.alive) return true;
+    if (viewer.id === target.id) return true;
+    // Los muertos no se dibujan igual, y mandarlos no filtra nada.
+    if (!target.alive) return true;
+
+    let seen = this.lastSeen.get(viewer.id);
+    if (!seen) {
+      seen = new Map();
+      this.lastSeen.set(viewer.id, seen);
+    }
+
+    if (hasLineOfSight(viewer.x, viewer.y, target.x, target.y, this.arena)) {
+      seen.set(target.id, this.state.tick);
+      return true;
+    }
+
+    const last = seen.get(target.id);
+    return last !== undefined && this.state.tick - last <= SIGHT_GRACE_TICKS;
+  }
+
+  /**
+   * Un snapshot por jugador, con lo que cada uno puede ver. Es lo que hace que
+   * un wallhack deje de existir: la información no sale del servidor, así que
+   * no alcanza con abrir la consola del navegador.
+   */
+  private broadcastSnapshot(): void {
+    const s = this.state;
+    const packed = packSnapshotArrays(s);
+    // El marcador es público y va igual para todos.
+    const standings: SnapStanding[] = s.players.map((p) => [p.id, p.kills, p.alive ? 1 : 0]);
+
+    const base = {
+      t: "s" as const,
+      tick: s.tick,
+      now: Date.now(),
+      phase: s.phase,
+      left: s.phaseTicksLeft,
+      st: standings,
+      zone: packed.zone,
+      alive: packed.alive,
+      winner: s.winnerId,
+    };
+
+    // Fuera de la partida no hay nada que ocultar: un solo mensaje para todos.
+    if (s.phase !== "playing") {
+      this.broadcast(
+        encodeServer({
+          ...base,
+          players: packed.players,
+          bullets: packed.bullets,
+          gr: s.grenades.map(packGrenade),
+          ...(this.events.length > 0 ? { ev: this.events } : {}),
+        }),
+      );
+      this.events = [];
+      return;
+    }
+
+    for (const conn of this.getConnections<ConnState>()) {
+      const viewerId = conn.state?.playerId;
+      const viewer = viewerId === undefined ? undefined : findPlayer(s, viewerId);
+
+      const players: SnapPlayer[] = [];
+      for (const p of s.players) if (this.canSee(viewer, p)) players.push(packPlayer(p));
+
+      const bullets: SnapBullet[] = [];
+      for (const b of s.bullets) {
+        if (!viewer?.alive || hasLineOfSight(viewer.x, viewer.y, b.x, b.y, this.arena)) {
+          bullets.push(packBullet(b));
+        }
+      }
+
+      const grenades: SnapGrenade[] = [];
+      for (const gr of s.grenades) {
+        if (!viewer?.alive || hasLineOfSight(viewer.x, viewer.y, gr.x, gr.y, this.arena)) {
+          grenades.push(packGrenade(gr));
+        }
+      }
+
+      const ev = this.visibleEvents(viewer);
+
+      conn.send(
+        encodeServer({
+          ...base,
+          players,
+          bullets,
+          gr: grenades,
+          ...(ev.length > 0 ? { ev } : {}),
+        }),
+      );
+    }
+
+    this.events = [];
+  }
+
+  /**
+   * Los efectos con posición (fogonazo, impacto, sangre) delatan dónde hay
+   * alguien, así que se filtran. Los de inventario NO: si a un cliente le
+   * faltara un "se cayó esto", su lista de objetos quedaría desincronizada.
+   */
+  private visibleEvents(viewer: PlayerState | undefined): SimEvent[] {
+    if (!viewer?.alive) return this.events;
+    return this.events.filter((e) => {
+      if (e.t !== "shot" && e.t !== "hit" && e.t !== "impact" && e.t !== "explosion") return true;
+      return hasLineOfSight(viewer.x, viewer.y, e.x, e.y, this.arena);
+    });
+  }
+
+  // ------------------------------------------------------------ sala
+
+  private resetToLobby(): void {
+    const s = this.state;
+    this.lastSeen.clear();
+    s.phase = "lobby";
+    s.phaseTicksLeft = 0;
+    s.bullets = [];
+    s.winnerId = -1;
+    s.tick = 0;
+    for (const p of s.players) {
+      p.alive = false;
+      p.diedAtTick = -1;
+      p.killerId = -1;
+    }
+    for (const seat of this.seats.values()) {
+      seat.meta.ready = false;
+      seat.queue.length = 0;
+      seat.last = { ...NEUTRAL_INPUT };
+    }
+    this.broadcastRoster();
+  }
+
+  private removeSeat(playerId: number): void {
+    const seat = this.seats.get(playerId);
+    if (!seat) return;
+    this.seats.delete(playerId);
+
+    const player = this.state.players.find((p) => p.id === playerId);
+    if (player) {
+      player.connected = false;
+      // En partida el cuerpo desaparece; en lobby se saca de la lista.
+      player.alive = false;
+    }
+    if (this.state.phase === "lobby" || this.state.phase === "ended") {
+      this.state.players = this.state.players.filter((p) => p.id !== playerId);
+    }
+
+    if (this.hostId === playerId) {
+      const next = this.seats.values().next();
+      this.hostId = next.done ? -1 : next.value.playerId;
+    }
+    this.broadcastRoster();
+  }
+
+  private freeColorIndex(): number {
+    const used = new Set<number>();
+    for (const seat of this.seats.values()) used.add(seat.meta.colorIndex);
+    for (let i = 0; i < PLAYER_COLORS.length; i++) if (!used.has(i)) return i;
+    return this.seats.size % PLAYER_COLORS.length;
+  }
+
+  private roster(): PlayerMeta[] {
+    return [...this.seats.values()].map((s) => ({ ...s.meta }));
+  }
+
+  private itemsMessage(): ServerMsg {
+    return {
+      t: "items",
+      items: this.state.items.map(packItem),
+      crates: [...this.state.openedCrates],
+    };
+  }
+
+  private broadcastItems(): void {
+    this.broadcast(encodeServer(this.itemsMessage()));
+  }
+
+  private broadcastRoster(): void {
+    this.broadcast(encodeServer({ t: "roster", roster: this.roster(), hostId: this.hostId }));
+  }
+
+  private sendTo(conn: Connection<ConnState>, msg: ServerMsg): void {
+    conn.send(encodeServer(msg));
+  }
+}
+
+function clampAxis(v: unknown): number {
+  if (typeof v !== "number" || !Number.isFinite(v)) return 0;
+  return v > 0 ? 1 : v < 0 ? -1 : 0;
+}

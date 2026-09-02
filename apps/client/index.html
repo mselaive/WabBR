@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>WabBR</title>
+    <meta name="description" content="Battle royale 2D para jugar con amigos en el navegador." />
+    <meta name="theme-color" content="#12161b" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="stage"></div>
+
+    <div id="hud" hidden>
+      <div class="hud-corner hud-tl">
+        <div class="stat"><span class="stat-key">VIVOS</span><span id="alive">0</span></div>
+        <div class="stat stat-kills"><span class="stat-key">KILLS</span><span id="kills">0</span></div>
+      </div>
+
+      <div id="zoneBanner" class="hud-banner" hidden>
+        <span class="warn">&#9888;</span>
+        <span id="zoneLabel">CIERRA EN</span>
+        <span id="zoneTime">00:00</span>
+      </div>
+
+      <canvas id="minimap" class="hud-corner hud-tr" width="200" height="200"></canvas>
+
+      <div id="killfeed" class="hud-corner hud-feed"></div>
+
+      <div class="hud-corner hud-bottom">
+        <div id="pickupPrompt" class="pickup" hidden></div>
+        <div id="channel" class="channel" hidden>
+          <div id="channelFill"></div><span id="channelText"></span>
+        </div>
+        <div id="shieldBar" class="shield-bar" hidden><div id="shieldFill"></div></div>
+        <div class="hp-bar"><div id="hpFill"></div><span id="hpText">100</span></div>
+        <div class="stamina-bar"><div id="staminaFill"></div></div>
+        <div class="weapon-row">
+          <span id="weaponName" class="weapon-name">Pistola</span>
+          <span id="ammo" class="ammo">12 / 12</span>
+        </div>
+        <div id="slots" class="slots"></div>
+      </div>
+
+      <div id="consumables" class="hud-corner hud-br"></div>
+
+      <div id="spectating" class="hud-spectating" hidden></div>
+    </div>
+
+    <div id="overlay">
+      <section id="screenMenu" class="screen">
+        <h1 class="logo">Wab<span>BR</span></h1>
+        <p class="tagline">Battle royale para jugar con amigos. Último en pie gana.</p>
+
+        <label class="field">
+          <span>Tu nombre</span>
+          <input id="nameInput" maxlength="14" placeholder="Jugador" autocomplete="off" />
+        </label>
+
+        <div class="menu-actions">
+          <button id="btnCreate" class="btn btn-primary">Crear sala</button>
+          <div class="join-row">
+            <input
+              id="codeInput"
+              class="code-input"
+              maxlength="6"
+              placeholder="CÓDIGO"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button id="btnJoin" class="btn">Unirse</button>
+          </div>
+        </div>
+
+        <p id="menuError" class="error" hidden></p>
+
+        <details class="help">
+          <summary>Controles</summary>
+          <ul>
+            <li><b>WASD</b> — moverse</li>
+            <li><b>Mouse</b> — apuntar</li>
+            <li><b>Click izquierdo</b> — disparar</li>
+            <li><b>R</b> — recargar</li>
+            <li><b>E</b> — recoger lo que tengas al lado</li>
+            <li><b>1</b> / <b>2</b> — cambiar de arma</li>
+            <li><b>3</b> / <b>4</b> / <b>5</b> — vendas, botiquín, adrenalina</li>
+            <li><b>Shift</b> — correr (gasta estamina)</li>
+            <li><b>G</b> — tirar una granada</li>
+            <li><b>Tab</b> — tabla de posiciones</li>
+          </ul>
+        </details>
+      </section>
+
+      <section id="screenLobby" class="screen" hidden>
+        <h2>Sala</h2>
+        <button id="roomCode" class="room-code" title="Copiar link de invitación">------</button>
+        <p class="hint">Tocá el código para copiar el link e invitá a tus amigos.</p>
+
+        <ul id="playerList" class="player-list"></ul>
+
+        <div class="lobby-actions">
+          <button id="btnReady" class="btn btn-primary">Estoy listo</button>
+          <button id="btnStart" class="btn" hidden>Empezar ya</button>
+          <button id="btnLeave" class="btn btn-ghost">Salir</button>
+        </div>
+        <p id="lobbyHint" class="hint"></p>
+      </section>
+
+      <section id="screenResult" class="screen" hidden>
+        <h2 id="resultTitle">Fin de la partida</h2>
+        <p id="resultSubtitle" class="tagline"></p>
+        <ol id="standings" class="standings"></ol>
+        <p class="hint">Volviendo al lobby...</p>
+      </section>
+
+      <section id="screenConnecting" class="screen" hidden>
+        <h2>Conectando...</h2>
+        <p class="tagline">Buscando la sala.</p>
+      </section>
+    </div>
+
+    <div id="scoreboard" class="scoreboard" hidden>
+      <h3>Tabla</h3>
+      <ol id="scoreboardList"></ol>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,39 @@
+{
+  "name": "wabbr",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c cyan,magenta \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "npm run dev --workspace @wabbr/server",
+    "dev:client": "npm run dev --workspace @wabbr/client",
+    "build": "npm run build --workspace @wabbr/client",
+    "deploy:server": "npm run deploy --workspace @wabbr/server",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "shots": "node scripts/shot.mjs",
+    "bots": "node scripts/bot.mjs",
+    "typecheck": "npm run typecheck --workspace @wabbr/shared && npm run typecheck --workspace @wabbr/server && npm run typecheck --workspace @wabbr/client"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "concurrently": "^9.1.2",
+    "playwright": "^1.62.1",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5",
+    "ws": "^8.21.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.2": true,
+    "esbuild@0.28.1": true,
+    "workerd@1.20260828.1": true
+  }
+}

@@ -1,0 +1,253 @@
+<title>Una Partida de WabBR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Archivo:wght@400;500;600;700&display=swap">
+
+<style>
+  :root {
+    /* Neutros con sesgo verde, tomados del pasto de la arena. */
+    --bg: #f2f3ee;
+    --surface: #ffffff;
+    --surface-2: #e7eae0;
+    --line: #d3d8ca;
+    --line-strong: #b6bfa9;
+    --ink: #14180f;
+    --ink-2: #55604a;
+    --accent: #4a7a1e;
+    --gold: #8a6200;
+    --frame: #1b2018;
+
+    --pixel: "Press Start 2P", ui-monospace, monospace;
+    --sans: "Archivo", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+
+    --col: 1080px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12160f;
+      --surface: #1b2018;
+      --surface-2: #232a1f;
+      --line: #2f382a;
+      --line-strong: #46523e;
+      --ink: #eaf0e6;
+      --ink-2: #96a38f;
+      --accent: #9ad754;
+      --gold: #e8b53f;
+      --frame: #0a0d08;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #12160f;
+    --surface: #1b2018;
+    --surface-2: #232a1f;
+    --line: #2f382a;
+    --line-strong: #46523e;
+    --ink: #eaf0e6;
+    --ink-2: #96a38f;
+    --accent: #9ad754;
+    --gold: #e8b53f;
+    --frame: #0a0d08;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0 20px 100px;
+  }
+
+  .wrap { max-width: var(--col); margin: 0 auto; }
+
+  p { margin: 0 0 12px; max-width: 66ch; }
+  p:last-child { margin-bottom: 0; }
+
+  .eyebrow {
+    font-family: var(--pixel);
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+    text-transform: uppercase;
+    line-height: 1.8;
+  }
+
+  /* ---------------------------------------------------------- cabecera */
+
+  header {
+    padding: 64px 0 36px;
+    border-bottom: 2px solid var(--line);
+    margin-bottom: 8px;
+  }
+
+  .wordmark {
+    font-family: var(--pixel);
+    font-size: clamp(26px, 5.5vw, 40px);
+    line-height: 1.3;
+    margin: 14px 0 0;
+    letter-spacing: 1px;
+  }
+  .wordmark em { font-style: normal; color: var(--accent); }
+
+  .lede {
+    font-size: 19px;
+    line-height: 1.5;
+    color: var(--ink-2);
+    margin: 16px 0 0;
+    max-width: 56ch;
+    text-wrap: balance;
+  }
+
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 30px 0 0;
+    border: 2px solid var(--line);
+    border-radius: 4px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .facts div {
+    flex: 1 1 120px;
+    padding: 11px 14px;
+    border-right: 1px solid var(--line);
+  }
+  .facts div:last-child { border-right: 0; }
+  .facts dt {
+    font-family: var(--pixel);
+    font-size: 7px;
+    letter-spacing: 1px;
+    color: var(--ink-2);
+    text-transform: uppercase;
+  }
+  .facts dd {
+    margin: 7px 0 0;
+    font-size: 17px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ------------------------------------------------------------- pasos */
+
+  .step { padding: 44px 0 0; }
+
+  .step-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-bottom: 4px;
+  }
+  .num {
+    font-family: var(--pixel);
+    font-size: 11px;
+    color: var(--accent);
+    flex: none;
+  }
+  .step h2 {
+    font-size: 22px;
+    margin: 0;
+    line-height: 1.25;
+    text-wrap: balance;
+  }
+  .step .caption {
+    color: var(--ink-2);
+    margin: 0 0 18px 39px;
+    font-size: 15px;
+  }
+  .step .caption b { color: var(--ink); font-weight: 600; }
+
+  /* Marco de la captura: fondo propio para que el juego no se funda con la página. */
+  figure {
+    margin: 0;
+    background: var(--frame);
+    border: 2px solid var(--line-strong);
+    border-radius: 6px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  figure img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 3px;
+  }
+
+  .pair {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 16px;
+  }
+  .pair figcaption {
+    font-family: var(--pixel);
+    font-size: 8px;
+    letter-spacing: 0.8px;
+    color: var(--ink-2);
+    padding: 9px 4px 3px;
+    text-transform: uppercase;
+  }
+
+  .small {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 26px;
+    align-items: start;
+  }
+  .small figure { padding: 6px; }
+  @media (max-width: 640px) {
+    .small { grid-template-columns: 1fr; }
+  }
+
+  /* ----------------------------------------------------------- leyenda */
+
+  .legend {
+    margin-top: 20px;
+    background: var(--surface);
+    border: 2px solid var(--line);
+    border-radius: 5px;
+    padding: 16px 18px;
+  }
+  .legend h3 {
+    font-family: var(--pixel);
+    font-size: 9px;
+    letter-spacing: 1px;
+    margin: 0 0 12px;
+    color: var(--ink-2);
+    text-transform: uppercase;
+  }
+  .tiers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .tier {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    padding: 5px 10px 5px 6px;
+    border-radius: 4px;
+    background: var(--surface-2);
+  }
+  .swatch {
+    width: 15px;
+    height: 15px;
+    border-radius: 3px;
+    border: 2px solid;
+    background: #171d24;
+    flex: none;
+  }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 26px;
+    border-top: 2px solid var(--line);
+    color: var(--ink-2);
+    font-size: 14px;
+  }
+  footer b { color: var(--ink); font-weight: 600; }
+</style>

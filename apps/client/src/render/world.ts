@@ -1017,9 +1017,19 @@ export class WorldView {
     const jitterY = this.shake > 0 ? (Math.random() * 2 - 1) * this.shake : 0;
 
     this.camera.scale.set(this.scale);
+    /*
+     * Sin redondear a píxeles enteros. Redondear es lo habitual en pixel art
+     * para que la grilla quede alineada, pero acá no alinea nada: la escala es
+     * el alto de la ventana dividido VIEW_HEIGHT y sale fraccionaria casi
+     * siempre (1,25 a 800 px de alto; 1,6875 en 1080p). Con la grilla ya
+     * desalineada, el redondeo no daba nitidez y sí cortaba el movimiento:
+     * medido a 144 fps, la cámara se desplazaba de a 0, 1 o 2 píxeles enteros y
+     * un tercio de los cuadros no se movía nada. Como la cámara te sigue, eso
+     * es el mundo entero trabándose, que se nota mucho más que el propio muñeco.
+     */
     this.camera.position.set(
-      Math.round(-cx * this.scale + w / 2 + jitterX),
-      Math.round(-cy * this.scale + h / 2 + jitterY),
+      -cx * this.scale + w / 2 + jitterX,
+      -cy * this.scale + h / 2 + jitterY,
     );
   }
 
@@ -1033,6 +1043,11 @@ export class WorldView {
   setCrosshair(sx: number, sy: number, visible: boolean): void {
     this.crosshair.visible = visible;
     this.crosshair.position.set(sx, sy);
+  }
+
+  /** Posición de la cámara en pantalla, para medir el desplazamiento. Solo dev. */
+  debugCamera(): { x: number; y: number; escala: number } {
+    return { x: this.camera.position.x, y: this.camera.position.y, escala: this.scale };
   }
 
   /** Estado del sprite de un jugador, para los scripts de captura. Solo dev. */

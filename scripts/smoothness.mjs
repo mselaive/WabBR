@@ -93,7 +93,8 @@ try {
       return await new Promise((listo) => {
         const paso = () => {
           const v = window.wabbr.sprite();
-          if (v?.mundo) pos.push({ t: performance.now(), x: v.mundo.x, y: v.mundo.y });
+          const c = window.wabbr.camara();
+          if (v?.mundo) pos.push({ t: performance.now(), x: v.mundo.x, y: v.mundo.y, cx: c.x, cy: c.y });
           if (performance.now() - t0 < s * 1000) requestAnimationFrame(paso);
           else listo(pos);
         };
@@ -115,7 +116,13 @@ try {
     ["KeyD"], ["KeyW"], ["KeyA"], ["KeyS"],
     ["KeyW", "KeyD"], ["KeyS", "KeyA"], ["KeyW", "KeyA"], ["KeyS", "KeyD"],
   ];
-  const MINIMO = 150; // px que hay que recorrer para que la muestra sirva
+  /*
+   * A 215 px/s (PLAYER_SPEED) un tramo libre recorre 215 * SECONDS. Se pide el
+   * 80% porque cualquier roce contra una pared frena al muñeco y entonces se
+   * estaría midiendo el choque: una corrida con el 35% de la velocidad daba un
+   * avance mediano de 0,20 px por cuadro y ensuciaba todo el reparto.
+   */
+  const MINIMO = 215 * SECONDS * 0.8;
 
   let muestras = null;
   for (const rumbo of RUMBOS) {
@@ -157,6 +164,32 @@ try {
   const orden = [...saltos].sort((a, b) => a - b);
   const pct = (q) => orden[Math.min(orden.length - 1, Math.floor(q * orden.length))].toFixed(2);
   console.log(`reparto (p10/50/90):  ${pct(0.1)} / ${pct(0.5)} / ${pct(0.9)} px`);
+
+  /*
+   * Y la cámara, que es lo que de verdad se ve moverse: como te sigue, tu muñeco
+   * queda casi siempre en el centro de la pantalla y lo que se desplaza es el
+   * mundo entero. Un tirón acá se nota mucho más que uno del sprite.
+   */
+  const camSaltos = [];
+  for (let i = 1; i < muestras.length; i++) {
+    camSaltos.push(
+      Math.hypot(muestras[i].cx - muestras[i - 1].cx, muestras[i].cy - muestras[i - 1].cy),
+    );
+  }
+  const camMov = camSaltos.filter((d) => d > 0.01);
+  const camQuietos = camSaltos.length - camMov.length;
+  const camMedia = camMov.reduce((a, b) => a + b, 0) / Math.max(camMov.length, 1);
+  const camVar = camMov.reduce((a, d) => a + (d - camMedia) ** 2, 0) / Math.max(camMov.length, 1);
+  const camOrden = [...camSaltos].sort((a, b) => a - b);
+  const camPct = (q) =>
+    camOrden[Math.min(camOrden.length - 1, Math.floor(q * camOrden.length))].toFixed(2);
+
+  console.log("");
+  console.log("CÁMARA (píxeles de pantalla)");
+  console.log(`cuadros sin desplazar: ${camQuietos} (${((100 * camQuietos) / camSaltos.length).toFixed(1)}%)`);
+  console.log(`desplazamiento medio:  ${camMedia.toFixed(2)} px`);
+  console.log(`desvío relativo:       ${((Math.sqrt(camVar) / Math.max(camMedia, 1e-9)) * 100).toFixed(1)}%`);
+  console.log(`reparto (p10/50/90):   ${camPct(0.1)} / ${camPct(0.5)} / ${camPct(0.9)} px`);
 
   /*
    * El veredicto mira los cuadros que no avanzan nada, que es exactamente lo que

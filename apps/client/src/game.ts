@@ -94,7 +94,12 @@ export class Game {
       resizeTo: window,
       autoDensity: true,
       resolution: Math.min(window.devicePixelRatio || 1, 2),
-      roundPixels: true,
+      // Sin redondear los sprites, por lo mismo que la cámara (ver applyCamera):
+      // la escala de la vista es fraccionaria, así que el redondeo no alinea la
+      // grilla del pixel art con la de la pantalla. Lo único que hacía era que
+      // cada sprite saltara de a un píxel entero por su cuenta mientras el suelo
+      // se desplaza suave, y eso se ve como si todo vibrara.
+      roundPixels: false,
     });
 
     document.getElementById("stage")!.appendChild(this.app.canvas);
@@ -118,6 +123,7 @@ export class Game {
         centro: { x: WORLD_CENTER_X, y: WORLD_CENTER_Y },
         radio: WORLD_RADIUS,
         sprite: () => this.world.debugPlayer(this.localId),
+        camara: () => this.world.debugCamera(),
         enFrame: () => {
           const frame = this.snapshots.sample(performance.now() - INTERP_DELAY_MS);
           const mine = frame?.players.find((p) => p.id === this.localId);

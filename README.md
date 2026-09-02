@@ -260,6 +260,12 @@ movimiento llega con el retraso del ping. Acá hay tres piezas:
    pantalla dibuja 60 o más, así que el jugador local también se dibuja entre dos pasos, no en el
    último. Sin esto sólo se movía 20 veces por segundo y se veía a los tirones —el resto se veía
    suave y el tuyo no, que es justo el que mirás.
+5. **Cámara sin redondear** (`applyCamera`): nada de `Math.round` en la posición de la cámara ni
+   `roundPixels` en los sprites. Redondear a píxeles enteros es lo habitual en pixel art, pero acá
+   no alinea nada: la escala de la vista es el alto de la ventana dividido `VIEW_HEIGHT` y sale
+   fraccionaria casi siempre (1,25 a 800 px de alto, 1,6875 en 1080p). Con la grilla ya desalineada
+   el redondeo no daba nitidez y sí cortaba el movimiento. Y como la cámara te sigue, lo que se
+   traba es el mundo entero: se nota mucho más que el propio muñeco.
 
 Para probarlo sin desplegar nada, agregá `?lag=200` a la URL: simula 200 ms de ida y vuelta.
 Tu personaje tiene que seguir respondiendo al instante.
@@ -274,8 +280,18 @@ Camina en línea recta y cuenta qué porcentaje de cuadros no avanzó nada. Nece
 en headless con renderizado por software el navegador dibuja a 4 cuadros por segundo y la medición
 habla del emulador, no del juego. El script lo detecta y avisa en vez de dar un veredicto falso.
 
-Medido a 145 fps: **77% de cuadros quietos** dibujando la posición simulada tal cual, **0,3%**
-interpolando entre pasos.
+Mide las dos cosas por separado, porque tienen causas distintas. A 145 fps:
+
+| | Cuadros sin moverse | Desvío del avance |
+|---|---|---|
+| Muñeco, dibujando la posición simulada | 77% | 150% |
+| Muñeco, interpolando entre pasos | 0% | 1,7% |
+| Cámara, redondeada a píxel entero | 1-35% | 28% |
+| Cámara, sin redondear | 0% | 1,6% |
+
+Cuánto daña el redondeo de cámara depende de la velocidad: si el desplazamiento por cuadro queda por
+debajo de un píxel, la mayoría de los cuadros redondea a cero. Por eso empeora cuanto más alta es la
+tasa de refresco — en un monitor de 144 Hz es donde peor se ve.
 
 ## Tests
 

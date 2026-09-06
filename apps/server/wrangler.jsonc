@@ -18,7 +18,13 @@
     // él solo andaría el dominio de producción. Los localhost están para que
     // `wrangler dev` siga funcionando, porque estas mismas variables se usan en
     // desarrollo; no debilitan nada, esto no es autenticación.
-    "ALLOWED_ORIGINS": "https://wab-br-client-lpyv.vercel.app,https://*.vercel.app,http://localhost:5173,http://127.0.0.1:5173",
+    //
+    // OJO: si servís el juego desde un dominio propio, tiene que estar acá.
+    // Faltaba wabbo.org y el síntoma no ayudaba nada: el navegador no puede
+    // leer el 403 de un upgrade de WebSocket fallido, así que el cliente decía
+    // "¿el servidor está andando?" cuando el servidor estaba perfecto y lo que
+    // pasaba era que rechazaba el origen.
+    "ALLOWED_ORIGINS": "https://wabbo.org,https://www.wabbo.org,https://wab-br-client-lpyv.vercel.app,https://*.vercel.app,http://localhost:5173,http://127.0.0.1:5173",
     // Región donde se crea el Durable Object: sam (Sudamérica), enam, wnam,
     // weur, eeur, apac, oc, afr, me. Vacío = cerca del primero que entra.
     "DO_LOCATION_HINT": "sam"

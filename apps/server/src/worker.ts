@@ -12,11 +12,25 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === "/" || url.pathname === "/health") {
-      return Response.json({ ok: true, service: "wabbr-server" });
+      // CORS abierto: el cliente lo consulta desde su propio dominio cuando la
+      // conexión falla, para distinguir "el servidor no está" de "el servidor
+      // rechazó tu origen". Sin la cabecera, el navegador le tapa la respuesta
+      // y las dos situaciones se ven iguales.
+      return Response.json(
+        { ok: true, service: "wabbr-server" },
+        { headers: { "Access-Control-Allow-Origin": "*" } },
+      );
     }
 
     if (!originAllowed(request, env)) {
-      return new Response("Forbidden origin", { status: 403 });
+      // Con CORS abierto a propósito: el navegador no deja leer el estado de un
+      // upgrade de WebSocket fallido, así que el cliente vuelve a preguntar por
+      // HTTP para poder decir "rechacé tu dominio" en vez de "no hay servidor".
+      // No filtra nada: el cuerpo es un cartel y el acceso ya está denegado.
+      return new Response("Forbidden origin", {
+        status: 403,
+        headers: { "Access-Control-Allow-Origin": "*" },
+      });
     }
 
     const locationHint = env.DO_LOCATION_HINT?.trim();

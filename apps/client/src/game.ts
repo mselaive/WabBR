@@ -31,7 +31,7 @@ import {
   type SnapshotMsg,
   type UnpackedPlayer,
 } from "@wabbr/shared";
-import { Net } from "./net/connection.js";
+import { Net, diagnoseConnection } from "./net/connection.js";
 import { SnapshotBuffer } from "./net/interpolation.js";
 import { Predictor } from "./net/prediction.js";
 import { InputController } from "./input.js";
@@ -151,7 +151,11 @@ export class Game {
       },
       onError: () => {
         this.ui.showScreen("menu");
-        this.ui.showError("No se pudo conectar. ¿El servidor está andando?");
+        this.ui.showError("No se pudo conectar…");
+        // El motivo real se averigua por HTTP, porque el navegador no deja leer
+        // el estado de un upgrade de WebSocket fallido. Llega un instante
+        // después, pero dice dónde mirar en vez de mandar a revisar el servidor.
+        void diagnoseConnection(room).then((motivo) => this.ui.showError(motivo));
       },
     });
   }

@@ -25,6 +25,54 @@ function serverHost(): string {
 }
 
 /**
+ * Base HTTP del servidor, con la misma regla de protocolo que usa PartySocket:
+ * `http` sólo para localhost y red local, `https` para todo lo demás.
+ */
+function serverBase(): string {
+  const host = serverHost().replace(/^(https?|wss?):\/\//, "");
+  const local =
+    host.startsWith("localhost:") ||
+    host.startsWith("127.0.0.1:") ||
+    host.startsWith("192.168.") ||
+    host.startsWith("10.");
+  return `${local ? "http" : "https"}://${host}`;
+}
+
+/**
+ * Por qué falló la conexión, preguntando por HTTP.
+ *
+ * Hace falta porque el navegador no deja leer el código de estado de un upgrade
+ * de WebSocket fallido: si el servidor rechaza tu origen con un 403, desde JS se
+ * ve igual que si el servidor no existiera. Decir "¿el servidor está andando?"
+ * cuando está perfecto manda a buscar el problema al lugar equivocado.
+ */
+export async function diagnoseConnection(room: string): Promise<string> {
+  const base = serverBase();
+
+  try {
+    const salud = await fetch(`${base}/health`, { cache: "no-store" });
+    if (!salud.ok) return "El servidor respondió mal. Probá de nuevo en un rato.";
+  } catch {
+    return "No se pudo conectar. ¿El servidor está andando?";
+  }
+
+  // El servidor está vivo, así que el problema es de esta conexión concreta.
+  try {
+    const r = await fetch(`${base}/parties/game-room/${encodeURIComponent(room)}`, {
+      cache: "no-store",
+    });
+    if (r.status === 403) {
+      return `El servidor está andando pero no acepta conexiones desde ${location.origin}. Hay que agregar ese dominio a ALLOWED_ORIGINS.`;
+    }
+  } catch {
+    // Que falle por CORS también apunta al chequeo de origen.
+    return `El servidor está andando pero rechazó este dominio (${location.origin}).`;
+  }
+
+  return "El servidor está andando pero no se pudo entrar a la sala. Probá de nuevo.";
+}
+
+/**
  * Conexión con la sala. Encapsula PartySocket, mide el ping y —en desarrollo—
  * puede inyectar latencia artificial para probar la predicción sin desplegar.
  */

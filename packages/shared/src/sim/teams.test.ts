@@ -78,6 +78,16 @@ describe("dúos", () => {
     expect([...sizes.values()].sort()).toEqual([1, 2, 2]);
   });
 
+  it("con dos jugadores no hay parejas: serían compañeros y terminaría al empezar", () => {
+    const state = createGameState(3);
+    state.teamSize = 2;
+    state.players.push(createPlayer(1), createPlayer(2));
+    startMatch(state, 7);
+    expect(state.players[0]!.team).not.toBe(state.players[1]!.team);
+    step(state, new Map(), [], EMPTY);
+    expect(state.phase).toBe("playing");
+  });
+
   it("en todos contra todos, cada uno es su propio equipo", () => {
     const state = createGameState(3);
     for (let i = 1; i <= 4; i++) state.players.push(createPlayer(i));

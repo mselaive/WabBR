@@ -552,21 +552,22 @@ export class Game {
     rows.sort((a, b) => a.place - b.place || b.kills - a.kills);
 
     const mine = rows.find((r) => r.isLocal);
-    const duos = this.teamSize === 2;
+    // En pareja se habla en plural: el puesto es de los dos.
+    const paired = this.mates().size > 0;
     const title = !mine
       ? "Fin de la partida"
       : mine.place === 1
-        ? duos && this.mates().size > 0
+        ? paired
           ? "¡Ganaron!"
           : "¡Ganaste!"
-        : `${duos ? "Quedaron" : "Quedaste"} en el puesto ${mine.place}`;
+        : `${paired ? "Quedaron" : "Quedaste"} en el puesto ${mine.place}`;
     // En dúos gana la pareja: los dos nombres, también el que cayó antes.
     const winnerTeam = this.standings.get(msg.winner)?.team;
     const winners =
       msg.winner < 0
         ? []
         : [...this.standings]
-            .filter(([id, s]) => id === msg.winner || (duos && s.team === winnerTeam))
+            .filter(([id, s]) => id === msg.winner || s.team === winnerTeam)
             .map(([id]) => this.everyone.get(id)?.name ?? "")
             .filter(Boolean);
     const subtitle =

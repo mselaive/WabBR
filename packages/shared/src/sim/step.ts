@@ -219,8 +219,11 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
   }
 
   // En dúos, el lugar sorteado también arma las parejas: 0 y 1 juntos, 2 y 3...
-  // Cada pareja aparece junta, en un punto del anillo para ella sola.
-  const duos = state.teamSize === 2;
+  // Cada pareja aparece junta, en un punto del anillo para ella sola. Con dos
+  // jugadores no hay dúos: serían compañeros y la partida terminaría al empezar.
+  const duos = state.teamSize === 2 && active.length > 2;
+  // El que no juega esta partida no arrastra el equipo de la anterior.
+  for (const p of state.players) p.team = p.id;
   const teams = duos ? Math.ceil(active.length / 2) : active.length;
   const firstOfTeam = new Map<number, { x: number; y: number }>();
   active.forEach((p, i) => {

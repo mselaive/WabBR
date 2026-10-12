@@ -71,6 +71,8 @@ export class Game {
   /** Tus granadas, igual: salen de la mano al apretar G. */
   private readonly grenades = new LocalGrenades();
   private readonly sound = new Sound();
+  /** Para soltar los listeners de ventana al destruir el juego. */
+  private readonly listeners = new AbortController();
   /** Para sonar el aviso una vez al salir de la zona, no en cada cuadro. */
   private wasOutside = false;
   /**
@@ -161,15 +163,16 @@ export class Game {
 
     // El navegador no deja sonar nada hasta el primer gesto: el audio arranca ahí.
     const unlock = () => this.sound.unlock();
-    window.addEventListener("pointerdown", unlock);
-    window.addEventListener("keydown", unlock);
+    const signal = this.listeners.signal;
+    window.addEventListener("pointerdown", unlock, { signal });
+    window.addEventListener("keydown", unlock, { signal });
     window.addEventListener("keydown", (e) => {
       if (e.code !== "KeyM" || e.repeat) return;
       // Escribiendo el nombre o el código, la M es una letra.
       if (e.target instanceof HTMLInputElement) return;
       const muted = this.sound.toggleMute();
       this.ui.addNotice(muted ? "Sonido apagado (M)" : "Sonido prendido (M)");
-    });
+    }, { signal });
     window.addEventListener("resize", () => this.world.resize());
 
     this.app.ticker.add((ticker) => this.frame(ticker.deltaMS));
@@ -249,8 +252,17 @@ export class Game {
       room,
       name,
       onMessage: (msg) => this.onMessage(msg),
-      onClose: () => {
+      onClose: (code) => {
         if (this.localId === -1) return;
+        if (code === 4001) {
+          // Otra pestaña con el mismo token (por ejemplo, "duplicar pestaña")
+          // se quedó con el asiento. Reintentar sería sacársela de vuelta, y
+          // las dos se lo pasarían para siempre: ésta se retira.
+          this.disconnect();
+          this.ui.showScreen("menu");
+          this.ui.showError("Abriste WabBR en otra pestaña: seguís jugando allá.");
+          return;
+        }
         this.startReconnecting();
       },
       onError: () => {
@@ -1112,6 +1124,7 @@ export class Game {
 
   destroy(): void {
     this.detachInput?.();
+    this.listeners.abort();
     this.disconnect();
     this.app.destroy(true);
   }

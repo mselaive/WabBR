@@ -68,6 +68,13 @@ a.enviar({ t: "ready", ready: true });
 b.enviar({ t: "ready", ready: true });
 check(await hasta(() => a.estado.phase === "playing", 15000), "arranca la partida");
 await hasta(() => a.estado.yo !== null);
+// Juega un rato antes del corte, como en una partida de verdad: así el
+// servidor tiene inputs numerados (hasta el 30) de esta conexión.
+for (let seq = 1; seq <= 30; seq++) {
+  a.enviar({ t: "in", seq, mx: 0, my: 0, aim: 0, btn: 0, act: 0 });
+  await esperar(50);
+}
+await esperar(300);
 const antes = a.estado.yo;
 
 // Se corta: el socket se cierra sin despedirse, como cuando se cae el WiFi.
@@ -94,6 +101,18 @@ const a3 = crudo("Ana", TOKEN_A);
 await hasta(() => a3.estado.id > 0);
 check(a3.estado.id === idA, "abrir el mismo token de nuevo recupera el mismo asiento");
 check(await hasta(() => a2.estado.cerrado), "y la conexión vieja se cierra");
+
+check(a2.estado.codigoCierre === 4001, "con el código que le dice al cliente que no reintente");
+
+// Recargar la página: vuelve con el token, pero numera los inputs desde 1.
+// Antes el servidor los rechazaba por viejos y el muñeco quedaba congelado.
+const xAntes = a3.estado.yo?.x ?? 0;
+for (let seq = 1; seq <= 20; seq++) {
+  a3.enviar({ t: "in", seq, mx: xAntes < 1500 ? 1 : -1, my: 0, aim: 0, btn: 0, act: 0 });
+  await esperar(50);
+}
+await esperar(400);
+check(Math.abs((a3.estado.yo?.x ?? 0) - xAntes) > 40, "después de recargar, el muñeco se mueve");
 
 // Sin token es otra persona.
 const c = crudo("Carla");

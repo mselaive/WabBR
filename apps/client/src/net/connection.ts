@@ -12,7 +12,8 @@ export interface NetOptions {
   name: string;
   onMessage: (msg: ServerMsg) => void;
   onOpen?: () => void;
-  onClose?: () => void;
+  /** `code` es el del cierre: 4001 = otra pestaña se quedó con el asiento. */
+  onClose?: (code: number) => void;
   onError?: (err: unknown) => void;
 }
 
@@ -141,7 +142,7 @@ export class Net {
       else deliver();
     });
 
-    this.socket.addEventListener("close", () => opts.onClose?.());
+    this.socket.addEventListener("close", (e: CloseEvent) => opts.onClose?.(e.code));
     this.socket.addEventListener("error", (e) => opts.onError?.(e));
   }
 

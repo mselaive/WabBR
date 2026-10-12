@@ -251,6 +251,12 @@ export class GameRoom extends Server<Env> {
     seat.connId = null;
     seat.goneAt = Date.now();
     seat.meta.away = true;
+    // El host pasa a otra persona conectada: si no, mientras le guardamos el
+    // lugar nadie puede forzar el arranque ni agregar bots en el lobby.
+    if (this.hostId === playerId) {
+      const next = [...this.seats.values()].find((s) => !s.bot && s.connId !== null);
+      if (next) this.hostId = next.playerId;
+    }
     this.broadcastRoster();
   }
 
@@ -260,6 +266,10 @@ export class GameRoom extends Server<Env> {
     seat.connId = conn.id;
     seat.goneAt = 0;
     seat.meta.away = false;
+    // Si recargó la página, el cliente vuelve a numerar sus inputs desde 1: con
+    // la cola recordando el último seq, los rechazaría todos y el muñeco
+    // quedaría congelado. Lo que hubiera en la cola se perdió con el corte.
+    seat.inputs.clear();
     conn.setState({ playerId: seat.playerId });
 
     // Si la conexión vieja sigue abierta —el navegador se reconectó antes de que
@@ -626,6 +636,9 @@ export class GameRoom extends Server<Env> {
   private visibleEvents(viewer: PlayerState | undefined): SimEvent[] {
     if (!viewer?.alive) return this.events;
     return this.events.filter((e) => {
+      // El disparo silencioso sólo le sirve al que tiró (para emparejar su
+      // bala): a los demás les diría dónde está, y la ballesta no delata.
+      if (e.t === "shot" && e.silent && e.byId !== viewer.id) return false;
       if (e.t !== "shot" && e.t !== "hit" && e.t !== "impact" && e.t !== "explosion") return true;
       return hasLineOfSight(viewer.x, viewer.y, e.x, e.y, this.arena);
     });

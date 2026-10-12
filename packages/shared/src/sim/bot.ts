@@ -39,8 +39,11 @@ import {
 export interface BotMemory {
   random: () => number;
   seq: number;
-  /** A dónde va. `crate` es el índice de la caja que va a abrir, o -1. */
-  waypoint: { x: number; y: number; crate: number } | null;
+  /**
+   * A dónde va. `crate` es el índice de la caja que va a abrir e `item` el id
+   * del objeto que va a buscar, o -1.
+   */
+  waypoint: { x: number; y: number; crate: number; item: number } | null;
   /** Lado hacia el que se corre peleando (-1 o 1) y cuánto le queda. */
   strafe: number;
   strafeTicks: number;
@@ -75,7 +78,8 @@ const PREFERRED_RANGE = [260, 230, 320, 110, 480, 380];
  * 50 ms del tick. El que no entra camina derecho y prueba en el siguiente.
  */
 const SEARCHES_PER_TICK = 2;
-const budget = { tick: -1, used: 0 };
+/** Cupo por partida: varias salas pueden compartir el mismo proceso. */
+const budgets = new WeakMap<GameState, { tick: number; used: number }>();
 
 export function createBotMemory(seed: number): BotMemory {
   return {
@@ -198,7 +202,7 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
 
   // Peleando se mueve de costado a pocos pasos: eso va directo. Para todo lo
   // demás —una caja, la zona, pasear— se busca el camino.
-  steer(me, mem, goal, input, target !== null && zoneGoal === null ? null : arena, state.tick);
+  steer(me, mem, goal, input, target !== null && zoneGoal === null ? null : arena, state);
   return input;
 }
 
@@ -308,18 +312,22 @@ function pickGoal(
   const wp = mem.waypoint;
   if (wp) {
     const reach = wp.crate >= 0 ? CRATE_REACH - 12 : 18;
-    const gone = wp.crate >= 0 && state.openedCrates.includes(wp.crate);
+    // Si la caja ya la abrió otro, o el objeto ya lo levantó otro, no tiene
+    // sentido seguir yendo.
+    const gone =
+      (wp.crate >= 0 && state.openedCrates.includes(wp.crate)) ||
+      (wp.item >= 0 && !state.items.some((i) => i.id === wp.item));
     if (!gone && Math.hypot(wp.x - me.x, wp.y - me.y) > reach) return wp;
   }
 
   const crate = nearestCrate(state, crates, me, 900, mem.unreachable);
   if (crate) {
-    mem.waypoint = { x: crate.x, y: crate.y, crate: crate.index };
+    mem.waypoint = { x: crate.x, y: crate.y, crate: crate.index, item: -1 };
     return mem.waypoint;
   }
   const item = nearestItem(state, me, 500, (i) => wants(me, i));
   if (item) {
-    mem.waypoint = { x: item.item.x, y: item.item.y, crate: -1 };
+    mem.waypoint = { x: item.item.x, y: item.item.y, crate: -1, item: item.item.id };
     return mem.waypoint;
   }
 
@@ -330,7 +338,7 @@ function pickGoal(
   const r = (z.shrinking ? z.targetRadius : z.radius) * 0.6;
   const angle = mem.random() * Math.PI * 2;
   const d = Math.sqrt(mem.random()) * r;
-  mem.waypoint = { x: cx + Math.cos(angle) * d, y: cy + Math.sin(angle) * d, crate: -1 };
+  mem.waypoint = { x: cx + Math.cos(angle) * d, y: cy + Math.sin(angle) * d, crate: -1, item: -1 };
   return mem.waypoint;
 }
 
@@ -356,10 +364,10 @@ function steer(
   input: PlayerInput,
   /** Con el mapa, busca el camino; sin él, va en línea recta. */
   arena: ArenaMap | null,
-  tick: number,
+  state: GameState,
 ): void {
   let angle: number | null = null;
-  const next = goal && arena ? nextStep(me, mem, goal, arena, tick) : goal;
+  const next = goal && arena ? nextStep(me, mem, goal, arena, state) : goal;
 
   if (mem.unstick > 0) {
     mem.unstick--;
@@ -401,7 +409,7 @@ function nextStep(
   mem: BotMemory,
   goal: { x: number; y: number },
   arena: ArenaMap,
-  tick: number,
+  state: GameState,
 ): { x: number; y: number } {
   const grid = navGridFor(arena);
   if (walkableLine(grid, me.x, me.y, goal.x, goal.y)) {
@@ -412,8 +420,13 @@ function nextStep(
   // El centro de la zona se corre de a poco mientras cierra: replanear por
   // cada paso sería buscar el camino casi en cada tick.
   const moved = Math.hypot(goal.x - mem.pathGoalX, goal.y - mem.pathGoalY) > 120;
-  if (budget.tick !== tick) {
-    budget.tick = tick;
+  let budget = budgets.get(state);
+  if (!budget) {
+    budget = { tick: -1, used: 0 };
+    budgets.set(state, budget);
+  }
+  if (budget.tick !== state.tick) {
+    budget.tick = state.tick;
     budget.used = 0;
   }
   if ((moved || mem.replanIn <= 0) && budget.used >= SEARCHES_PER_TICK) {

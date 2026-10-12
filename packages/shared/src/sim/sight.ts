@@ -1,5 +1,6 @@
 import { segmentBoxT } from "./collision.js";
 import type { ArenaMap, ObstacleKind } from "../map/arena.js";
+import type { GameState, PlayerState } from "./types.js";
 
 /**
  * Línea de vista. Una sola función, usada por los dos lados: el servidor la usa
@@ -68,4 +69,24 @@ export function hasLineOfSight(
   }
 
   return true;
+}
+
+/** Más cerca que esto, el que está en un arbusto se ve igual: lo tenés encima. */
+export const BUSH_SPOT_DISTANCE = 90;
+/** Lo que te delata un disparo estando en un arbusto: un segundo y medio. */
+export const BUSH_SHOT_REVEAL_TICKS = 30;
+
+/**
+ * ¿El objetivo está escondido en un arbusto para quien mira desde (x, y)?
+ * Esconderse no frena las balas, sólo la vista: el que tira a ciegas al
+ * arbusto puede pegarte igual. Disparar te delata un rato, y de muy cerca se
+ * te ve. La usan el servidor —para no mandarte a los que no ves— y los bots,
+ * para no hacer trampa.
+ */
+export function concealedFrom(state: GameState, target: PlayerState, x: number, y: number): boolean {
+  if (!target.inBush) return false;
+  if (state.tick - target.lastShotTick <= BUSH_SHOT_REVEAL_TICKS) return false;
+  const dx = target.x - x;
+  const dy = target.y - y;
+  return dx * dx + dy * dy > BUSH_SPOT_DISTANCE * BUSH_SPOT_DISTANCE;
 }

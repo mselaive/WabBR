@@ -14,7 +14,7 @@ import {
 import { lootCrates, type ArenaMap, type Obstacle } from "../map/arena.js";
 import { makeRng } from "../math.js";
 import { findPath, navGridFor, walkableLine } from "./nav.js";
-import { hasLineOfSight } from "./sight.js";
+import { concealedFrom, hasLineOfSight } from "./sight.js";
 import {
   ACT_NONE,
   ACT_PICKUP,
@@ -209,6 +209,8 @@ function nearestEnemy(state: GameState, me: PlayerState, arena: ArenaMap): Playe
     if (!p.alive || p.id === me.id) continue;
     const d2 = (p.x - me.x) ** 2 + (p.y - me.y) ** 2;
     if (d2 >= bestDist) continue;
+    // Lo mismo que vería un jugador: ni a través de paredes ni adentro de un arbusto.
+    if (concealedFrom(state, p, me.x, me.y)) continue;
     if (!hasLineOfSight(me.x, me.y, p.x, p.y, arena)) continue;
     best = p;
     bestDist = d2;

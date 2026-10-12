@@ -847,6 +847,41 @@ export function generateArena(seed = ARENA_SEED): ArenaMap {
   return { obstacles, decor, buildings, paths, ponds, districts, grid: new ObstacleGrid(obstacles) };
 }
 
+/**
+ * La mancha de cada arbusto, en coordenadas del mundo: una elipse un poco más
+ * grande que la parte frondosa del dibujo (24x18 a escala 2, apoyado en su
+ * base). Adentro de una de estas, un jugador queda tapado por el follaje.
+ */
+interface BushShape {
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+}
+
+const bushesByArena = new WeakMap<ArenaMap, BushShape[]>();
+
+function bushesOf(map: ArenaMap): BushShape[] {
+  let shapes = bushesByArena.get(map);
+  if (!shapes) {
+    shapes = map.decor
+      .filter((d) => d.kind === "bush")
+      .map((d) => ({ cx: d.x, cy: d.y - 14 * d.scale, rx: 24 * d.scale, ry: 17 * d.scale }));
+    bushesByArena.set(map, shapes);
+  }
+  return shapes;
+}
+
+/** ¿El punto está metido en un arbusto? */
+export function bushAt(map: ArenaMap, x: number, y: number): boolean {
+  for (const b of bushesOf(map)) {
+    const dx = (x - b.cx) / b.rx;
+    const dy = (y - b.cy) / b.ry;
+    if (dx * dx + dy * dy < 1) return true;
+  }
+  return false;
+}
+
 let cached: ArenaMap | null = null;
 
 /** Mapa de la partida. Se genera una sola vez por proceso. */

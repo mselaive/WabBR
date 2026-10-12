@@ -20,6 +20,7 @@ import {
   decodeClient,
   encodeServer,
   getArena,
+  concealedFrom,
   hasLineOfSight,
   packBullet,
   packGrenade,
@@ -524,7 +525,11 @@ export class GameRoom extends Server<Env> {
       this.lastSeen.set(viewer.id, seen);
     }
 
-    if (hasLineOfSight(viewer.x, viewer.y, target.x, target.y, this.arena)) {
+    // Visto: sin pared en el medio y sin estar escondido en un arbusto.
+    if (
+      !concealedFrom(this.state, target, viewer.x, viewer.y) &&
+      hasLineOfSight(viewer.x, viewer.y, target.x, target.y, this.arena)
+    ) {
       seen.set(target.id, this.state.tick);
       return true;
     }

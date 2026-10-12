@@ -1133,3 +1133,17 @@ body.playing {
   50% { content: ".."; }
   75% { content: "..."; }
 }
+
+/* Escondido en un arbusto: verde y discreto, sobre la barra de vida. */
+.hidden-tag {
+  font-size: 10px;
+  padding: 4px 8px;
+  color: #8fe08a;
+  background: rgba(13, 30, 14, 0.8);
+  border: 2px solid #3d7a37;
+  border-radius: 3px;
+}
+
+.hidden-tag[hidden] {
+  display: none;
+}

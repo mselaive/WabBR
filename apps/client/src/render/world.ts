@@ -739,7 +739,7 @@ export class WorldView {
     frame: InterpolatedFrame,
     roster: Map<number, PlayerMeta>,
     localId: number,
-    localOverride: { x: number; y: number; aim: number } | null,
+    localOverride: { x: number; y: number; aim: number; hidden: boolean } | null,
     dt: number,
   ): void {
     const seen = new Set<number>();
@@ -759,6 +759,9 @@ export class WorldView {
       view.root.position.set(x, y);
       view.root.zIndex = y;
       view.root.visible = true;
+      // Escondido en un arbusto: tu muñeco se ve medio transparente, para que
+      // sepas que los demás no te ven.
+      view.root.alpha = isLocal && localOverride?.hidden ? 0.5 : 1;
       view.gun.rotation = aim;
       // El arma se tiñe con su rareza: de un vistazo sabés con qué te disparan.
       const tier = p.slotTiers[p.activeSlot] ?? 0;

@@ -109,6 +109,7 @@ export class UI {
   private readonly staminaFill = el("staminaFill");
   private readonly consumablesEl = el("consumables");
   private readonly loadout = el("loadout");
+  private readonly hiddenTag = el("hiddenTag");
   private readonly reconnecting = el("reconnecting");
   private readonly pickupPrompt = el("pickupPrompt");
   private readonly channel = el("channel");
@@ -405,6 +406,11 @@ export class UI {
         return node;
       }),
     );
+  }
+
+  /** Aviso de que estás escondido en un arbusto. */
+  setHidden(hidden: boolean): void {
+    if (this.hiddenTag.hidden !== !hidden) this.hiddenTag.hidden = !hidden;
   }
 
   /** Aviso de "apretá E para recoger". null lo esconde. */

@@ -102,6 +102,10 @@ export interface PlayerState {
   /** Tick en que murió, para el kill feed y la cámara de espectador. -1 si vive. */
   diedAtTick: number;
   killerId: number;
+  /** Metido en un arbusto: ver `concealedFrom`. Se calcula en cada tick. */
+  inBush: boolean;
+  /** Tick del último disparo. Disparar te delata aunque estés en un arbusto. */
+  lastShotTick: number;
   /**
    * Estadísticas de la partida, para el resultado final. El daño es el que de
    * verdad entró (vida más escudo, sin pasarse de lo que le quedaba al otro):

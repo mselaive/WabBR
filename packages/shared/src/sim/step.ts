@@ -43,7 +43,7 @@ import {
   weaponStats,
   type GroundItem,
 } from "../items.js";
-import { getArena, lootCrates, spawnPoint, type ArenaMap } from "../map/arena.js";
+import { bushAt, getArena, lootCrates, spawnPoint, type ArenaMap } from "../map/arena.js";
 import { hasLineOfSight } from "./sight.js";
 import { rollCrateContents, spawnLoot } from "../map/loot.js";
 import {
@@ -113,6 +113,8 @@ export function createPlayer(id: number, x = 0, y = 0): PlayerState {
     lastSeq: 0,
     diedAtTick: -1,
     killerId: -1,
+    inBush: false,
+    lastShotTick: -1000,
     damageDealt: 0,
     damageTaken: 0,
     shotsFired: 0,
@@ -217,6 +219,8 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
     p.diedAtTick = -1;
     p.killerId = -1;
     p.place = 0;
+    p.inBush = false;
+    p.lastShotTick = -1000;
     p.damageDealt = 0;
     p.damageTaken = 0;
     p.shotsFired = 0;
@@ -745,6 +749,7 @@ function stepWeapon(
   const def = weaponStats(weaponIndex, activeTier(p));
   const firstBullet = state.nextBulletId;
   p.shotsFired += def.pellets;
+  p.lastShotTick = state.tick;
 
   for (const pellet of shotPellets(p, weaponIndex, input.seq)) {
     state.bullets.push({
@@ -1239,7 +1244,11 @@ export function step(
 
   // Antes de las balas: las de este tick se prueban contra la historia, y el
   // tramo más reciente es el de ahora.
-  for (const p of state.players) if (p.alive) recordTrail(p, state.tick);
+  for (const p of state.players) {
+    if (!p.alive) continue;
+    recordTrail(p, state.tick);
+    p.inBush = bushAt(arena, p.x, p.y);
+  }
 
   stepGrenades(state, arena, events);
   stepBullets(state, arena, events);

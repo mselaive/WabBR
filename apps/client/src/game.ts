@@ -1,6 +1,7 @@
 import { Application } from "pixi.js";
 import {
   BTN_RELOAD,
+  BUSH_SHOT_REVEAL_TICKS,
   BTN_SHOOT,
   BTN_SPRINT,
   CONSUMABLES,
@@ -15,6 +16,7 @@ import {
   WORLD_CENTER_Y,
   WORLD_RADIUS,
   ZONE_PHASES,
+  bushAt,
   consumableAt,
   getArena,
   itemName,
@@ -97,6 +99,8 @@ export class Game {
   private lastLocal: UnpackedPlayer | null = null;
   /** Dónde se dibujó tu muñeco en el último cuadro: de ahí salen tus disparos en pantalla. */
   private lastDrawn: { x: number; y: number } | null = null;
+  /** Cuándo disparaste por última vez (performance.now()): disparar te delata en un arbusto. */
+  private lastShotAt = -Infinity;
   /** Tick del servidor que se mostró en el último cuadro: viaja con cada input (compensación de lag). */
   private viewTick = -1;
   /**
@@ -161,6 +165,24 @@ export class Game {
         camara: () => this.world.debugCamera(),
         cortar: () => this.net?.simulateDrop(),
         paquetes: () => [...(this.snapshots.latest?.airdrops.values() ?? [])],
+        // El centro del follaje del arbusto más cercano, para probar el escondite.
+        arbusto: () => {
+          const me = this.lastLocal;
+          if (!me) return null;
+          let best: { x: number; y: number } | null = null;
+          let bestD = Infinity;
+          for (const d of this.arena.decor) {
+            if (d.kind !== "bush") continue;
+            const c = { x: d.x, y: d.y - 14 * d.scale };
+            const dist = Math.hypot(c.x - me.x, c.y - me.y);
+            if (dist < bestD) {
+              bestD = dist;
+              best = c;
+            }
+          }
+          return best;
+        },
+        escondido: () => !document.getElementById("hiddenTag")!.hidden,
         // Espectando: lleva la cámara libre a un punto, para mirar algo de cerca.
         mirar: (x: number, y: number) => {
           this.freeCam = { x, y };
@@ -575,11 +597,19 @@ export class Game {
     this.lastDrawn = localPredicted;
 
     const aim = this.currentAim();
+    // La misma regla que aplica el servidor (concealedFrom): en un arbusto y
+    // sin haber disparado hace poco. Que alguien muy cerca te vea igual no se
+    // puede saber desde acá, y no hace falta: lo vas a tener encima.
+    const hidden =
+      localPredicted !== null &&
+      bushAt(this.arena, localPredicted.x, localPredicted.y) &&
+      now - this.lastShotAt > BUSH_SHOT_REVEAL_TICKS * MS_PER_TICK;
+    this.ui.setHidden(hidden);
     this.world.update(
       { ...frame, bullets },
       this.roster,
       this.localId,
-      localPredicted ? { ...localPredicted, aim } : null,
+      localPredicted ? { ...localPredicted, aim, hidden } : null,
       dt,
     );
 
@@ -628,6 +658,7 @@ export class Game {
 
   /** Disparaste: la bala, el fogonazo y el retroceso salen ya, sin esperar al servidor. */
   private onLocalShot(shot: PredictedShot): void {
+    this.lastShotAt = performance.now();
     const me = this.predictor!.state;
     // La bala sale de la posición simulada, que es por donde va la real, pero
     // en pantalla arranca del arma tal como se ve.

@@ -340,6 +340,14 @@ de perderlo de vista, porque si no caminar al lado de una columna lo hace
 parpadear. Y los muertos ven todo, para que mirar la partida siga teniendo
 sentido.
 
+**Los arbustos esconden.** Metido en uno, los demás dejan de verte: el servidor no te
+manda en su snapshot, igual que detrás de una pared. Tres reglas lo mantienen justo
+(`concealedFrom` en `sight.ts`): de muy cerca (90 px) se te ve igual, disparar te
+delata un segundo y medio, y esconderse no frena las balas —el que tira a ciegas al
+arbusto te puede pegar—. Los bots respetan lo mismo. Tu muñeco se ve medio
+transparente y aparece "Escondido en el arbusto" sobre la vida, así sabés que
+funciona. Es lo que hace útil al Parque: cruzar el mapa sin que te vean.
+
 Al morir se sigue a quien te mató. Con click o con las flechas se pasa a otro
 jugador vivo, y el HUD muestra su vida, su arma y su mochila; con `Espacio` se
 suelta la cámara y se recorre el mapa con `WASD`. La tabla con `Tab` también

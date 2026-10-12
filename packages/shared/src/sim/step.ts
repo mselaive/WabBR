@@ -554,19 +554,9 @@ function handleAction(
   }
 
   if (act === ACT_THROW) {
-    if (p.grenades <= 0 || p.useCd > 0) return;
+    if (!canThrow(p)) return;
     p.grenades--;
-    const cos = Math.cos(p.aim);
-    const sin = Math.sin(p.aim);
-    state.grenades.push({
-      id: state.nextGrenadeId++,
-      ownerId: p.id,
-      x: p.x + cos * (PLAYER_RADIUS + 12),
-      y: p.y + sin * (PLAYER_RADIUS + 12),
-      vx: cos * GRENADE_SPEED,
-      vy: sin * GRENADE_SPEED,
-      fuse: GRENADE_FUSE_TICKS,
-    });
+    state.grenades.push({ id: state.nextGrenadeId++, ownerId: p.id, ...grenadeLaunch(p) });
     return;
   }
 
@@ -872,8 +862,10 @@ export function applyExplosion(
   byId: number,
   arena: ArenaMap,
   events: SimEvent[],
+  /** La granada que estalló, si fue una: el que la tiró ya dibujó su explosión. */
+  grenade = -1,
 ): void {
-  events.push({ t: "explosion", x, y, byId });
+  events.push({ t: "explosion", x, y, byId, grenade });
 
   for (const p of state.players) {
     if (!p.alive) continue;
@@ -911,34 +903,64 @@ function grenadeBlocked(x: number, y: number, arena: ArenaMap): boolean {
   return false;
 }
 
+/** ¿Puede tirar una granada? Curándose no: tiene las manos ocupadas. */
+export function canThrow(p: PlayerState): boolean {
+  return p.grenades > 0 && p.useCd === 0;
+}
+
+/** Dónde aparece y con qué velocidad sale una granada tirada ahora. */
+export function grenadeLaunch(p: PlayerState): { x: number; y: number; vx: number; vy: number; fuse: number } {
+  const cos = Math.cos(p.aim);
+  const sin = Math.sin(p.aim);
+  return {
+    x: p.x + cos * (PLAYER_RADIUS + 12),
+    y: p.y + sin * (PLAYER_RADIUS + 12),
+    vx: cos * GRENADE_SPEED,
+    vy: sin * GRENADE_SPEED,
+    fuse: GRENADE_FUSE_TICKS,
+  };
+}
+
+/**
+ * Un tick de una granada: mecha, rebote y rozamiento. Devuelve false si le
+ * toca estallar. La comparten el servidor y el cliente, que dibuja la suya sin
+ * esperarlo: con el mismo mapa y los mismos números, rueda por el mismo lado.
+ */
+export function advanceGrenade(
+  g: { x: number; y: number; vx: number; vy: number; fuse: number },
+  arena: ArenaMap,
+): boolean {
+  g.fuse--;
+  if (g.fuse <= 0) return false;
+
+  // Rebote por eje: es lo que permite tirarla contra una pared para que caiga
+  // del otro lado de una esquina.
+  let nx = g.x + g.vx * DT;
+  if (grenadeBlocked(nx, g.y, arena)) {
+    g.vx = -g.vx * GRENADE_BOUNCE;
+    nx = g.x;
+  }
+  let ny = g.y + g.vy * DT;
+  if (grenadeBlocked(nx, ny, arena)) {
+    g.vy = -g.vy * GRENADE_BOUNCE;
+    ny = g.y;
+  }
+
+  g.x = nx;
+  g.y = ny;
+  g.vx *= GRENADE_FRICTION;
+  g.vy *= GRENADE_FRICTION;
+  return true;
+}
+
 function stepGrenades(state: GameState, arena: ArenaMap, events: SimEvent[]): void {
   const kept: GrenadeState[] = [];
 
   for (const g of state.grenades) {
-    g.fuse--;
-    if (g.fuse <= 0) {
-      applyExplosion(state, g.x, g.y, g.ownerId, arena, events);
+    if (!advanceGrenade(g, arena)) {
+      applyExplosion(state, g.x, g.y, g.ownerId, arena, events, g.id);
       continue;
     }
-
-    // Rebote por eje: es lo que permite tirarla contra una pared para que caiga
-    // del otro lado de una esquina.
-    let nx = g.x + g.vx * DT;
-    if (grenadeBlocked(nx, g.y, arena)) {
-      g.vx = -g.vx * GRENADE_BOUNCE;
-      nx = g.x;
-    }
-    let ny = g.y + g.vy * DT;
-    if (grenadeBlocked(nx, ny, arena)) {
-      g.vy = -g.vy * GRENADE_BOUNCE;
-      ny = g.y;
-    }
-
-    g.x = nx;
-    g.y = ny;
-    g.vx *= GRENADE_FRICTION;
-    g.vy *= GRENADE_FRICTION;
-
     kept.push(g);
   }
 
@@ -1225,7 +1247,14 @@ export function step(
       const list: readonly PlayerInput[] = isInputList(input) ? input : [input];
       for (const one of list) {
         stepPlayerMovement(p, one, arena);
-        if (one.act !== 0) handleAction(state, p, one.act, arena, events);
+        if (one.act !== 0) {
+          const before = state.nextGrenadeId;
+          handleAction(state, p, one.act, arena, events);
+          // Como el "shot" de las balas: le dice al que la tiró cuál es la suya.
+          if (state.nextGrenadeId > before) {
+            events.push({ t: "throw", byId: p.id, seq: one.seq, grenade: before });
+          }
+        }
         stepConsumable(p, one, events);
         stepWeapon(state, p, one, events);
       }

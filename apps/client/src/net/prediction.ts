@@ -1,9 +1,12 @@
 import {
   ACT_NONE,
+  ACT_THROW,
   PLAYER_MAX_HP,
   activeTier,
   applySelfAction,
+  canThrow,
   createPlayer,
+  grenadeLaunch,
   shotPellets,
   stepConsumable,
   stepPlayerMovement,
@@ -33,6 +36,12 @@ export interface PredictedShot {
   pellets: Pellet[];
 }
 
+/** Una granada tirada desde acá: con qué input y cómo sale. */
+export interface PredictedThrow {
+  seq: number;
+  launch: ReturnType<typeof grenadeLaunch>;
+}
+
 /** Los eventos que generan las funciones compartidas no le importan a la predicción. */
 const discard: SimEvent[] = [];
 
@@ -57,6 +66,10 @@ export class Predictor {
    */
   private prevX = 0;
   private prevY = 0;
+  /** Granada tirada en el último apply(), pendiente de que el juego la levante. */
+  private thrown: PredictedThrow | null = null;
+  /** Re-aplicando inputs ya dibujados: lo que salga acá no es nuevo. */
+  private replaying = false;
 
   constructor(id: number) {
     this.state = createPlayer(id);
@@ -102,7 +115,15 @@ export class Predictor {
    */
   private step(input: PlayerInput, arena: ArenaMap): number {
     stepPlayerMovement(this.state, input, arena);
-    if (input.act !== ACT_NONE) applySelfAction(this.state, input.act);
+    if (input.act === ACT_THROW) {
+      // El mismo orden que el servidor: después de moverse, antes del arma.
+      if (canThrow(this.state)) {
+        this.state.grenades--;
+        if (!this.replaying) this.thrown = { seq: input.seq, launch: grenadeLaunch(this.state) };
+      }
+    } else if (input.act !== ACT_NONE) {
+      applySelfAction(this.state, input.act);
+    }
     stepConsumable(this.state, input, discard);
     const weapon = stepWeaponState(this.state, input, discard);
     discard.length = 0;
@@ -140,16 +161,19 @@ export class Predictor {
     s.consumables = [...server.consumables];
     s.useCd = server.useCd;
     s.useIndex = server.useIndex;
+    s.grenades = server.grenades;
     s.fireCd = server.fireCd;
     s.reloadCd = server.reloadCd;
 
+    this.replaying = true;
     for (const input of this.pending) {
       // Igual que en apply(): el tramo a interpolar es el del último paso.
       this.prevX = this.state.x;
       this.prevY = this.state.y;
-      // Los disparos que salgan acá ya se dibujaron cuando se apretó el gatillo.
+      // Los disparos y granadas que salgan acá ya se dibujaron al apretar.
       this.step(input, arena);
     }
+    this.replaying = false;
 
     const dx = prevX - this.state.x;
     const dy = prevY - this.state.y;
@@ -192,6 +216,13 @@ export class Predictor {
       x: this.prevX + (this.state.x - this.prevX) * t + this.errX,
       y: this.prevY + (this.state.y - this.prevY) * t + this.errY,
     };
+  }
+
+  /** La granada que se tiró en el último input, si hubo una. Se vacía al leerla. */
+  takeThrow(): PredictedThrow | null {
+    const t = this.thrown;
+    this.thrown = null;
+    return t;
   }
 
   get pendingCount(): number {

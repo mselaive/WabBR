@@ -429,6 +429,13 @@ cuanto el servidor confirma ese input sin el `shot`; si el servidor hizo uno que
 balas se dibujan como las de cualquiera. Para esto la tupla de tu propio jugador trae, al final, los
 ticks de cadencia y de recarga que faltan; a los demás no se les mandan.
 
+Las **granadas** tenían el mismo atraso y tienen el mismo arreglo: salen de la mano
+en el input en que apretás `G` y ruedan con la misma física que en el servidor
+(`advanceGrenade`), así que rebotan igual y estallan en el mismo lugar —hay un test
+que lo compara con 200 ms de ping—. El evento `throw` las empareja con las del
+servidor, como `shot` a las balas. La explosión se dibuja al acabarse la mecha
+acá; el daño lo sigue decidiendo el servidor.
+
 Lo que decide si le pegaste sigue siendo el servidor. Tu bala se frena contra el jugador tal como lo
 ves, pero la sangre y el número de daño llegan sólo con el evento `hit`. Para que los dos coincidan
 está la compensación de lag (abajo).

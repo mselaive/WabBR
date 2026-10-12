@@ -42,6 +42,7 @@ import { Net, diagnoseConnection } from "./net/connection.js";
 import { SnapshotBuffer } from "./net/interpolation.js";
 import { Predictor, type PredictedShot } from "./net/prediction.js";
 import { LocalShots } from "./net/shots.js";
+import { LocalGrenades } from "./net/grenades.js";
 import { InputController, type SpectateIntent } from "./input.js";
 import { WorldView } from "./render/world.js";
 import { Minimap } from "./render/minimap.js";
@@ -65,6 +66,8 @@ export class Game {
   private predictor: Predictor | null = null;
   /** Tus balas, que se dibujan desde el click sin esperar al servidor. */
   private readonly shots = new LocalShots();
+  /** Tus granadas, igual: salen de la mano al apretar G. */
+  private readonly grenades = new LocalGrenades();
   /**
    * Efectos de lo que no es tuyo, esperando a que el dibujo llegue a su momento.
    * Los demás jugadores se ven `INTERP_DELAY_MS` en el pasado: si el fogonazo
@@ -263,6 +266,7 @@ export class Game {
     this.predictor = null;
     this.snapshots.clear();
     this.shots.clear();
+    this.grenades.clear();
     this.deferred = [];
     this.announcedAirdrops.clear();
     this.roster.clear();
@@ -323,6 +327,7 @@ export class Game {
         this.viewTick = -1;
         this.snapshots.clear();
         this.shots.clear();
+        this.grenades.clear();
         this.deferred = [];
         this.announcedAirdrops.clear();
         this.world.reset();
@@ -394,7 +399,10 @@ export class Game {
     if (msg.ev) this.handleEvents(msg.ev);
     // Después de los eventos: un tiro predicho cuyo input ya se procesó y no
     // trajo su "shot" en este mismo snapshot no salió nunca.
-    if (me) this.shots.settle(me.lastSeq);
+    if (me) {
+      this.shots.settle(me.lastSeq);
+      this.grenades.settle(me.lastSeq);
+    }
     if (previousPhase !== this.phase) this.onPhaseChange(this.phase, msg);
   }
 
@@ -419,6 +427,7 @@ export class Game {
       this.world.reset();
       this.snapshots.clear();
       this.shots.clear();
+      this.grenades.clear();
       this.deferred = [];
       this.predictor = null;
       this.spawned = false;
@@ -502,7 +511,12 @@ export class Game {
           });
           break;
         }
+        case "throw":
+          if (ev.byId === this.localId) this.grenades.confirm(ev.seq, ev.grenade);
+          break;
         case "explosion": {
+          // La tuya ya estalló en pantalla cuando se le acabó la mecha acá.
+          if (this.grenades.covers(ev.grenade)) break;
           this.world.spawnExplosion(ev.x, ev.y);
           // El sacudón cae con la distancia: una explosión lejos se ve, no se siente.
           const me = this.lastLocal;
@@ -572,6 +586,7 @@ export class Game {
     while (this.inputAccumulator >= MS_PER_TICK) {
       this.inputAccumulator -= MS_PER_TICK;
       this.tickInput();
+      this.tickGrenades();
     }
 
     const now = performance.now();
@@ -590,6 +605,8 @@ export class Game {
     // Las del servidor que ya dibujamos nosotros no se dibujan dos veces.
     const bullets = frame.bullets.filter((b) => !this.shots.covers(b.id));
     bullets.push(...this.shots.bullets());
+    const grenades = frame.grenades.filter((g) => !this.grenades.covers(g.id));
+    grenades.push(...this.grenades.grenades(this.inputAccumulator / MS_PER_TICK));
 
     // Cuánto se avanzó del tick en curso: con esto el muñeco se dibuja entre dos
     // pasos de simulación en vez de saltar de uno al otro.
@@ -608,7 +625,7 @@ export class Game {
       now - this.lastShotAt > BUSH_SHOT_REVEAL_TICKS * MS_PER_TICK;
     this.ui.setHidden(hidden);
     this.world.update(
-      { ...frame, bullets },
+      { ...frame, bullets, grenades },
       this.roster,
       this.localId,
       localPredicted ? { ...localPredicted, aim, hidden } : null,
@@ -642,6 +659,8 @@ export class Game {
     const input = this.input.sample(this.seq++, aim, this.viewTick);
     const shot = this.predictor.apply(input, this.arena);
     if (shot) this.onLocalShot(shot);
+    const thrown = this.predictor.takeThrow();
+    if (thrown) this.grenades.throw(thrown.seq, thrown.launch);
 
     this.net.send({
       t: "in",
@@ -656,6 +675,19 @@ export class Game {
       act: input.act,
       ...(input.view >= 0 ? { vt: Math.round(input.view * 10) } : {}),
     });
+  }
+
+  /**
+   * Un tick de tus granadas, después del input como stepGrenades en el
+   * servidor: la recién tirada ya avanza en este mismo tick. Va aparte del
+   * input porque sigue aunque mueras con una en el aire.
+   */
+  private tickGrenades(): void {
+    for (const blast of this.grenades.tick(this.arena)) {
+      this.world.spawnExplosion(blast.x, blast.y);
+      const me = this.lastDrawn;
+      if (me) this.world.addShake(Math.max(0, 18 * (1 - Math.hypot(me.x - blast.x, me.y - blast.y) / 340)));
+    }
   }
 
   /** Disparaste: la bala, el fogonazo y el retroceso salen ya, sin esperar al servidor. */

@@ -272,6 +272,15 @@ export type SimEvent =
   | { t: "drop"; item: GroundItem }
   | { t: "heal"; byId: number; amount: number }
   | { t: "crate"; crateId: number; x: number; y: number; byId: number }
-  | { t: "explosion"; x: number; y: number; byId: number }
+  | {
+      t: "explosion";
+      x: number;
+      y: number;
+      byId: number;
+      /** Granada que estalló, o -1 si fue otra cosa. */
+      grenade: number;
+    }
+  /** Tiró una granada: con el seq del input, el que la tiró reconoce la suya. */
+  | { t: "throw"; byId: number; seq: number; grenade: number }
   /** Aterrizó un paquete aéreo: su botín llega con eventos "drop". */
   | { t: "airdrop"; x: number; y: number };

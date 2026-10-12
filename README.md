@@ -100,7 +100,11 @@ de 26 y 34 px; con celdas de 20 px casas enteras quedaban como cerradas.
 
 Cuestan poco: unos 0,1 ms por tick con 12 bots. Las búsquedas de camino tienen un
 cupo de dos por tick entre todos —al arrancar la partida todos quieren la suya a la
-vez— y una sala con bots solos cuenta como vacía y se apaga.
+vez— y una sala con bots solos cuenta como vacía y se apaga. La grilla además sabe qué zonas
+están conectadas entre sí (se calcula una vez por mapa): pedir un camino a un lugar encerrado
+antes recorría toda la zona alcanzable antes de rendirse, y con dos búsquedas así en el mismo
+tick el servidor llegaba a 60 ms (el tick dura 50). Ahora se contesta al instante; con 16 bots el
+peor tick de una partida entera baja a unos 16 ms, y es el del arranque.
 
 `node scripts/server-bots.mjs` prueba contra el servidor local que una partida con
 bots se juegue entera.

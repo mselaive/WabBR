@@ -83,4 +83,30 @@ describe("caminos de los bots", () => {
     };
     expect(findPath(navGridFor(map), WORLD_CENTER_X, WORLD_CENTER_Y, 1800, 1800)).toBeNull();
   });
+
+  it("a un lugar encerrado contesta que no hay camino sin recorrer el mapa", () => {
+    // Un cuarto cerrado de cuatro paredes en el medio del mapa vacío.
+    const x = WORLD_CENTER_X;
+    const y = WORLD_CENTER_Y;
+    const obstacles = [
+      { kind: "wall" as const, x: x - 100, y: y - 100, w: 200, h: 20, variant: 0 },
+      { kind: "wall" as const, x: x - 100, y: y + 80, w: 200, h: 20, variant: 0 },
+      { kind: "wall" as const, x: x - 100, y: y - 100, w: 20, h: 200, variant: 0 },
+      { kind: "wall" as const, x: x + 80, y: y - 100, w: 20, h: 200, variant: 0 },
+    ];
+    const room: ArenaMap = { obstacles, decor: [], buildings: [], paths: [], ponds: [], districts: [], grid: new ObstacleGrid(obstacles) };
+    const grid = navGridFor(room);
+    const inside = grid.region[Math.floor(y / grid.cell) * grid.cols + Math.floor(x / grid.cell)];
+    const outside = grid.region[Math.floor(y / grid.cell) * grid.cols + Math.floor((x - 400) / grid.cell)];
+    expect(inside).toBeGreaterThan(0);
+    expect(outside).toBeGreaterThan(0);
+    expect(inside).not.toBe(outside);
+
+    const t0 = performance.now();
+    expect(findPath(grid, x - 400, y, x, y)).toBeNull();
+    // Antes recorría toda la zona de afuera: decenas de milisegundos.
+    expect(performance.now() - t0).toBeLessThan(5);
+    // Y adentro sí se llega.
+    expect(findPath(grid, x - 40, y - 40, x + 40, y + 40)).not.toBeNull();
+  });
 });

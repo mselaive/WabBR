@@ -14,6 +14,11 @@ export interface NavGrid {
   rows: number;
   /** 1 = se puede parar ahí un jugador. */
   walkable: Uint8Array;
+  /**
+   * A qué zona conectada pertenece cada celda caminable (0 = no caminable).
+   * Dos celdas de zonas distintas no tienen camino: findPath lo sabe sin buscar.
+   */
+  region: Int32Array;
 }
 
 /**
@@ -67,9 +72,47 @@ export function navGridFor(arena: ArenaMap): NavGrid {
     }
   }
 
-  const grid = { cell: CELL, cols, rows, walkable };
+  const grid = { cell: CELL, cols, rows, walkable, region: regionsOf(walkable, cols, rows) };
   grids.set(arena, grid);
   return grid;
+}
+
+/**
+ * Las zonas conectadas de la grilla, con un relleno por inundación. Sin esto,
+ * pedir un camino a un lugar encerrado —un hueco entre muebles, una caja
+ * rodeada— recorría toda la zona alcanzable antes de rendirse: 30 ms por
+ * búsqueda, y con dos por tick el servidor se pasaba de los 50 ms del tick.
+ *
+ * Alcanza con los cuatro vecinos derechos: findPath sólo va en diagonal si las
+ * dos celdas de al lado también se pisan, así que conecta lo mismo.
+ */
+function regionsOf(walkable: Uint8Array, cols: number, rows: number): Int32Array {
+  const region = new Int32Array(cols * rows);
+  const stack: number[] = [];
+  let next = 0;
+  for (let start = 0; start < region.length; start++) {
+    if (!walkable[start] || region[start] !== 0) continue;
+    next++;
+    region[start] = next;
+    stack.push(start);
+    while (stack.length > 0) {
+      const i = stack.pop()!;
+      const c = i % cols;
+      const r = (i - c) / cols;
+      if (c > 0) visit(i - 1);
+      if (c < cols - 1) visit(i + 1);
+      if (r > 0) visit(i - cols);
+      if (r < rows - 1) visit(i + cols);
+    }
+  }
+  return region;
+
+  function visit(j: number): void {
+    if (walkable[j] && region[j] === 0) {
+      region[j] = next;
+      stack.push(j);
+    }
+  }
 }
 
 function cellOf(grid: NavGrid, x: number, y: number): number {
@@ -218,6 +261,8 @@ export function findPath(
   const goal = nearestWalkable(grid, cellOf(grid, toX, toY));
   if (start < 0 || goal < 0) return null;
   if (start === goal) return [{ x: toX, y: toY }];
+  // Sin camino posible: se sabe sin buscar (ver regionsOf).
+  if (grid.region[start] !== grid.region[goal]) return null;
 
   // Los buffers se reusan entre búsquedas: cada bot replanea cada tanto y
   // pedir (y limpiar) medio mega de memoria cada vez es trabajo de más.

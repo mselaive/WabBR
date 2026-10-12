@@ -207,7 +207,7 @@ mapa, y su id es su orden de aparición.
 Cada arma tiene un **techo de rareza** (`maxTier`). El francotirador tope en
 épica: con el multiplicador legendario haría 104 de daño y mataría de un tiro
 desde fuera de la pantalla, que no es una pelea sino una lotería. Hay un test
-que recorre las cinco armas en su rareza máxima y falla si alguna puede matar de
+que recorre todas las armas en su rareza máxima y falla si alguna puede matar de
 un disparo a alguien con la vida llena, así que tocar los multiplicadores sin
 pensarlo avisa solo.
 

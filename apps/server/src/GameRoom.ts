@@ -20,6 +20,7 @@ import {
   packGrenade,
   packItem,
   packPlayer,
+  packResults,
   packSnapshotArrays,
   sanitizeName,
   startMatch,
@@ -431,6 +432,8 @@ export class GameRoom extends Server<Env> {
           bullets: packed.bullets,
           gr: s.grenades.map(packGrenade),
           ...(this.events.length > 0 ? { ev: this.events } : {}),
+          // El resultado completo, mientras se muestra la pantalla final.
+          ...(s.phase === "ended" ? { res: packResults(s) } : {}),
         }),
       );
       this.events = [];

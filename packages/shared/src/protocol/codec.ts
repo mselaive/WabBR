@@ -5,6 +5,7 @@ import type {
   SnapGrenade,
   SnapItem,
   SnapPlayer,
+  SnapResult,
   SnapZone,
 } from "./messages.js";
 import {
@@ -290,6 +291,41 @@ export function unpackZone(s: SnapZone): UnpackedZone {
     phase: s[6],
     shrinking: s[7] === 1,
     ticksLeft: s[8],
+  };
+}
+
+/** Las estadísticas de los que jugaron, para el resultado final. */
+export function packResults(state: GameState): SnapResult[] {
+  return state.players
+    .filter((p) => p.place > 0)
+    .map((p) => [
+      p.id,
+      Math.round(p.damageDealt),
+      Math.round(p.damageTaken),
+      p.shotsFired,
+      p.shotsHit,
+      p.diedAtTick >= 0 ? p.diedAtTick : state.tick,
+    ]);
+}
+
+export interface UnpackedResult {
+  id: number;
+  damageDealt: number;
+  damageTaken: number;
+  shotsFired: number;
+  shotsHit: number;
+  /** Ticks que aguantó vivo desde que arrancó la partida. */
+  survivedTicks: number;
+}
+
+export function unpackResult(s: SnapResult): UnpackedResult {
+  return {
+    id: s[0],
+    damageDealt: s[1],
+    damageTaken: s[2],
+    shotsFired: s[3],
+    shotsHit: s[4],
+    survivedTicks: s[5],
   };
 }
 

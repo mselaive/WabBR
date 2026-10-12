@@ -23,6 +23,7 @@ import {
   rarityAt,
   unpackAim,
   unpackItem,
+  unpackResult,
   weaponStats,
   type ArenaMap,
   type GroundItem,
@@ -32,6 +33,7 @@ import {
   type SimEvent,
   type SnapshotMsg,
   type UnpackedPlayer,
+  type UnpackedResult,
 } from "@wabbr/shared";
 import { Net, diagnoseConnection } from "./net/connection.js";
 import { SnapshotBuffer } from "./net/interpolation.js";
@@ -41,7 +43,7 @@ import { InputController, type SpectateIntent } from "./input.js";
 import { WorldView } from "./render/world.js";
 import { Minimap } from "./render/minimap.js";
 import { causeIconUrl } from "./render/textures.js";
-import { UI, type ResultRow } from "./ui.js";
+import { UI, type Award, type ResultRow } from "./ui.js";
 
 /** Cuánto tira la cámara hacia el cursor (0 = centrada en el jugador). */
 const CAMERA_LEAD = 0.18;
@@ -351,6 +353,7 @@ export class Game {
    * decide un battle royale; las kills desempatan y se muestran al lado.
    */
   private showResult(msg: SnapshotMsg): void {
+    const results = new Map((msg.res ?? []).map(unpackResult).map((r) => [r.id, r]));
     const rows: ResultRow[] = [];
     for (const [id, kills, , place = 0] of msg.st) {
       // Sin puesto es que no jugó esta partida: entró a mirar.
@@ -363,6 +366,10 @@ export class Game {
         place,
         isLocal: id === this.localId,
         left: !this.roster.has(id),
+        damage: results.get(id)?.damageDealt ?? 0,
+        accuracy: shotAccuracy(results.get(id)),
+        shots: results.get(id)?.shotsFired ?? 0,
+        survived: (results.get(id)?.survivedTicks ?? 0) / TICK_RATE,
       });
     }
     rows.sort((a, b) => a.place - b.place || b.kills - a.kills);
@@ -377,7 +384,7 @@ export class Game {
     const subtitle = winner
       ? `${winner.name} quedó último en pie.`
       : "Nadie sobrevivió a la zona.";
-    this.ui.showResult(title, subtitle, rows);
+    this.ui.showResult(title, subtitle, rows, awardsFor(rows));
   }
 
   private handleEvents(events: SimEvent[]): void {
@@ -873,6 +880,44 @@ export class Game {
     this.disconnect();
     this.app.destroy(true);
   }
+}
+
+/**
+ * Para la puntería hace falta haber tirado bastante: con dos tiros y uno
+ * adentro, cualquiera tendría 50 % y le ganaría al que se pasó la partida
+ * peleando. 20 proyectiles son 20 tiros de pistola o tres escopetazos.
+ */
+const MIN_SHOTS_FOR_ACCURACY = 20;
+
+function shotAccuracy(r: UnpackedResult | undefined): number | null {
+  return r && r.shotsFired > 0 ? r.shotsHit / r.shotsFired : null;
+}
+
+/**
+ * Los premios del resultado. Sólo si valen algo: nadie es "el de más daño"
+ * con cero, y la puntería pide un mínimo de tiros.
+ */
+function awardsFor(rows: ResultRow[]): Award[] {
+  const best = <T>(list: T[], score: (x: T) => number): T | undefined =>
+    list.reduce<T | undefined>((top, x) => (top === undefined || score(x) > score(top) ? x : top), undefined);
+
+  const awards: Award[] = [];
+  const damage = best(rows, (r) => r.damage);
+  if (damage && damage.damage > 0) {
+    awards.push({ label: "MÁS DAÑO", name: damage.name, colorIndex: damage.colorIndex, value: String(Math.round(damage.damage)) });
+  }
+  const kills = best(rows, (r) => r.kills);
+  if (kills && kills.kills > 0) {
+    awards.push({ label: "MÁS KILLS", name: kills.name, colorIndex: kills.colorIndex, value: String(kills.kills) });
+  }
+  const aim = best(
+    rows.filter((r) => r.shots >= MIN_SHOTS_FOR_ACCURACY && (r.accuracy ?? 0) > 0),
+    (r) => r.accuracy ?? 0,
+  );
+  if (aim) {
+    awards.push({ label: "MEJOR PUNTERÍA", name: aim.name, colorIndex: aim.colorIndex, value: `${Math.round((aim.accuracy ?? 0) * 100)}%` });
+  }
+  return awards;
 }
 
 /** 0x4aa3ff -> "#4aa3ff". La paleta vive en shared como número. */

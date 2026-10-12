@@ -24,6 +24,21 @@ export interface ResultRow {
   isLocal: boolean;
   /** Se desconectó antes de que terminara. */
   left: boolean;
+  damage: number;
+  /** Aciertos sobre disparos, de 0 a 1. null si no disparó. */
+  accuracy: number | null;
+  /** Proyectiles disparados: la puntería con muy pocos no dice nada. */
+  shots: number;
+  /** Segundos que aguantó vivo. */
+  survived: number;
+}
+
+/** Un premio del resultado: "más daño", "mejor puntería"... */
+export interface Award {
+  label: string;
+  name: string;
+  colorIndex: number;
+  value: string;
 }
 
 /** Clase del puesto para pintarlo de oro, plata o bronce. */
@@ -31,6 +46,19 @@ const MEDAL = ["", "gold", "silver", "bronze"];
 
 function killsText(kills: number): string {
   return kills === 1 ? "1 kill" : `${kills} kills`;
+}
+
+/** 154 -> "2:34" */
+function clock(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+function cell(text: string, className = "num"): HTMLSpanElement {
+  const span = document.createElement("span");
+  span.className = className;
+  span.textContent = text;
+  return span;
 }
 
 function el<T extends HTMLElement>(id: string): T {
@@ -96,6 +124,7 @@ export class UI {
   private readonly resultTitle = el("resultTitle");
   private readonly resultSubtitle = el("resultSubtitle");
   private readonly podium = el("podium");
+  private readonly awards = el("awards");
   private readonly standings = el("standings");
 
   private ready = false;
@@ -487,7 +516,7 @@ export class UI {
    * Pantalla final: un podio con los tres primeros y abajo la tabla completa.
    * `rows` viene ordenada por puesto y, dentro del mismo puesto, por kills.
    */
-  showResult(title: string, subtitle: string, rows: ResultRow[]): void {
+  showResult(title: string, subtitle: string, rows: ResultRow[], awards: Award[]): void {
     this.resultTitle.textContent = title;
     this.resultSubtitle.textContent = subtitle;
 
@@ -497,7 +526,33 @@ export class UI {
     this.podium.hidden = top.length === 0;
     this.podium.replaceChildren(...order.map((slot) => this.podiumSpot(top[slot]!, slot)));
 
+    this.awards.hidden = awards.length === 0;
+    this.awards.replaceChildren(
+      ...awards.map((a) => {
+        const card = document.createElement("div");
+        card.className = "award";
+        const who = cell(a.name, "award-who");
+        who.style.color = hex(playerColor(a.colorIndex));
+        card.append(cell(a.label, "award-label"), who, cell(a.value, "award-value"));
+        return card;
+      }),
+    );
+
+    const head = document.createElement("li");
+    head.className = "result-head";
+    head.setAttribute("aria-hidden", "true");
+    head.append(
+      cell("#", "place"),
+      cell("", ""),
+      cell("Jugador", "who"),
+      cell("Kills"),
+      cell("Daño"),
+      cell("Punt."),
+      cell("Vivo"),
+    );
+
     this.standings.replaceChildren(
+      head,
       ...rows.map((r) => {
         const li = document.createElement("li");
         li.className = r.isLocal ? "player-row standing me" : "player-row standing";
@@ -514,20 +569,22 @@ export class UI {
         const who = document.createElement("span");
         who.className = "who";
         who.textContent = r.isLocal ? `${r.name} (vos)` : r.name;
-
-        li.append(place, swatch, who);
-
         if (r.left) {
           const left = document.createElement("span");
           left.className = "tag";
           left.textContent = "se fue";
-          li.append(left);
+          who.append(" ", left);
         }
 
-        const kills = document.createElement("span");
-        kills.className = "tag";
-        kills.textContent = killsText(r.kills);
-        li.append(kills);
+        li.append(
+          place,
+          swatch,
+          who,
+          cell(String(r.kills)),
+          cell(String(Math.round(r.damage))),
+          cell(r.accuracy === null ? "—" : `${Math.round(r.accuracy * 100)}%`),
+          cell(clock(r.survived)),
+        );
         return li;
       }),
     );

@@ -109,6 +109,10 @@ export function createPlayer(id: number, x = 0, y = 0): PlayerState {
     lastSeq: 0,
     diedAtTick: -1,
     killerId: -1,
+    damageDealt: 0,
+    damageTaken: 0,
+    shotsFired: 0,
+    shotsHit: 0,
     place: -1,
     trail: new Array<number>(TRAIL_LENGTH * 2).fill(0).map((_, i) => (i % 2 === 0 ? x : y)),
   };
@@ -205,6 +209,10 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
     p.diedAtTick = -1;
     p.killerId = -1;
     p.place = 0;
+    p.damageDealt = 0;
+    p.damageTaken = 0;
+    p.shotsFired = 0;
+    p.shotsHit = 0;
     // Sin historia previa: hasta que la haya, rebobinarlo da donde apareció.
     for (let i = 0; i < TRAIL_LENGTH; i++) {
       p.trail[i * 2] = p.x;
@@ -728,6 +736,7 @@ function stepWeapon(
 
   const def = weaponStats(weaponIndex, activeTier(p));
   const firstBullet = state.nextBulletId;
+  p.shotsFired += def.pellets;
 
   for (const pellet of shotPellets(p, weaponIndex, input.seq)) {
     state.bullets.push({
@@ -767,6 +776,14 @@ function applyDamage(
   cause: number,
   events: SimEvent[],
 ): void {
+  // Lo que de verdad entra: un tiro de 64 a alguien con 10 de vida hizo 10.
+  const landed = Math.min(amount, target.shield + Math.max(0, target.hp));
+  target.damageTaken += landed;
+  if (byId !== target.id) {
+    const attacker = byId >= 0 ? findPlayer(state, byId) : undefined;
+    if (attacker) attacker.damageDealt += landed;
+  }
+
   let left = amount;
   if (target.shield > 0) {
     const absorbed = Math.min(target.shield, left);
@@ -965,6 +982,8 @@ function stepBullets(state: GameState, arena: ArenaMap, events: SimEvent[]): voi
         dir: Math.atan2(b.vy, b.vx),
         bullet: b.id,
       });
+      const owner = findPlayer(state, b.ownerId);
+      if (owner) owner.shotsHit++;
       applyDamage(state, hitPlayer, b.damage, b.ownerId, b.weapon, events);
       continue;
     }
@@ -1044,6 +1063,7 @@ function stepZone(state: GameState, events: SimEvent[]): void {
     const dy = p.y - z.y;
     if (dx * dx + dy * dy <= z.radius * z.radius) continue;
     // La zona ignora el escudo: no querés que un chaleco te deje vivir afuera.
+    p.damageTaken += Math.min(damage, Math.max(0, p.hp));
     p.hp -= damage;
     if (p.useCd > 0) {
       p.useCd = 0;
@@ -1132,7 +1152,11 @@ export function step(
   // acá y no al morir para cubrir también al que se desconecta, y para que dos
   // que caen en el mismo tick (una granada, la zona) empaten.
   for (const p of state.players) {
-    if (p.place === 0 && !p.alive) p.place = alive.length + 1;
+    if (p.place === 0 && !p.alive) {
+      p.place = alive.length + 1;
+      // El que se desconecta no pasa por killPlayer: su tiempo vivo termina acá.
+      if (p.diedAtTick < 0) p.diedAtTick = state.tick;
+    }
   }
 
   if (alive.length <= 1) {

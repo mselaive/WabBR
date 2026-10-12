@@ -1004,3 +1004,74 @@ body.playing {
     animation: none;
   }
 }
+
+/* Tabla del resultado: puesto, color, nombre y cuatro números alineados. */
+.standing,
+.result-head {
+  display: grid;
+  grid-template-columns: 4ch 14px minmax(0, 1fr) repeat(4, 6ch);
+  align-items: center;
+  gap: 10px;
+}
+
+.result-head {
+  padding: 0 12px 2px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.standing .num,
+.result-head .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.standing .who .tag {
+  vertical-align: 1px;
+}
+
+/* Premios: tres tarjetas chicas entre el podio y la tabla. */
+.awards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.awards[hidden] {
+  display: none;
+}
+
+.award {
+  flex: 1 1 130px;
+  max-width: 170px;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  text-align: center;
+}
+
+/* Con la fuente común: la pixelada no tiene mayúsculas con tilde. */
+.award-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--gold);
+}
+
+.award-who {
+  max-width: 100%;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.award-value {
+  font-family: var(--pixel);
+  font-size: 12px;
+}

@@ -85,6 +85,13 @@ export type SnapPlayer = number[];
  */
 export type SnapStanding = [number, number, number, number];
 
+/**
+ * [id, dañoHecho, dañoRecibido, disparos, aciertos, ticksVivo] de cada uno que
+ * jugó la partida. Sólo viaja con la partida terminada: mientras se juega no le
+ * sirve a nadie y el daño de los demás sería información de más.
+ */
+export type SnapResult = [number, number, number, number, number, number];
+
 /** [id, kind, ref, tier, x, y, count] */
 export type SnapItem = [number, number, number, number, number, number, number];
 
@@ -165,6 +172,8 @@ export interface SnapshotMsg {
   winner: number;
   /** Eventos ocurridos en este tick (efectos, kill feed). */
   ev?: SimEvent[];
+  /** Estadísticas finales. Sólo con la partida terminada (fase "ended"). */
+  res?: SnapResult[];
 }
 
 export interface ItemsMsg {

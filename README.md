@@ -13,7 +13,8 @@ Battle royale 2D con vista cenital y estética pixel art, para jugar con amigos 
 
 ## Empezar
 
-Hace falta **Node 22** o más nuevo: es lo que pide wrangler, el servidor local. Con uno más viejo
+Hace falta **Node 22** o más nuevo: es lo que pide wrangler, el servidor local. Está
+fijado en `.nvmrc`, así que con nvm alcanza con `nvm use`. Con uno más viejo
 `npm run dev` avisa y no arranca, en vez de levantar sólo el cliente y dejarte un menú que no
 conecta con nada.
 
@@ -239,6 +240,19 @@ El resultado se ordena por **puesto**, que es lo que decide un battle royale: el
 desempatan. Arriba hay un podio con los tres primeros —cada uno con su muñeco y su
 color— y abajo la tabla completa, con tu fila marcada.
 
+Además de las kills, la tabla tiene el **daño hecho**, la **puntería** y cuánto
+**aguantó vivo** cada uno, y entre el podio y la tabla hay tres premios: más daño,
+más kills y mejor puntería. Los cuenta el servidor (`damageDealt`, `shotsFired`,
+`shotsHit`... en `PlayerState`) porque el cliente no ve todo: los eventos se filtran
+por línea de vista y con lo que le llega a cada uno los números saldrían mal. Viajan
+una sola vez, con la partida terminada (`res` en el snapshot).
+
+- El daño es el que **de verdad entró**, escudo incluido: rematar con un escopetazo
+  de 64 a alguien con 10 de vida suma 10. Las granadas propias no cuentan.
+- La puntería es por proyectil, así que cada perdigón de la escopeta cuenta. Para
+  el premio hacen falta al menos 20: con dos tiros y uno adentro cualquiera tendría
+  50 % y le ganaría al que se pasó la partida peleando.
+
 El puesto lo calcula el servidor (`PlayerState.place`) al final de cada tick y no al
 morir, por dos motivos: así también le toca al que se desconecta en el medio (que
 figura con "se fue"), y dos que caen en el mismo tick —una granada, la zona— empatan
@@ -433,6 +447,9 @@ tasa de refresco — en un monitor de 144 Hz es donde peor se ve.
 ```bash
 npm test
 ```
+
+En GitHub corren solos en cada push (`.github/workflows/ci.yml`): typecheck, tests y
+el humo sobre el build de producción. No despliegan nada.
 
 Cubren lo que sostiene todo lo demás: que la simulación sea determinista (mismo estado + mismos
 inputs = mismo resultado), que no se pueda atravesar un obstáculo, que las balas no atraviesen

@@ -103,6 +103,16 @@ export interface PlayerState {
   diedAtTick: number;
   killerId: number;
   /**
+   * Estadísticas de la partida, para el resultado final. El daño es el que de
+   * verdad entró (vida más escudo, sin pasarse de lo que le quedaba al otro):
+   * un escopetazo de 64 a alguien con 10 de vida cuenta 10.
+   */
+  damageDealt: number;
+  damageTaken: number;
+  /** Proyectiles disparados y los que le pegaron a alguien. La escopeta cuenta cada perdigón. */
+  shotsFired: number;
+  shotsHit: number;
+  /**
    * Puesto final en la partida: 1 el ganador, 2 el último en caer, etc. 0
    * mientras sigue en pie y -1 si no jugó esta partida (entró a mirar).
    */

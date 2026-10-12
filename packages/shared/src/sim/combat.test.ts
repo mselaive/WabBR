@@ -14,6 +14,7 @@ import {
   WORLD_CENTER_Y,
 } from "../constants.js";
 import { WEAPON_IDS, weaponStats } from "../items.js";
+import { packResults, unpackResult } from "../protocol/codec.js";
 import { generateArena, type ArenaMap, type ObstacleKind } from "../map/arena.js";
 import { ObstacleGrid } from "./collision.js";
 import { createGameState, createPlayer, startMatch, step, stepPlayerMovement } from "./step.js";
@@ -418,5 +419,83 @@ describe("escopeta", () => {
   it("de lejos no compite con el rifle", () => {
     // A 300 px un rifle común pega 18 por bala, cuatro veces por segundo.
     expect(blast(300, 1).damage).toBeLessThan(30);
+  });
+});
+
+describe("estadísticas de la partida", () => {
+  function duel(): { state: GameState; shooter: ReturnType<typeof createPlayer>; target: ReturnType<typeof createPlayer> } {
+    const state = createGameState(3);
+    state.phase = "playing";
+    const shooter = createPlayer(1, WORLD_CENTER_X, WORLD_CENTER_Y);
+    const target = createPlayer(2, WORLD_CENTER_X + 90, WORLD_CENTER_Y);
+    const other = createPlayer(3, WORLD_CENTER_X, WORLD_CENTER_Y + 900);
+    for (const p of [shooter, target, other]) {
+      p.alive = true;
+      p.place = 0;
+    }
+    state.players.push(shooter, target, other);
+    return { state, shooter, target };
+  }
+
+  it("cuenta disparos, aciertos y el daño que de verdad entró", () => {
+    const { state, shooter, target } = duel();
+    target.shield = 20;
+    // Pistola: un tiro al blanco y otro al aire.
+    step(state, new Map([[1, { ...emptyInput(1), aim: 0, shoot: true }]]), [], EMPTY);
+    for (let t = 2; t < 7; t++) step(state, new Map([[1, { ...emptyInput(t), aim: 0 }]]), [], EMPTY);
+    step(state, new Map([[1, { ...emptyInput(7), aim: Math.PI, shoot: true }]]), [], EMPTY);
+    for (let t = 8; t < 40; t++) step(state, new Map([[1, emptyInput(t)]]), [], EMPTY);
+
+    const pistol = weaponStats(0, 0).damage;
+    expect(shooter.shotsFired).toBe(2);
+    expect(shooter.shotsHit).toBe(1);
+    // El escudo también cuenta: es daño que le hiciste.
+    expect(shooter.damageDealt).toBe(pistol);
+    expect(target.damageTaken).toBe(pistol);
+    expect(target.hp + target.shield).toBe(PLAYER_MAX_HP + 20 - pistol);
+  });
+
+  it("no cuenta el daño que sobra: rematar con 64 a alguien con 10 suma 10", () => {
+    const { state, shooter, target } = duel();
+    shooter.slots[0] = WEAPON_IDS.indexOf("shotgun");
+    shooter.slotAmmo[0] = 6;
+    target.hp = 10;
+    step(state, new Map([[1, { ...emptyInput(1), aim: 0, shoot: true }]]), [], EMPTY);
+    for (let t = 2; t < 20; t++) step(state, new Map([[1, emptyInput(t)]]), [], EMPTY);
+
+    expect(target.alive).toBe(false);
+    expect(shooter.damageDealt).toBe(10);
+    // Cada perdigón es un disparo: la puntería de la escopeta se mide igual.
+    expect(shooter.shotsFired).toBe(8);
+  });
+
+  it("el resultado dice cuánto aguantó cada uno", () => {
+    const { state, target } = duel();
+    for (let t = 1; t <= 30; t++) step(state, new Map([[1, emptyInput(t)]]), [], EMPTY);
+    // Se desconecta: no pasa por killPlayer, pero el tiempo vivo se corta igual.
+    target.alive = false;
+    for (let t = 31; t <= 60; t++) step(state, new Map([[1, emptyInput(t)]]), [], EMPTY);
+    // Y se va el tercero: termina la partida con el primero de ganador.
+    state.players[2]!.alive = false;
+    step(state, new Map([[1, emptyInput(61)]]), [], EMPTY);
+    expect(state.phase).toBe("ended");
+
+    const rows = new Map(packResults(state).map(unpackResult).map((r) => [r.id, r]));
+    expect(rows.get(2)!.survivedTicks).toBe(31);
+    expect(rows.get(3)!.survivedTicks).toBe(61);
+    expect(rows.get(1)!.survivedTicks).toBe(61);
+  });
+
+  it("una granada propia no suma daño hecho", () => {
+    const { state, shooter } = duel();
+    shooter.grenades = 1;
+    step(state, new Map([[1, { ...emptyInput(1), act: ACT_THROW, aim: Math.PI / 2 }]]), [], EMPTY);
+    for (let t = 2; t < 30; t++) step(state, new Map([[1, emptyInput(t)]]), [], EMPTY);
+    // Pararse encima antes de que estalle.
+    shooter.x = state.grenades[0]!.x;
+    shooter.y = state.grenades[0]!.y;
+    for (let t = 30; t < 80; t++) step(state, new Map([[1, emptyInput(t)]]), [], EMPTY);
+    expect(shooter.damageTaken).toBeGreaterThan(0);
+    expect(shooter.damageDealt).toBe(0);
   });
 });

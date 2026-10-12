@@ -194,6 +194,8 @@ export interface ItemsMsg {
   items: SnapItem[];
   /** Ids de las cajas ya abiertas: lo único que hace falta para el que se une. */
   crates: number[];
+  /** Barriles que ya estallaron (índice de obstáculo), para dibujarlos quemados. */
+  barrels?: number[];
 }
 
 export interface MatchStartMsg {

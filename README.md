@@ -251,6 +251,15 @@ sea una decisión y no un botón gratis. Una pared frena la esquirla: la explosi
 usa la misma `hasLineOfSight` que la visión, así que no se puede granadear a
 través de una casa.
 
+**Los barriles explotan.** Tres tiros de pistola (`BARREL_HP`) y estallan igual que
+una granada, con el daño a cuenta del que los hizo estallar: tirarle al barril que
+tiene alguien al lado es una forma de pelear, y tirarle al que tenés al lado tuyo te
+cuesta caro. Una explosión lastima a los barriles de alrededor, así que los que están
+juntos se encadenan. Después quedan quemados: siguen siendo cobertura y ya no
+estallan, y así no hubo que tocar las colisiones, ni la predicción ni los caminos.
+Los clientes los dibujan quemados por el evento `barrel`, y el que entra tarde los
+recibe en el mensaje de objetos, igual que las cajas abiertas.
+
 El daño en área vive en `applyExplosion`, separado de las granadas a propósito:
 cualquier cosa que estalle —un barril, un cohete— lo va a usar igual, y así el
 balance de las explosiones queda en un solo lugar.

@@ -276,6 +276,23 @@ function rock(): Texture {
   });
 }
 
+/** Barril que ya estalló: el mismo tambor, chamuscado y abierto arriba. */
+function burntBarrel(): Texture {
+  return make(18, 24, (ctx) => {
+    rect(ctx, 2, 8, 14, 14, "#2b2726");
+    rect(ctx, 2, 9, 14, 2, "#3d2a26");
+    rect(ctx, 2, 16, 14, 2, "#1d1a19");
+    // Bordes rotos donde estaba la tapa.
+    rect(ctx, 2, 6, 3, 2, "#2b2726");
+    rect(ctx, 8, 7, 3, 1, "#2b2726");
+    rect(ctx, 13, 6, 3, 2, "#2b2726");
+    ellipse(ctx, 9, 9, 5, 2, "#0d0b0a");
+    // Una brasa que todavía no se apagó.
+    rect(ctx, 6, 13, 2, 1, "#c9541e");
+    outline(ctx, 1, 6, 16, 17);
+  });
+}
+
 function barrel(): Texture {
   return make(18, 24, (ctx) => {
     rect(ctx, 2, 4, 14, 18, "#a8332f");
@@ -448,6 +465,7 @@ export interface TexturePack {
   tree: Texture[];
   rock: Texture;
   barrel: Texture;
+  burntBarrel: Texture;
   bush: Texture[];
   grassTuft: Texture;
   flower: Texture[];
@@ -493,6 +511,7 @@ export function getTextures(): TexturePack {
     tree: [tree(0), tree(1), tree(2)],
     rock: rock(),
     barrel: barrel(),
+    burntBarrel: burntBarrel(),
     bush: [bush(0), bush(1), bush(2)],
     grassTuft: grassTuft(),
     flower: [flower(0), flower(1), flower(2)],

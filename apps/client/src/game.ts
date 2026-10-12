@@ -17,6 +17,7 @@ import {
   WORLD_RADIUS,
   ZONE_PHASES,
   bushAt,
+  segmentBoxT,
   consumableAt,
   getArena,
   itemName,
@@ -202,6 +203,29 @@ export class Game {
           return best;
         },
         escondido: () => !document.getElementById("hiddenTag")!.hidden,
+        // El barril más cercano con tiro limpio, y apuntarle con el mouse: para
+        // probar que estallen.
+        barril: () => {
+          const me = this.lastLocal;
+          if (!me) return null;
+          const obstacles = this.arena.obstacles;
+          const clear = (index: number, x: number, y: number) =>
+            obstacles.every(
+              (o, i) => i === index || segmentBoxT(me.x, me.y, x - me.x, y - me.y, 3, o) < 0,
+            );
+          return (
+            obstacles
+              .map((o, index) => ({ o, index, x: o.x + o.w / 2, y: o.y + o.h / 2 }))
+              .filter((b) => b.o.kind === "barrel" && Math.hypot(b.x - me.x, b.y - me.y) < 700)
+              .sort((a, b) => Math.hypot(a.x - me.x, a.y - me.y) - Math.hypot(b.x - me.x, b.y - me.y))
+              .find((b) => clear(b.index, b.x, b.y)) ?? null
+          );
+        },
+        apuntar: (x: number, y: number) => {
+          const s = this.world.worldToScreen(x, y);
+          this.input.mouseX = s.x;
+          this.input.mouseY = s.y;
+        },
         // Espectando: lleva la cámara libre a un punto, para mirar algo de cerca.
         mirar: (x: number, y: number) => {
           this.freeCam = { x, y };
@@ -358,6 +382,7 @@ export class Game {
         this.openedCrates = new Set(msg.crates);
         this.world.resetCrates();
         for (const id of this.openedCrates) this.world.setCrateOpen(id);
+        for (const index of msg.barrels ?? []) this.world.setBarrelExploded(index);
         return;
 
       case "s":
@@ -535,6 +560,10 @@ export class Game {
           });
           break;
         }
+        case "barrel":
+          // En el reloj atrasado, junto con la explosión que lo acompaña.
+          this.defer(() => this.world.setBarrelExploded(ev.index));
+          break;
         case "throw":
           if (ev.byId === this.localId) this.grenades.confirm(ev.seq, ev.grenade);
           break;

@@ -126,6 +126,8 @@ export class WorldView {
   private readonly grenadeSprites = new Map<number, Sprite>();
   /** Sprite de cada caja de botín, por id (= su orden en el mapa). */
   private readonly crateSprites = new Map<number, Sprite>();
+  /** Sprite de cada barril, por índice de obstáculo: los que estallan se cambian. */
+  private readonly barrelSprites = new Map<number, Sprite>();
   private readonly effects: Effect[] = [];
 
   /** Sacudón pendiente, en píxeles. Se apaga solo. */
@@ -377,7 +379,7 @@ export class WorldView {
     // que en el servidor: por eso alcanza con transmitir un número al abrirla.
     let crateId = 0;
 
-    for (const o of this.arena.obstacles) {
+    for (const [index, o] of this.arena.obstacles.entries()) {
       if (o.kind === "buildingWall") {
         this.entityLayer.addChild(this.makeWall(o));
         continue;
@@ -402,6 +404,7 @@ export class WorldView {
       sprite.position.set(o.x + o.w / 2, o.y + o.h);
       sprite.zIndex = o.y + o.h;
       this.entityLayer.addChild(sprite);
+      if (o.kind === "barrel") this.barrelSprites.set(index, sprite);
     }
   }
 
@@ -440,6 +443,14 @@ export class WorldView {
     for (const sprite of this.crateSprites.values()) {
       sprite.texture = this.tex.lootCrate[0]!;
     }
+    // Lo mismo con los barriles: la ronda nueva arranca con todos enteros.
+    for (const sprite of this.barrelSprites.values()) sprite.texture = this.tex.barrel;
+  }
+
+  /** Un barril estalló: queda quemado. Idempotente. */
+  setBarrelExploded(index: number): void {
+    const sprite = this.barrelSprites.get(index);
+    if (sprite) sprite.texture = this.tex.burntBarrel;
   }
 
   private obstacleTexture(kind: string, variant: number): Texture {
@@ -1137,6 +1148,10 @@ export class WorldView {
       -cx * this.scale + w / 2 + jitterX,
       -cy * this.scale + h / 2 + jitterY,
     );
+  }
+
+  worldToScreen(wx: number, wy: number): { x: number; y: number } {
+    return { x: wx * this.scale + this.camera.x, y: wy * this.scale + this.camera.y };
   }
 
   screenToWorld(sx: number, sy: number): { x: number; y: number } {

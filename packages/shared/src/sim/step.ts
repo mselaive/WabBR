@@ -17,6 +17,7 @@ import {
   STAMINA_REGEN_DELAY,
   AIRDROP_FALL_TICKS,
   AIRDROP_PHASES,
+  BARREL_HP,
   ENDED_TICKS,
   LAG_COMP_MAX_TICKS,
   PLAYER_MAX_HP,
@@ -153,6 +154,8 @@ export function createGameState(seed = 1): GameState {
     nextGrenadeId: 1,
     airdrops: [],
     nextAirdropId: 1,
+    barrelHp: new Map(),
+    explodedBarrels: [],
     items: [],
     nextItemId: 1,
     openedCrates: [],
@@ -175,6 +178,8 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
   state.nextGrenadeId = 1;
   state.airdrops = [];
   state.nextAirdropId = 1;
+  state.barrelHp = new Map();
+  state.explodedBarrels = [];
   state.zone = createZone();
   state.rng = seed | 0;
   state.winnerId = -1;
@@ -889,6 +894,59 @@ export function applyExplosion(
     });
     applyDamage(state, p, damage, byId, CAUSE_EXPLOSION, events);
   }
+
+  // Los barriles de alrededor también reciben: así se encadenan.
+  damageBarrelsAround(state, x, y, byId, arena, events);
+}
+
+/** Scratch propio: esto corre a veces en medio del recorrido de las balas. */
+const blastNearby: number[] = [];
+
+function damageBarrelsAround(
+  state: GameState,
+  x: number,
+  y: number,
+  byId: number,
+  arena: ArenaMap,
+  events: SimEvent[],
+): void {
+  arena.grid.query(x, y, EXPLOSION_RADIUS, blastNearby);
+  // Copia: cada barril que estalla vuelve a consultar la grilla.
+  for (const index of [...blastNearby]) {
+    const o = arena.obstacles[index]!;
+    if (o.kind !== "barrel") continue;
+    const cx = o.x + o.w / 2;
+    const cy = o.y + o.h / 2;
+    const dist = Math.hypot(cx - x, cy - y);
+    if (dist > EXPLOSION_RADIUS || !hasLineOfSight(x, y, cx, cy, arena)) continue;
+    damageBarrel(state, index, lerp(EXPLOSION_MAX_DAMAGE, EXPLOSION_MIN_DAMAGE, dist / EXPLOSION_RADIUS), byId, arena, events);
+  }
+}
+
+/**
+ * Un barril recibe daño. Si se le acaba la vida, estalla como una granada y
+ * queda quemado: sigue siendo cobertura pero ya no explota. El daño de la
+ * explosión cuenta como del que lo hizo estallar.
+ */
+function damageBarrel(
+  state: GameState,
+  index: number,
+  amount: number,
+  byId: number,
+  arena: ArenaMap,
+  events: SimEvent[],
+): void {
+  if (state.explodedBarrels.includes(index)) return;
+  const hp = (state.barrelHp.get(index) ?? BARREL_HP) - amount;
+  if (hp > 0) {
+    state.barrelHp.set(index, hp);
+    return;
+  }
+  state.barrelHp.delete(index);
+  state.explodedBarrels.push(index);
+  events.push({ t: "barrel", index });
+  const o = arena.obstacles[index]!;
+  applyExplosion(state, o.x + o.w / 2, o.y + o.h / 2, byId, arena, events);
 }
 
 // ------------------------------------------------------------ granadas
@@ -994,6 +1052,7 @@ function stepBullets(state: GameState, arena: ArenaMap, events: SimEvent[]): voi
 
     // Impacto contra obstáculos.
     let hitBox = false;
+    let boxIndex = -1;
     arena.grid.query(b.x + dx * 0.5, b.y + dy * 0.5, Math.abs(dx) + Math.abs(dy) + BULLET_RADIUS, nearby);
     nearby.sort((a, c) => a - c);
     for (let i = 0; i < nearby.length; i++) {
@@ -1003,6 +1062,7 @@ function stepBullets(state: GameState, arena: ArenaMap, events: SimEvent[]): voi
         bestT = t;
         hitPlayer = null;
         hitBox = true;
+        boxIndex = nearby[i]!;
       }
     }
 
@@ -1028,6 +1088,9 @@ function stepBullets(state: GameState, arena: ArenaMap, events: SimEvent[]): voi
 
     if (hitBox) {
       events.push({ t: "impact", x: nx, y: ny, bullet: b.id });
+      if (arena.obstacles[boxIndex]?.kind === "barrel") {
+        damageBarrel(state, boxIndex, b.damage, b.ownerId, arena, events);
+      }
       continue;
     }
 

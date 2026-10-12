@@ -213,6 +213,10 @@ export interface GameState {
   nextGrenadeId: number;
   airdrops: AirdropState[];
   nextAirdropId: number;
+  /** Vida que les queda a los barriles tocados, por índice de obstáculo. */
+  barrelHp: Map<number, number>;
+  /** Barriles que ya estallaron, por índice de obstáculo. Quedan quemados. */
+  explodedBarrels: number[];
   items: GroundItem[];
   nextItemId: number;
   /**
@@ -282,6 +286,8 @@ export type SimEvent =
       /** Granada que estalló, o -1 si fue otra cosa. */
       grenade: number;
     }
+  /** Estalló un barril (índice de obstáculo): se dibuja quemado desde ahora. */
+  | { t: "barrel"; index: number }
   /** Tiró una granada: con el seq del input, el que la tiró reconoce la suya. */
   | { t: "throw"; byId: number; seq: number; grenade: number }
   /** Aterrizó un paquete aéreo: su botín llega con eventos "drop". */

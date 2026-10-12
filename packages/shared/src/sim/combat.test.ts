@@ -499,3 +499,83 @@ describe("estadísticas de la partida", () => {
     expect(shooter.damageDealt).toBe(0);
   });
 });
+
+describe("barriles", () => {
+  /** Un mapa con los barriles dados (esquina superior izquierda de cada uno). */
+  function barrels(...spots: [number, number][]): ArenaMap {
+    const obstacles = spots.map(([x, y]) => ({ kind: "barrel" as ObstacleKind, x, y, w: 30, h: 30, variant: 0 }));
+    return { ...EMPTY, obstacles, grid: new ObstacleGrid(obstacles) };
+  }
+
+  /** Tirador en el centro mirando a la derecha; un blanco y un tercero lejos. */
+  function range(targetDx: number, targetDy: number): GameState {
+    const state = createGameState(3);
+    state.phase = "playing";
+    const shooter = createPlayer(1, WORLD_CENTER_X, WORLD_CENTER_Y);
+    const target = createPlayer(2, WORLD_CENTER_X + targetDx, WORLD_CENTER_Y + targetDy);
+    const other = createPlayer(3, WORLD_CENTER_X - 900, WORLD_CENTER_Y);
+    for (const p of [shooter, target, other]) p.alive = true;
+    state.players.push(shooter, target, other);
+    return state;
+  }
+
+  /** Dispara la pistola `shots` veces hacia la derecha y deja correr el tiempo. */
+  function shoot(state: GameState, arena: ArenaMap, shots: number): SimEvent[] {
+    const events: SimEvent[] = [];
+    let fired = 0;
+    for (let t = 1; t <= 80; t++) {
+      const go = fired < shots;
+      const tickEvents: SimEvent[] = [];
+      step(state, new Map([[1, { ...emptyInput(t), aim: 0, shoot: go }]]), tickEvents, arena);
+      if (tickEvents.some((e) => e.t === "shot")) fired++;
+      events.push(...tickEvents);
+    }
+    return events;
+  }
+
+  it("a balazos estalla y lastima al que está al lado, a cuenta del que tiró", () => {
+    // El barril a 150 px del tirador, en la línea de tiro; el blanco, al lado del barril.
+    const map = barrels([WORLD_CENTER_X + 150, WORLD_CENTER_Y - 15]);
+    const state = range(165, 60);
+    const events = shoot(state, map, 3);
+
+    expect(events.some((e) => e.t === "barrel")).toBe(true);
+    expect(state.explodedBarrels).toEqual([0]);
+    const hit = events.find((e) => e.t === "hit" && e.targetId === 2);
+    expect(hit?.t === "hit" && hit.byId).toBe(1);
+    expect(state.players[1]!.hp).toBeLessThan(PLAYER_MAX_HP);
+  });
+
+  it("con dos tiros todavía no estalla", () => {
+    const map = barrels([WORLD_CENTER_X + 150, WORLD_CENTER_Y - 15]);
+    const state = range(165, 60);
+    shoot(state, map, 2);
+    expect(state.explodedBarrels).toEqual([]);
+  });
+
+  it("se encadenan: uno al lado del otro estallan los dos", () => {
+    const map = barrels([WORLD_CENTER_X + 150, WORLD_CENTER_Y - 15], [WORLD_CENTER_X + 150, WORLD_CENTER_Y + 70]);
+    const state = range(0, 600);
+    const events = shoot(state, map, 3);
+    expect(state.explodedBarrels.sort()).toEqual([0, 1]);
+    expect(events.filter((e) => e.t === "explosion")).toHaveLength(2);
+  });
+
+  it("quemado ya no estalla, pero sigue frenando balas", () => {
+    const map = barrels([WORLD_CENTER_X + 150, WORLD_CENTER_Y - 15]);
+    const state = range(0, 600);
+    shoot(state, map, 3);
+    const after = shoot(state, map, 4);
+    expect(after.some((e) => e.t === "explosion")).toBe(false);
+    expect(after.filter((e) => e.t === "impact")).toHaveLength(4);
+  });
+
+  it("una granada al lado lo hace estallar", () => {
+    const map = barrels([WORLD_CENTER_X + 150, WORLD_CENTER_Y - 15]);
+    const state = range(0, 600);
+    // Una granada quieta a 50 px del barril, a punto de estallar.
+    state.grenades.push({ id: 1, ownerId: 1, x: WORLD_CENTER_X + 115, y: WORLD_CENTER_Y + 40, vx: 0, vy: 0, fuse: 1 });
+    step(state, new Map([[1, emptyInput(1)]]), [], map);
+    expect(state.explodedBarrels).toEqual([0]);
+  });
+});

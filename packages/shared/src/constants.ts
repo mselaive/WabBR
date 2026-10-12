@@ -78,6 +78,12 @@ export const AIRDROP_PHASES = 2;
 /** Lo que tarda en llegar al piso desde que se anuncia: tiempo para ir a buscarlo. */
 export const AIRDROP_FALL_TICKS = 10 * TICK_RATE;
 
+/**
+ * Vida de un barril: dos o tres tiros de pistola. Al llegar a cero estalla
+ * como una granada (applyExplosion) y queda quemado, todavía de cobertura.
+ */
+export const BARREL_HP = 30;
+
 export const EXPLOSION_RADIUS = 130;
 export const EXPLOSION_MAX_DAMAGE = 95;
 /** Daño en el borde del radio. Entre medio interpola lineal. */

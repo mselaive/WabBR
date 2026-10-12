@@ -30,6 +30,7 @@ Ninguno está en `main`: un push a `main` despliega solo a wabbo.org.
 | Mira del francotirador | Con él en la mano la cámara se aleja un 40 % | Capturas con y sin mira |
 | Granada de humo | `H` tira una nube que tapa la vista (no las balas) por 10 s; servidor y bots respetan lo que tapa | 11 tests (con control) + capturas |
 | Marcador de la sala | "2/5 ganadas · 11 kills" al lado de cada nombre en el lobby, sumando las partidas de la noche | `scripts/server-bots.mjs` + captura |
+| Bots con granadas | Tiran granadas (simulando el tiro), se escapan de las ajenas y no le disparan a un barril que tienen al lado: el daño que se hacían solos bajó de 1536 a 109 en 8 partidas | Tests (con control) + medición en 8 partidas |
 | Controles táctiles | Dos sticks flotantes, HUD tocable, Recargar/Tabla, aviso de girar el teléfono | Chrome emulando un teléfono con toques de dos dedos; **no probado en un teléfono real** |
 
 ### Para subirlo
@@ -58,9 +59,8 @@ La zona según cuántos juegan, la mira, el humo y los controles táctiles ya es
 4. **Killcam.** Ver los últimos segundos desde los ojos del que te mató. Ya al
    morir la cámara sigue al que te mató, que da casi lo mismo; la repetición de
    verdad pide guardar historia de snapshots por jugador.
-5. **Que los bots usen granadas y humo.** Hoy juntan granadas y no las tiran, y el
-   humo ni lo juntan. Tirarle una granada al que está detrás de una caja es lo que
-   más los haría parecer personas.
+5. **Que los bots usen el humo.** Las granadas ya las tiran; el humo ni lo juntan.
+   Tirarlo entre ellos y el que les dispara para irse a curar sería lo natural.
 
 Y uno que descarté: **cuerpo a cuerpo**. Lo había anotado para "el que se queda sin
 balas", pero acá la munición es infinita (se recarga siempre) y nunca te quedás

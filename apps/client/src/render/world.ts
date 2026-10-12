@@ -62,8 +62,12 @@ const GROUND_STYLES: {
   { base: 0x93794d, dark: 0x836b43, light: 0xa4885a, marks: 800, markW: 5, markH: 4 },
 ];
 
-/** Hasta dónde se buscan obstáculos que proyecten sombra. Un poco más que la pantalla. */
-const SHADOW_RANGE = 900;
+/**
+ * Hasta dónde se buscan obstáculos que proyecten sombra. Un poco más que la
+ * esquina de la pantalla con la mira del francotirador puesta, en pantalla
+ * ancha y con la cámara corrida hacia el cursor.
+ */
+const SHADOW_RANGE = 1300;
 /** Largo de la sombra: alcanza con que salga de la pantalla. */
 const SHADOW_LENGTH = 2200;
 
@@ -151,6 +155,7 @@ export class WorldView {
 
   private scale = 1;
   private camX = WORLD_CENTER_X;
+  private zoom = 1;
   private camY = WORLD_CENTER_Y;
 
   constructor(
@@ -1111,6 +1116,14 @@ export class WorldView {
     this.applyCamera();
   }
 
+  /**
+   * Cuánto más mundo se ve que lo normal (1 = lo normal). Lo sube la mira
+   * del francotirador; se aplica con la próxima `setCamera`.
+   */
+  setZoom(zoom: number): void {
+    this.zoom = zoom;
+  }
+
   /** Punto del mundo al que mira la cámara. */
   cameraCenter(): { x: number; y: number } {
     return { x: this.camX, y: this.camY };
@@ -1125,7 +1138,7 @@ export class WorldView {
     // usando la misma unidad en los dos lados no hay que pensar en el devicePixelRatio.
     const w = this.app.screen.width;
     const h = this.app.screen.height;
-    this.scale = Math.max(h / VIEW_HEIGHT, 0.35);
+    this.scale = Math.max(h / VIEW_HEIGHT, 0.35) / this.zoom;
 
     // Sujetar la cámara dentro de la arena antes de aplicarla.
     let cx = this.camX;

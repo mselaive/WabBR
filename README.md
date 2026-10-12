@@ -195,6 +195,11 @@ mapa, y su id es su orden de aparición.
 - **La ballesta es silenciosa**: sin fogonazo y sin delatarte, así que se puede
   tirar desde un arbusto sin salir de él. Dos flechas matan, pero hay que recargar
   después de cada una y la flecha es lenta. Sale sólo de las cajas.
+- **El francotirador tiene mira**: con él en la mano la cámara se aleja un 40 %
+  (en unos 0,3 s, para no marear). Su bala llega a unos 1400 px y la pantalla
+  mostraba 570 hacia cada costado: tenía más alcance que lo que se veía. El
+  servidor no recorta por distancia, sólo por línea de vista, así que no hubo que
+  tocarlo; sí se buscan sombras más lejos para que lleguen a las esquinas.
 - **Cinco rarezas** (común → legendaria), que multiplican daño, recarga,
   cargador y precisión. No tocan la cadencia ni el alcance a propósito: un rifle
   legendario sigue siendo un rifle, no una escopeta mejor.

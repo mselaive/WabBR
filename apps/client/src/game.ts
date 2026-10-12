@@ -15,6 +15,7 @@ import {
   WORLD_CENTER_X,
   WORLD_CENTER_Y,
   WORLD_RADIUS,
+  WEAPON_IDS,
   ZONE_PHASES,
   bushAt,
   segmentBoxT,
@@ -53,6 +54,13 @@ import { Sound, type Spot } from "./audio.js";
 
 /** Cuánto tira la cámara hacia el cursor (0 = centrada en el jugador). */
 const CAMERA_LEAD = 0.18;
+/**
+ * Cuánto más se ve con el francotirador en la mano. Su bala llega a ~1400 px
+ * y sin mira la pantalla mostraba ~570 hacia cada costado: tenía más alcance
+ * que lo que se veía. El servidor no recorta por distancia (sólo por línea de
+ * vista), así que lo que entra en la pantalla más grande ya llega.
+ */
+const SCOPE_ZOOM = 1.4;
 
 export class Game {
   private app!: Application;
@@ -128,6 +136,8 @@ export class Game {
   private spectateId = -1;
   /** Cámara libre del espectador, o null si se está siguiendo a alguien. */
   private freeCam: { x: number; y: number } | null = null;
+  /** Zoom actual de la cámara, que se acerca de a poco al de la mira. */
+  private zoom = 1;
   /** El jugador que se está mirando: el HUD muestra su vida y su arma. */
   private watched: UnpackedPlayer | null = null;
   private detachInput: (() => void) | null = null;
@@ -819,6 +829,13 @@ export class Game {
     intents: SpectateIntent[],
     dt: number,
   ): void {
+    // La mira entra y sale suave, en ~0,3 s: un salto de zoom marea.
+    const me = localPredicted ? this.predictor?.state : null;
+    const scoped = me ? me.slots[me.activeSlot] === WEAPON_IDS.indexOf("sniper") : false;
+    this.zoom += ((scoped ? SCOPE_ZOOM : 1) - this.zoom) * (1 - Math.exp(-dt * 10));
+    if (Math.abs(this.zoom - 1) < 0.001) this.zoom = 1;
+    this.world.setZoom(this.zoom);
+
     if (localPredicted) {
       const cursor = this.world.screenToWorld(this.input.mouseX, this.input.mouseY);
       this.world.setCamera(

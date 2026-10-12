@@ -144,6 +144,13 @@ export interface PlayerMeta {
   away?: boolean;
   /** Lo maneja el servidor. */
   bot?: boolean;
+  /**
+   * Lo que lleva en esta sala, sumando las partidas que jugó: un marcador
+   * para la noche entre amigos. Vive en la sala y se pierde al salir de ella.
+   */
+  played?: number;
+  wins?: number;
+  totalKills?: number;
 }
 
 export interface BulletState {

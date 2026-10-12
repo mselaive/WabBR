@@ -96,6 +96,12 @@ bloqueo blando y a propósito: sin cuentas no hay identidad estable, así que ca
 igual. Cubre lo que molesta —el que reentra de un clic— y no pretende ser más que eso. Sólo funciona
 en el lobby: en partida, echar sería un arma más.
 
+**Marcador de la sala.** Al lado de cada nombre, cuántas ganó de las que jugó en esa sala y cuántas
+kills lleva sumadas ("2/5 ganadas · 11 kills"). Para la noche en que se juegan varias rondas entre
+amigos. Vive en la sala, en el asiento de cada uno: sobrevive a un corte de conexión pero no a salir
+de la sala, y no se guarda en ningún lado. Es lo que daría un perfil sin tener cuentas (ver
+`IDEAS.md`). El que entra a mirar con la partida empezada no suma una partida jugada.
+
 ## El mapa
 
 Arena circular de 3000 px de diámetro, generada con semilla fija en

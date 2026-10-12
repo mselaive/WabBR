@@ -503,7 +503,9 @@ export class GameRoom extends Server<Env> {
       inputs.set(seat.playerId, seat.inputs.take());
     }
 
+    const wasPlaying = s.phase === "playing";
     step(s, inputs, this.events, this.arena);
+    if (wasPlaying && s.phase === "ended") this.addToTally();
 
     // Transiciones que dependen del contador que acaba de decrementar step().
     if (s.phase === "countdown" && s.phaseTicksLeft <= 0) {
@@ -647,6 +649,24 @@ export class GameRoom extends Server<Env> {
   }
 
   // ------------------------------------------------------------ sala
+
+  /**
+   * Suma la partida que acaba de terminar al marcador de la sala de cada uno
+   * que la jugó. El que entró a mirar con la partida empezada no tiene puesto
+   * y no suma una partida jugada.
+   */
+  private addToTally(): void {
+    const s = this.state;
+    for (const seat of this.seats.values()) {
+      const p = findPlayer(s, seat.playerId);
+      if (!p || p.place <= 0) continue;
+      const m = seat.meta;
+      m.played = (m.played ?? 0) + 1;
+      m.totalKills = (m.totalKills ?? 0) + p.kills;
+      if (s.winnerId === p.id) m.wins = (m.wins ?? 0) + 1;
+    }
+    this.broadcastRoster();
+  }
 
   private resetToLobby(): void {
     const s = this.state;

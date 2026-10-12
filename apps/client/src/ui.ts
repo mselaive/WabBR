@@ -259,6 +259,15 @@ export class UI {
 
         li.append(swatch, who);
 
+        // El marcador de la noche: cuántas ganó de las que jugó en esta sala.
+        if ((p.played ?? 0) > 0) {
+          const tally = document.createElement("span");
+          tally.className = "tally";
+          tally.textContent = `${p.wins ?? 0}/${p.played} ganadas · ${p.totalKills ?? 0} kills`;
+          tally.title = `En esta sala: ganó ${p.wins ?? 0} de ${p.played} partidas e hizo ${p.totalKills ?? 0} kills`;
+          li.append(tally);
+        }
+
         if (p.id === hostId) {
           const tag = document.createElement("span");
           tag.className = "tag host";

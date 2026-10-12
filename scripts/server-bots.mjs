@@ -19,7 +19,7 @@ const check = (ok, que) => {
   if (!ok) fallos.push(que);
 };
 
-const estado = { id: -1, roster: [], phase: "", kills: 0, res: null, alive: 0, vio: new Set() };
+const estado = { id: -1, roster: [], phase: "", kills: 0, res: null, alive: 0, vio: new Set(), winner: -1 };
 const ws = new WebSocket(`${WS}/parties/game-room/${ROOM}?name=Host&v=2`);
 ws.on("message", (raw) => {
   const m = JSON.parse(raw.toString());
@@ -31,6 +31,7 @@ ws.on("message", (raw) => {
     for (const p of m.players) if (p[0] !== estado.id) estado.vio.add(p[0]);
     for (const ev of m.ev ?? []) if (ev.t === "kill" && ev.byId >= 0) estado.kills++;
     if (m.res) estado.res = m.res;
+    if (m.phase === "ended") estado.winner = m.winner;
   }
 });
 const enviar = (msg) => ws.send(JSON.stringify(msg));
@@ -58,6 +59,18 @@ console.log("  (jugando: los bots tienen que encontrarse y pelear...)");
 check(await hasta(() => estado.phase === "ended", 6 * 60 * 1000), "la partida termina");
 check(estado.kills > 0, `hubo combate (${estado.kills} kills)`);
 check(estado.res?.length === BOTS + 1, "y el resultado trae a todos");
+
+// El marcador de la sala: una partida jugada para cada uno, una ganada para el
+// que ganó, y las kills de todos sumadas igual que las del kill feed.
+await hasta(() => estado.roster.every((p) => p.played === 1), 3000);
+check(estado.roster.every((p) => p.played === 1), "el marcador de la sala cuenta la partida para todos");
+const ganadas = estado.roster.reduce((n, p) => n + (p.wins ?? 0), 0);
+check(
+  estado.winner >= 0 ? ganadas === 1 && estado.roster.find((p) => p.id === estado.winner)?.wins === 1 : ganadas === 0,
+  "y la victoria se la anota el que ganó",
+);
+const killsSala = estado.roster.reduce((n, p) => n + (p.totalKills ?? 0), 0);
+check(killsSala === estado.kills, `y suma las kills (${killsSala} de ${estado.kills})`);
 
 ws.close();
 if (fallos.length) {

@@ -36,6 +36,7 @@ Ninguno está en `main`: un push a `main` despliega solo a wabbo.org.
 | Caer y levantar | En dúos, a cero con el compañero en pie caés: te arrastrás, te desangrás en 30 s y él te levanta con E en 4 s. Los bots también | 7 tests + 8 partidas de dúos de bots (31 caídas, 3 levantadas) + captura del caído |
 | Marcas para la pareja | `F` o click en el minimapa: rombo, flecha en el borde y anillo en el minimapa, sólo para tu compañero | `scripts/marks.mjs` (compañero sí, rival no) + captura |
 | Cómo te mataron | Al morir: quién, con qué arma y cuánta vida y chaleco le quedaban | Test + captura |
+| Dos revisiones más | Un muerto en dúos veía todo el mapa y se lo podía marcar al compañero (ahora ve con los ojos del vivo); el minimapa se tragaba los tiros; levantar se mezclaba con curarse y tirar granadas; un bot caído se alejaba mientras lo levantaban | Tests nuevos para cada uno |
 | Controles táctiles | Dos sticks flotantes, HUD tocable, Recargar/Tabla, aviso de girar el teléfono | Chrome emulando un teléfono con toques de dos dedos; **no probado en un teléfono real** |
 
 ### Para subirlo

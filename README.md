@@ -657,6 +657,11 @@ y con pérdida de paquetes.
 y el codec del snapshot— con latencia y con jitter, y comprueba que cada bala del servidor ya
 estuviera dibujada y por el mismo camino. Con el servidor repitiendo inputs como antes, falla.
 
+Contra el servidor local (`npm run dev` en otra terminal) hay scripts con sockets de verdad:
+`scripts/server-bots.mjs` (una partida de bots entera y el marcador de la sala),
+`scripts/reconnect.mjs` (cortes de conexión), `scripts/marks.mjs` (las marcas le llegan sólo a
+la pareja, y las parejas elegidas se respetan) y `scripts/kick.mjs` (echar del lobby).
+
 ### Ver el juego sin abrirlo a mano
 
 ```bash

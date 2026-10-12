@@ -115,5 +115,11 @@ export const EMPTY_ROOM_SHUTDOWN_TICKS = 30 * TICK_RATE;
 
 /** Un input más viejo que esto se descarta (anti-cheat básico / anti-lag-abuse). */
 export const MAX_INPUT_BUFFER = 8;
+/**
+ * Cuánto se le guarda el lugar en la partida al que se le cortó la conexión.
+ * Mientras tanto su muñeco se queda quieto donde estaba (y lo pueden matar).
+ * Alcanza para un corte de WiFi o un cambio de red del celular.
+ */
+export const RECONNECT_GRACE_MS = 15_000;
 export const ROOM_CODE_LENGTH = 6;
 export const MAX_NAME_LENGTH = 14;

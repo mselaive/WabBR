@@ -8,6 +8,7 @@ import {
   InputQueue,
   MAX_PLAYERS,
   MIN_PLAYERS,
+  RECONNECT_GRACE_MS,
   MS_PER_TICK,
   PLAYER_COLORS,
   createGameState,
@@ -23,6 +24,7 @@ import {
   packResults,
   packSnapshotArrays,
   sanitizeName,
+  sanitizeToken,
   startMatch,
   findPlayer,
   step,
@@ -53,7 +55,12 @@ interface ConnState {
 /** Todo lo que el servidor sabe de un jugador sentado en la sala. */
 interface Seat {
   playerId: number;
-  connId: string;
+  /** Conexión actual, o null mientras se le guarda el lugar tras un corte. */
+  connId: string | null;
+  /** Con esto vuelve al mismo asiento si se le corta la conexión. */
+  token: string | null;
+  /** Cuándo se le cortó la conexión (Date.now()), o 0 si está conectado. */
+  goneAt: number;
   meta: PlayerMeta;
   /** Inputs pendientes. Cada uno se procesa exactamente una vez: ver InputQueue. */
   inputs: InputQueue;
@@ -82,6 +89,8 @@ export class GameRoom extends Server<Env> {
 
   private state: GameState = createGameState(1);
   private seats = new Map<number, Seat>();
+  /** Token de reconexión -> id del asiento. */
+  private byToken = new Map<string, number>();
   private events: SimEvent[] = [];
   private nextPlayerId = 1;
   private hostId = -1;
@@ -103,6 +112,19 @@ export class GameRoom extends Server<Env> {
   // ------------------------------------------------------------ conexiones
 
   override onConnect(conn: Connection<ConnState>, ctx: ConnectionContext): void {
+    const url = new URL(ctx.request.url);
+    const token = sanitizeToken(url.searchParams.get("token"));
+
+    // Vuelve alguien a quien se le cortó la conexión: recupera su asiento, y si
+    // está en partida, su muñeco. Va antes del chequeo de sala llena porque su
+    // lugar nunca se liberó.
+    const known = token === null ? undefined : this.byToken.get(token);
+    const back = known === undefined ? undefined : this.seats.get(known);
+    if (back) {
+      this.reattach(conn, back);
+      return;
+    }
+
     if (this.seats.size >= MAX_PLAYERS) {
       this.sendTo(conn, {
         t: "err",
@@ -113,7 +135,6 @@ export class GameRoom extends Server<Env> {
       return;
     }
 
-    const url = new URL(ctx.request.url);
     const name = sanitizeName(url.searchParams.get("name"));
 
     if (this.kicked.has(name.trim().toLowerCase())) {
@@ -130,10 +151,13 @@ export class GameRoom extends Server<Env> {
     const seat: Seat = {
       playerId,
       connId: conn.id,
+      token,
+      goneAt: 0,
       meta: { id: playerId, name, colorIndex: this.freeColorIndex(), ready: false },
       inputs: new InputQueue(),
     };
     this.seats.set(playerId, seat);
+    if (token !== null) this.byToken.set(token, playerId);
     conn.setState({ playerId });
 
     // Un jugador que entra en plena partida mira como espectador y juega la próxima.
@@ -169,14 +193,71 @@ export class GameRoom extends Server<Env> {
   }
 
   override onClose(conn: Connection<ConnState>): void {
-    const playerId = conn.state?.playerId;
-    if (playerId === undefined) return;
-    this.removeSeat(playerId);
+    this.dropConnection(conn);
   }
 
   override onError(conn: Connection<ConnState>): void {
+    this.dropConnection(conn);
+  }
+
+  /**
+   * Se cortó una conexión. En partida no se echa al jugador de una: se le
+   * guarda el lugar `RECONNECT_GRACE_MS` con el muñeco quieto. Antes un corte de
+   * un segundo te mataba ahí mismo, y al reconectarte volvías como espectador.
+   */
+  private dropConnection(conn: Connection<ConnState>): void {
     const playerId = conn.state?.playerId;
-    if (playerId !== undefined) this.removeSeat(playerId);
+    if (playerId === undefined) return;
+    const seat = this.seats.get(playerId);
+    // Una conexión vieja que se cierra cuando el jugador ya volvió por otra.
+    if (!seat || seat.connId !== conn.id) return;
+
+    const inMatch = this.state.phase === "playing" || this.state.phase === "countdown";
+    if (!inMatch || seat.token === null) {
+      this.removeSeat(playerId);
+      return;
+    }
+    seat.connId = null;
+    seat.goneAt = Date.now();
+    seat.meta.away = true;
+    this.broadcastRoster();
+  }
+
+  /** Vuelve al asiento el que se había desconectado (o abrió de nuevo la pestaña). */
+  private reattach(conn: Connection<ConnState>, seat: Seat): void {
+    const previous = seat.connId;
+    seat.connId = conn.id;
+    seat.goneAt = 0;
+    seat.meta.away = false;
+    conn.setState({ playerId: seat.playerId });
+
+    // Si la conexión vieja sigue abierta —el navegador se reconectó antes de que
+    // el servidor notara el corte— se cierra: un asiento, una conexión.
+    if (previous !== null) {
+      for (const c of this.getConnections<ConnState>()) {
+        if (c.id === previous) c.close(4001, "replaced");
+      }
+    }
+
+    this.sendTo(conn, {
+      t: "welcome",
+      you: seat.playerId,
+      room: this.name,
+      hostId: this.hostId,
+      roster: this.roster(),
+      phase: this.state.phase,
+    });
+    this.broadcastRoster();
+    // Lo que se recogió y se tiró mientras no estaba.
+    if (this.state.phase === "playing") this.sendTo(conn, this.itemsMessage());
+    this.ensureLoop();
+  }
+
+  /** A los que no volvieron a tiempo se los da por ido, como antes. */
+  private expireAbsent(now: number): void {
+    for (const seat of [...this.seats.values()]) {
+      if (seat.goneAt > 0 && now - seat.goneAt > RECONNECT_GRACE_MS) this.removeSeat(seat.playerId);
+    }
   }
 
   /** Chequeo de salud / existencia de sala, útil para el lobby del cliente. */
@@ -310,6 +391,7 @@ export class GameRoom extends Server<Env> {
     const now = Date.now();
     let delta = now - this.lastPumpAt;
     this.lastPumpAt = now;
+    this.expireAbsent(now);
 
     // Si el runtime nos dejó dormidos, no intentamos recuperar todo el tiempo
     // perdido de golpe: preferimos perder simulación antes que trabar la sala.
@@ -518,6 +600,7 @@ export class GameRoom extends Server<Env> {
     const seat = this.seats.get(playerId);
     if (!seat) return;
     this.seats.delete(playerId);
+    if (seat.token !== null) this.byToken.delete(seat.token);
 
     const player = this.state.players.find((p) => p.id === playerId);
     if (player) {

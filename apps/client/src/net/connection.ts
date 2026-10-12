@@ -10,6 +10,25 @@ export interface NetOptions {
   onError?: (err: unknown) => void;
 }
 
+/**
+ * Con qué vuelve esta pestaña a su asiento si se le corta la conexión. Vive en
+ * sessionStorage: sobrevive a recargar la página pero es de esta pestaña sola,
+ * así que otra pestaña con la misma sala entra como otro jugador.
+ */
+function reconnectToken(room: string): string {
+  const key = `wabbr:token:${room}`;
+  try {
+    const saved = sessionStorage.getItem(key);
+    if (saved) return saved;
+    const fresh = crypto.randomUUID();
+    sessionStorage.setItem(key, fresh);
+    return fresh;
+  } catch {
+    // Sin almacenamiento (modo privado estricto): se pierde sólo la reconexión.
+    return crypto.randomUUID();
+  }
+}
+
 /** `?lag=200` simula 200 ms de ida y vuelta sin salir de tu máquina. */
 function lagFromUrl(): number {
   const raw = new URLSearchParams(location.search).get("lag");
@@ -92,7 +111,8 @@ export class Net {
       host: serverHost(),
       party: "game-room",
       room: opts.room,
-      query: { name: opts.name },
+      // El mismo token en cada reintento: PartySocket reusa la query al reconectar.
+      query: { name: opts.name, token: reconnectToken(opts.room) },
     });
 
     this.socket.addEventListener("open", () => {
@@ -132,6 +152,11 @@ export class Net {
     };
     if (this.lag > 0) setTimeout(push, this.lag / 2);
     else push();
+  }
+
+  /** Sólo para probar: corta la conexión como si se cayera el WiFi y deja que vuelva sola. */
+  simulateDrop(): void {
+    this.socket.reconnect();
   }
 
   close(): void {

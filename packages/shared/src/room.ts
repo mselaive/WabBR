@@ -46,3 +46,11 @@ export function sanitizeName(raw: unknown): string {
   cleaned = cleaned.trim().slice(0, MAX_NAME_LENGTH);
   return cleaned.length > 0 ? cleaned : "Jugador";
 }
+
+/**
+ * El token con el que una pestaña vuelve a su asiento si se le corta la
+ * conexión. Lo genera el cliente; acá sólo se acepta algo con forma razonable.
+ */
+export function sanitizeToken(raw: unknown): string | null {
+  return typeof raw === "string" && /^[A-Za-z0-9_-]{8,64}$/.test(raw) ? raw : null;
+}

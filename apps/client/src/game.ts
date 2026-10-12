@@ -9,6 +9,7 @@ import {
   MS_PER_TICK,
   CRATE_REACH,
   PICKUP_RADIUS,
+  RECONNECT_GRACE_MS,
   TICK_RATE,
   WORLD_CENTER_X,
   WORLD_CENTER_Y,
@@ -57,6 +58,8 @@ export class Game {
   private readonly snapshots = new SnapshotBuffer();
 
   private net: Net | null = null;
+  /** Se cortó la conexión y PartySocket está reintentando. Pasado el plazo, se abandona. */
+  private giveUpTimer: ReturnType<typeof setTimeout> | null = null;
   private predictor: Predictor | null = null;
   /** Tus balas, que se dibujan desde el click sin esperar al servidor. */
   private readonly shots = new LocalShots();
@@ -154,6 +157,7 @@ export class Game {
         radio: WORLD_RADIUS,
         sprite: () => this.world.debugPlayer(this.localId),
         camara: () => this.world.debugCamera(),
+        cortar: () => this.net?.simulateDrop(),
         enFrame: () => {
           const frame = this.snapshots.sample(performance.now() - INTERP_DELAY_MS);
           const mine = frame?.players.find((p) => p.id === this.localId);
@@ -175,11 +179,11 @@ export class Game {
       onMessage: (msg) => this.onMessage(msg),
       onClose: () => {
         if (this.localId === -1) return;
-        this.ui.showScreen("menu");
-        this.ui.showError("Se cortó la conexión con la sala.");
-        this.reset();
+        this.startReconnecting();
       },
       onError: () => {
+        // Ya estábamos adentro: es un reintento fallido y PartySocket sigue probando.
+        if (this.localId !== -1) return;
         this.ui.showScreen("menu");
         this.ui.showError("No se pudo conectar…");
         // El motivo real se averigua por HTTP, porque el navegador no deja leer
@@ -191,9 +195,34 @@ export class Game {
   }
 
   disconnect(): void {
+    this.stopReconnecting();
     this.net?.close();
     this.net = null;
     this.reset();
+  }
+
+  /**
+   * Se cortó la conexión. Antes te mandaba al menú con un error; ahora el
+   * servidor te guarda el lugar un rato (RECONNECT_GRACE_MS) y PartySocket
+   * reintenta solo, así que se avisa y se espera. Si no vuelve a tiempo, el
+   * lugar ya se perdió y recién ahí se va al menú.
+   */
+  private startReconnecting(): void {
+    this.ui.setReconnecting(true);
+    if (this.giveUpTimer) return;
+    this.giveUpTimer = setTimeout(() => {
+      this.giveUpTimer = null;
+      this.ui.setReconnecting(false);
+      this.disconnect();
+      this.ui.showScreen("menu");
+      this.ui.showError("Se cortó la conexión con la sala.");
+    }, RECONNECT_GRACE_MS + 5000);
+  }
+
+  private stopReconnecting(): void {
+    if (this.giveUpTimer) clearTimeout(this.giveUpTimer);
+    this.giveUpTimer = null;
+    this.ui.setReconnecting(false);
   }
 
   private reset(): void {
@@ -226,7 +255,21 @@ export class Game {
 
   private onMessage(msg: ServerMsg): void {
     switch (msg.t) {
-      case "welcome":
+      case "welcome": {
+        this.stopReconnecting();
+        const inMatch = msg.phase === "playing" || msg.phase === "countdown";
+        if (msg.you === this.localId && inMatch) {
+          // Volvimos a nuestro asiento en la misma partida: se sigue jugando.
+          // Lo que se mandó durante el corte no llegó, así que la predicción
+          // se replanta en la posición del servidor con el próximo snapshot.
+          this.hostId = msg.hostId;
+          this.setRoster(msg.roster);
+          this.spawned = false;
+          return;
+        }
+        // Un asiento nuevo (el lugar ya se había perdido, o es la primera vez):
+        // de lo de antes no sirve nada.
+        if (this.localId !== -1 && msg.you !== this.localId) this.reset();
         this.localId = msg.you;
         this.hostId = msg.hostId;
         this.setRoster(msg.roster);
@@ -234,6 +277,7 @@ export class Game {
         this.ui.resetReady();
         this.ui.showScreen("lobby");
         return;
+      }
 
       case "roster":
         this.hostId = msg.hostId;
@@ -759,6 +803,7 @@ export class Game {
           alive: p?.alive ?? false,
           colorIndex: meta.colorIndex,
           isLocal: meta.id === this.localId,
+          away: meta.away === true,
         };
       })
       .sort((a, b) => Number(b.alive) - Number(a.alive) || b.kills - a.kills);

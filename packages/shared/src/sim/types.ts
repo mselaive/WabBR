@@ -132,6 +132,8 @@ export interface PlayerMeta {
   /** Índice de paleta, no un color RGB: ahorra bytes y centraliza la paleta. */
   colorIndex: number;
   ready: boolean;
+  /** Se le cortó la conexión y el servidor le está guardando el lugar. */
+  away?: boolean;
 }
 
 export interface BulletState {

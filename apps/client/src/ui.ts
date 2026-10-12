@@ -106,6 +106,7 @@ export class UI {
   private readonly staminaFill = el("staminaFill");
   private readonly consumablesEl = el("consumables");
   private readonly loadout = el("loadout");
+  private readonly reconnecting = el("reconnecting");
   private readonly pickupPrompt = el("pickupPrompt");
   private readonly channel = el("channel");
   private readonly channelFill = el("channelFill");
@@ -261,7 +262,7 @@ export class UI {
         }
         const state = document.createElement("span");
         state.className = p.ready ? "tag ready" : "tag";
-        state.textContent = p.ready ? "LISTO" : "esperando";
+        state.textContent = p.away ? "sin conexión" : p.ready ? "LISTO" : "esperando";
         li.append(state);
 
         // El host puede echar a cualquiera menos a sí mismo. El servidor lo
@@ -425,6 +426,11 @@ export class UI {
     this.zoneAlert.classList.toggle("critical", alert.seconds <= 5);
   }
 
+  /** Aviso de que se cortó la conexión y se está reintentando. */
+  setReconnecting(on: boolean): void {
+    this.reconnecting.hidden = !on;
+  }
+
   /** A quién estás mirando después de morir y cómo cambiar. null lo esconde. */
   setSpectating(view: { title: string; hint: string } | null): void {
     this.spectating.hidden = view === null;
@@ -486,7 +492,7 @@ export class UI {
 
   setScoreboard(
     visible: boolean,
-    rows: { name: string; kills: number; alive: boolean; colorIndex: number; isLocal: boolean }[],
+    rows: { name: string; kills: number; alive: boolean; colorIndex: number; isLocal: boolean; away: boolean }[],
   ): void {
     this.scoreboard.hidden = !visible;
     if (!visible) return;
@@ -501,7 +507,7 @@ export class UI {
 
         const who = document.createElement("span");
         who.className = "who";
-        who.textContent = r.name;
+        who.textContent = r.away ? `${r.name} (sin conexión)` : r.name;
 
         const kills = document.createElement("span");
         kills.textContent = `${r.kills}`;

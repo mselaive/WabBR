@@ -45,6 +45,18 @@ Con dos jugadores listos arranca la partida.
 
 No ves a través de las paredes: mirá la sección de línea de vista.
 
+### Si se corta la conexión
+
+En partida, un corte no te saca del juego: el servidor te guarda el lugar 15 segundos
+(`RECONNECT_GRACE_MS`) con el muñeco quieto donde estaba —y lo pueden matar—, el
+cliente muestra "Reconectando…" y vuelve solo. Cada pestaña tiene un token en
+`sessionStorage` con el que el servidor la reconoce; recargar la página también
+vuelve al mismo asiento. Los demás te ven como "sin conexión" en la tabla.
+
+Antes, un corte de un segundo te mataba ahí mismo y al volver entrabas como
+espectador. `node scripts/reconnect.mjs` lo prueba contra el servidor local (con
+`--largo` también prueba que pasado el plazo se te da por ido).
+
 ### El lobby
 
 El que crea la sala es el host: puede forzar el arranque sin esperar a que todos marquen listo, y

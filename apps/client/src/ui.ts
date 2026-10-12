@@ -619,14 +619,23 @@ export class UI {
 
   setScoreboard(
     visible: boolean,
-    rows: { name: string; kills: number; alive: boolean; colorIndex: number; isLocal: boolean; away: boolean }[],
+    rows: {
+      name: string;
+      kills: number;
+      alive: boolean;
+      colorIndex: number;
+      isLocal: boolean;
+      away: boolean;
+      /** Tu compañero en dúos. */
+      mate?: boolean;
+    }[],
   ): void {
     this.scoreboard.hidden = !visible;
     if (!visible) return;
     this.scoreboardList.replaceChildren(
       ...rows.map((r) => {
         const li = document.createElement("li");
-        li.className = `score-row${r.alive ? "" : " dead"}${r.isLocal ? " me" : ""}`;
+        li.className = `score-row${r.alive ? "" : " dead"}${r.isLocal ? " me" : ""}${r.mate ? " mate" : ""}`;
 
         const swatch = document.createElement("span");
         swatch.className = "swatch";

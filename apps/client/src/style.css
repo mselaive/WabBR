@@ -680,6 +680,10 @@ input:focus {
   border-bottom: 1px solid #ffffff12;
 }
 
+.score-row.mate .who {
+  color: #7dff9a;
+}
+
 .score-row .who {
   flex: 1;
 }

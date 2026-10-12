@@ -1099,10 +1099,12 @@ export class Game {
       this.ui.setZoneBanner(null, "", false);
     }
 
+    const mates = this.mates();
     const rows = [...this.roster.values()]
       .map((meta) => {
         const p = this.standings.get(meta.id);
         return {
+          mate: mates.has(meta.id),
           name: meta.name,
           kills: p?.kills ?? 0,
           alive: p?.alive ?? false,

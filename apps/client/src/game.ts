@@ -47,6 +47,7 @@ import { Predictor, type PredictedShot } from "./net/prediction.js";
 import { LocalShots } from "./net/shots.js";
 import { LocalGrenades } from "./net/grenades.js";
 import { InputController, type SpectateIntent } from "./input.js";
+import { TouchControls } from "./touch.js";
 import { WorldView } from "./render/world.js";
 import { Minimap } from "./render/minimap.js";
 import { causeIconUrl } from "./render/textures.js";
@@ -62,6 +63,8 @@ const CAMERA_LEAD = 0.18;
  * vista), así que lo que entra en la pantalla más grande ya llega.
  */
 const SCOPE_ZOOM = 1.4;
+/** Qué tan adelante del muñeco va la mira cuando se apunta con el stick táctil. */
+const TOUCH_CURSOR_DISTANCE = 160;
 
 export class Game {
   private app!: Application;
@@ -170,12 +173,24 @@ export class Game {
       this.arena,
     );
 
-    this.detachInput = this.input.attach(this.app.canvas);
+    const detachKeys = this.input.attach(this.app.canvas);
+    const detachTouch = new TouchControls(this.input).attach(this.app.canvas, {
+      root: document.getElementById("hud")!,
+      slots: document.getElementById("slots")!,
+      consumables: document.getElementById("consumables")!,
+      pickup: document.getElementById("pickupPrompt")!,
+    });
+    this.detachInput = () => {
+      detachKeys();
+      detachTouch();
+    };
 
     // El navegador no deja sonar nada hasta el primer gesto: el audio arranca ahí.
     const unlock = () => this.sound.unlock();
     const signal = this.listeners.signal;
     window.addEventListener("pointerdown", unlock, { signal });
+    // Safari en el teléfono sólo deja arrancar el audio al levantar el dedo.
+    window.addEventListener("touchend", unlock, { signal });
     window.addEventListener("keydown", unlock, { signal });
     window.addEventListener("keydown", (e) => {
       if (e.code !== "KeyM" || e.repeat) return;
@@ -829,6 +844,16 @@ export class Game {
   /** Ángulo del jugador hacia el cursor, en coordenadas del mundo. */
   private currentAim(): number {
     if (!this.predictor) return 0;
+    const touchAim = this.input.touch.aim;
+    if (touchAim !== null) {
+      // Con el stick, el cursor es virtual y va adelante del muñeco: la mira y
+      // el adelanto de la cámara lo siguen igual que al mouse.
+      const me = this.lastDrawn ?? this.predictor.state;
+      const at = this.world.worldToScreen(me.x, me.y);
+      this.input.mouseX = at.x + Math.cos(touchAim) * TOUCH_CURSOR_DISTANCE;
+      this.input.mouseY = at.y + Math.sin(touchAim) * TOUCH_CURSOR_DISTANCE;
+      return touchAim;
+    }
     const target = this.world.screenToWorld(this.input.mouseX, this.input.mouseY);
     return Math.atan2(target.y - this.predictor.state.y, target.x - this.predictor.state.x);
   }
@@ -922,8 +947,11 @@ export class Game {
         playing
           ? {
               title: `Mirando a ${name}`,
-              hint:
-                alive.length > 1
+              hint: document.body.classList.contains("touch")
+                ? alive.length > 1
+                  ? "Tocá a un costado para cambiar"
+                  : ""
+                : alive.length > 1
                   ? "Click o ← → para cambiar · Espacio: cámara libre"
                   : "Espacio: cámara libre",
             }

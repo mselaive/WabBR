@@ -1153,3 +1153,121 @@ body.playing {
 .hidden-tag[hidden] {
   display: none;
 }
+
+/* ------------------------------------------------------------ táctil */
+
+/*
+ * Los sticks aparecen donde se apoya el dedo. La capa no recibe toques: los
+ * recibe el canvas de abajo, que es el que sabe de qué lado tocaste.
+ */
+.touch-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.stick {
+  position: absolute;
+  width: 112px;
+  height: 112px;
+  margin: -56px 0 0 -56px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: rgba(13, 16, 20, 0.3);
+}
+
+.stick-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.stick-knob.firing {
+  background: rgba(255, 106, 74, 0.8);
+}
+
+.touch-buttons {
+  display: none;
+}
+
+body.touch .touch-buttons {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+/*
+ * Un teléfono acostado tiene 350-430 px de alto: el HUD de la compu ocupaba
+ * media pantalla y el minimapa tapaba los botones. Se achica todo junto.
+ */
+@media (max-height: 500px) {
+  #hud {
+    zoom: 0.62;
+  }
+}
+
+.touch-button {
+  font-family: var(--pixel);
+  font-size: 9px;
+  color: var(--ink);
+  padding: 12px 10px;
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  background: rgba(13, 16, 20, 0.72);
+}
+
+/* En el teléfono, las filas del HUD son botones: más grandes y tocables. */
+body.touch #slots .slot,
+body.touch #consumables .consumable,
+body.touch #pickupPrompt {
+  pointer-events: auto;
+}
+
+body.touch #slots .slot {
+  padding: 9px 12px;
+}
+
+body.touch #consumables .consumable {
+  padding: 9px 11px;
+}
+
+/* El canvas no se desplaza ni hace zoom con los dedos: los dedos son del juego. */
+#stage canvas {
+  touch-action: none;
+}
+
+/* Parado no entra: la mitad de la pantalla serían tus pulgares. */
+.rotate-hint {
+  display: none;
+}
+
+@media (orientation: portrait) {
+  body.touch .touch-buttons {
+    display: none;
+  }
+
+  body.touch .rotate-hint {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    text-align: center;
+    font-family: var(--pixel);
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--ink);
+    background: rgba(13, 16, 20, 0.92);
+  }
+}

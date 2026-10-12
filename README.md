@@ -47,6 +47,26 @@ Con dos jugadores listos arranca la partida.
 
 No ves a través de las paredes: mirá la sección de línea de vista.
 
+### En el teléfono
+
+Se juega acostado. Con el primer toque aparecen los controles táctiles (`apps/client/src/touch.ts`):
+
+- **Dedo izquierdo**: un stick que aparece donde apoyás el dedo. Mueve en ocho direcciones, igual
+  que el teclado (el servidor sólo acepta -1, 0 o 1 por eje), y empujado a fondo corre.
+- **Dedo derecho**: otro stick que apunta. Empujado más de la mitad, dispara; menos, sólo apunta, y
+  al soltarlo la mira queda donde estaba.
+- **El HUD se toca**: la ranura cambia de arma, cada fila de la mochila usa lo suyo (vendas,
+  granada, humo…) y el cartel de "recoger" recoge. Más los botones **Recargar** y **Tabla**.
+- Muerto, tocar a un costado cambia a quién mirás.
+
+Usa eventos táctiles y no de puntero, porque cancelarlos es lo único que evita que el navegador
+además simule un click: cada toque era un tiro. Con menos de 500 px de alto el HUD se achica
+entero, y parado aparece "Girá el teléfono". En una compu con mouse no aparece nada de esto, y si
+la compu además tiene pantalla táctil, mover el mouse le devuelve la puntería.
+
+Probado emulando un teléfono en Chrome con toques de dos dedos (moverse, correr, apuntar, disparar,
+recargar, y que un toque suelto no dispare); **no lo probé en un teléfono de verdad**.
+
 ### Bots
 
 El host puede **agregar bots** desde el lobby, para completar la sala o practicar

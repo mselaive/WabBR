@@ -21,6 +21,26 @@ const ACTION_KEYS: Record<string, number> = {
   Digit5: ACT_USE_BASE + 2, // adrenalina
 };
 
+/**
+ * La acción de la tecla que muestra el HUD ("1", "G", "E"...). Con esto, en una
+ * pantalla táctil, tocar la ranura o la fila de la mochila hace lo mismo que
+ * apretar su tecla.
+ */
+export function actionForKey(label: string): number | undefined {
+  return ACTION_KEYS[/^\d$/.test(label) ? `Digit${label}` : `Key${label}`];
+}
+
+/** Lo que mandan los controles táctiles (ver touch.ts). */
+export interface TouchState {
+  /** -1/0/1 por eje, como las teclas: el servidor no acepta otra cosa. */
+  moveX: number;
+  moveY: number;
+  sprint: boolean;
+  /** Hacia dónde apunta el stick derecho, o null si nunca se tocó. */
+  aim: number | null;
+  shooting: boolean;
+}
+
 /** Teclas de movimiento: WASD y flechas, más el layout francés por si acaso. */
 const UP = new Set(["KeyW", "ArrowUp", "KeyZ"]);
 const DOWN = new Set(["KeyS", "ArrowDown"]);
@@ -70,6 +90,26 @@ export class InputController {
    */
   watching = false;
   private spectateIntents: SpectateIntent[] = [];
+  /** Estado de los controles táctiles. Se suma al del teclado y el mouse. */
+  readonly touch: TouchState = { moveX: 0, moveY: 0, sprint: false, aim: null, shooting: false };
+
+  /** Una acción pedida desde afuera (un botón táctil), como si se apretara su tecla. */
+  queueAction(action: number): void {
+    if (this.enabled) this.pendingAction = action;
+  }
+
+  queueReload(): void {
+    if (this.enabled) this.reloadQueued = true;
+  }
+
+  /** Para tocar la pantalla mirando la partida: lo mismo que las flechas o el click. */
+  queueSpectate(intent: SpectateIntent): void {
+    if (this.watching) this.spectateIntents.push(intent);
+  }
+
+  setScoreboard(open: boolean): void {
+    this.scoreboardOpen = open;
+  }
 
   attach(target: HTMLElement): () => void {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -105,6 +145,8 @@ export class InputController {
     const onMouseMove = (e: MouseEvent) => {
       this.mouseX = e.clientX;
       this.mouseY = e.clientY;
+      // Volvió el mouse (una compu con pantalla táctil): manda él otra vez.
+      this.touch.aim = null;
     };
 
     const onMouseDown = (e: MouseEvent) => {
@@ -160,11 +202,20 @@ export class InputController {
 
   /** Dirección de las teclas de movimiento, -1/0/1 por eje. Para la cámara libre. */
   moveAxes(): { x: number; y: number; fast: boolean } {
-    return { x: this.axis(LEFT, RIGHT), y: this.axis(UP, DOWN), fast: this.isSprinting() };
+    return { x: this.moveX(), y: this.moveY(), fast: this.isSprinting() };
+  }
+
+  private moveX(): number {
+    return this.axis(LEFT, RIGHT) || this.touch.moveX;
+  }
+
+  private moveY(): number {
+    return this.axis(UP, DOWN) || this.touch.moveY;
   }
 
   /** Correr se mantiene apretado, así que se lee del estado, no de un evento. */
   private isSprinting(): boolean {
+    if (this.touch.sprint) return true;
     for (const key of this.keys) if (SPRINT.has(key)) return true;
     return false;
   }
@@ -185,10 +236,10 @@ export class InputController {
   sample(seq: number, aim: number, view: number): PlayerInput {
     const input: PlayerInput = {
       seq,
-      moveX: this.axis(LEFT, RIGHT),
-      moveY: this.axis(UP, DOWN),
+      moveX: this.moveX(),
+      moveY: this.moveY(),
       aim,
-      shoot: this.shooting || this.shotQueued,
+      shoot: this.shooting || this.shotQueued || this.touch.shooting,
       reload: this.reloadQueued,
       sprint: this.isSprinting(),
       view,
@@ -203,6 +254,10 @@ export class InputController {
   releaseAll(): void {
     this.keys.clear();
     this.shooting = false;
+    this.touch.moveX = 0;
+    this.touch.moveY = 0;
+    this.touch.sprint = false;
+    this.touch.shooting = false;
     this.shotQueued = false;
     this.pendingAction = ACT_NONE;
   }

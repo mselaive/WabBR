@@ -23,29 +23,48 @@ Ninguno está en `main`: un push a `main` despliega solo a wabbo.org.
 | Granadas predichas | Salen de la mano al apretar `G`, como las balas | Test cliente/servidor con 200 ms de ping |
 | Sonido | Generado por código, posicional, `M` para silenciar | Niveles medidos sin parlantes; **no lo escuché**: probalo |
 | Barriles | Explotan a balazos y se encadenan | Tests + captura del barril quemado |
+| Ícono y test de echar | Favicon (el navegador pedía uno y daba 404) y el test de echar sin carrera | `scripts/kick.mjs` |
+| Doble sombra | Donde se cruzaban las sombras de dos paredes quedaba el doble de oscuro | Capturas antes/después en el mismo momento |
+| Revisión de código | Siete arreglos: recargar la página en partida te congelaba, dos pestañas se peleaban el asiento, la ballesta igual delataba dónde estabas, etc. | `scripts/reconnect.mjs` (falla sin el arreglo) |
+| Ritmo de la zona | Con 2 jugadores las esperas duran la mitad; desde 8, lo normal | Test |
+| Mira del francotirador | Con él en la mano la cámara se aleja un 40 % | Capturas con y sin mira |
+| Granada de humo | `H` tira una nube que tapa la vista (no las balas) por 10 s; servidor y bots respetan lo que tapa | 11 tests (con control) + capturas |
+| Marcador de la sala | "2/5 ganadas · 11 kills" al lado de cada nombre en el lobby, sumando las partidas de la noche | `scripts/server-bots.mjs` + captura |
+| Controles táctiles | Dos sticks flotantes, HUD tocable, Recargar/Tabla, aviso de girar el teléfono | Chrome emulando un teléfono con toques de dos dedos; **no probado en un teléfono real** |
+
+### Para subirlo
+
+- Revisar: `git log main..noche` (un commit por cosa) y probar con
+  `PATH="$HOME/.local/node22/bin:$PATH" npm run dev`.
+- El humo cambió el protocolo (versión 2): **primero el servidor**
+  (`npm run deploy:server` o el push, si Cloudflare lo despliega solo) y después el
+  cliente. Quien tenga la pestaña abierta durante el cambio ve "recargá la página".
+- El sonido y los controles táctiles no los probé con oídos ni con un teléfono de
+  verdad: son lo primero que conviene mirar.
 
 ## Ideas que quedaron, en el orden en que las haría
 
-1. **Zona según cuántos juegan.** Con 3 o 4 personas en un mapa pensado para 16, se
-   camina mucho antes de encontrarse. Acortar las esperas de la zona cuando hay pocos
-   (por ejemplo a la mitad con 4 o menos) es cambiar un número en `ZONE_PHASES`.
-   Ahora que hay bots para completar la sala pesa menos, por eso no lo toqué.
-2. **Cuerpo a cuerpo.** Hoy, sin balas y sin arma, no hay nada que hacer. Una sartén
-   o un cuchillo de corto alcance le da algo al que perdió su arma, y en surviv.io
-   es de lo más querido.
-3. **Miras.** Que el francotirador aleje un poco la cámara (y que el servidor amplíe
-   lo que te manda en la misma medida). Hoy tiene más alcance que la pantalla.
-4. **Pings en el minimapa.** Con amigos por voz igual sirve marcar "acá hay alguien"
-   o "voy para el paquete". Es un mensaje chico y un dibujo en el minimapa.
-5. **Granada de humo.** Tapa la vista por unos segundos. Encaja con la línea de vista
-   que ya existe, pero hay que meter obstáculos que cambian con el tiempo en
-   `hasLineOfSight`, y eso toca al servidor, al cliente y a los bots.
-6. **Cascos y mochilas.** Más capas de equipo para lootear. Más contenido que
+La zona según cuántos juegan, la mira, el humo y los controles táctiles ya están
+(arriba). De la lista anterior quedaron:
+
+1. **Equipos (dúos).** Lo que más cambiaría el juego para un grupo de amigos: jugar
+   de a dos contra el resto. Es grande —el servidor tiene que saber quién es tu
+   compañero, no lastimarlo, mostrártelo siempre (atravesando la línea de vista) y
+   terminar cuando queda un equipo—, pero abre la puerta a lo siguiente.
+2. **Pings en el minimapa.** Los dejé para después de los equipos: en un todos
+   contra todos, marcar "acá hay alguien" se lo dice a todos, también al que marcás.
+3. **Cascos y mochilas.** Más capas de equipo para lootear. Más contenido que
    sistema: vale la pena si las partidas se sienten cortas de cosas para encontrar.
-7. **Killcam.** Ver los últimos segundos desde los ojos del que te mató. Lindo pero
-   caro: hay que guardar historia de snapshots por jugador.
-8. **Controles táctiles.** Hoy es teclado y mouse. Si alguien quiere jugar desde el
-   celular es todo un trabajo aparte (dos joysticks, botones, HUD distinto).
+4. **Killcam.** Ver los últimos segundos desde los ojos del que te mató. Ya al
+   morir la cámara sigue al que te mató, que da casi lo mismo; la repetición de
+   verdad pide guardar historia de snapshots por jugador.
+5. **Que los bots usen granadas y humo.** Hoy juntan granadas y no las tiran, y el
+   humo ni lo juntan. Tirarle una granada al que está detrás de una caja es lo que
+   más los haría parecer personas.
+
+Y uno que descarté: **cuerpo a cuerpo**. Lo había anotado para "el que se queda sin
+balas", pero acá la munición es infinita (se recarga siempre) y nunca te quedás
+sin arma: arrancás con la pistola y al morir es cuando la soltás.
 
 ### Un detalle del mapa
 

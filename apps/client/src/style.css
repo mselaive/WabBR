@@ -145,6 +145,9 @@ body {
 .hud-tr {
   top: 14px;
   right: 14px;
+  /* Clickearlo marca un lugar para el compañero. */
+  pointer-events: auto;
+  cursor: crosshair;
   width: 200px;
   height: 200px;
   border: 2px solid var(--line);

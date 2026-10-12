@@ -90,6 +90,8 @@ export class InputController {
    */
   watching = false;
   private spectateIntents: SpectateIntent[] = [];
+  /** Se apretó F: marcar donde apunta el cursor. Se consume con takeMark(). */
+  private markQueued = false;
   /** Estado de los controles táctiles. Se suma al del teclado y el mouse. */
   readonly touch: TouchState = { moveX: 0, moveY: 0, sprint: false, aim: null, shooting: false };
 
@@ -126,6 +128,8 @@ export class InputController {
         this.scoreboardOpen = true;
         return;
       }
+      // Marcar se puede también muerto, mirando: el compañero sigue jugando.
+      if (e.code === "KeyF" && !e.repeat) this.markQueued = true;
       if (!this.enabled) return;
       if (e.code === "KeyR") this.reloadQueued = true;
       // Sólo en el keydown: repetir la acción mientras la tecla está apretada
@@ -190,6 +194,13 @@ export class InputController {
       window.removeEventListener("mouseup", onMouseUp);
       window.removeEventListener("blur", onBlur);
     };
+  }
+
+  /** ¿Se pidió marcar desde el último cuadro? */
+  takeMark(): boolean {
+    const queued = this.markQueued;
+    this.markQueued = false;
+    return queued;
   }
 
   /** Lo que se pidió mirando desde el último cuadro. Se vacía al leerlo. */

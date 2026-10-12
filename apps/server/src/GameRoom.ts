@@ -7,6 +7,8 @@ import {
   EMPTY_ROOM_SHUTDOWN_TICKS,
   InputQueue,
   MAX_PLAYERS,
+  WORLD_CENTER_X,
+  WORLD_CENTER_Y,
   botInput,
   createBotMemory,
   navGridFor,
@@ -74,6 +76,8 @@ interface Seat {
   inputs: InputQueue;
   /** Si es un bot, lo que recuerda entre ticks. Los bots no tienen conexión. */
   bot: BotMemory | null;
+  /** Cuándo marcó el mapa por última vez (Date.now()), para no inundar. */
+  lastMarkAt: number;
 }
 
 /** Cada cuánto se le da una oportunidad de correr al loop (no es el ritmo del tick). */
@@ -86,6 +90,8 @@ const MAX_TICKS_PER_PUMP = 5;
  * margen, caminar al lado de una columna hace parpadear al otro jugador.
  */
 const SIGHT_GRACE_TICKS = 6;
+/** Entre una marca y la siguiente del mismo jugador. */
+const MARK_INTERVAL_MS = 500;
 
 /** Nombres para los bots: cortos, para que entren en la tabla. */
 const BOT_NAMES = [
@@ -186,6 +192,7 @@ export class GameRoom extends Server<Env> {
       goneAt: 0,
       meta: { id: playerId, name, colorIndex: this.freeColorIndex(), ready: false },
       inputs: new InputQueue(),
+      lastMarkAt: 0,
       bot: null,
     };
     this.seats.set(playerId, seat);
@@ -407,6 +414,28 @@ export class GameRoom extends Server<Env> {
 
       case "ping": {
         this.sendTo(conn, { t: "pong", c: msg.c, s: Date.now() });
+        return;
+      }
+
+      case "mark": {
+        // Sólo en partida y a lo sumo dos por segundo: una marca es un aviso,
+        // no un dibujo.
+        if (this.state.phase !== "playing") return;
+        if (typeof msg.x !== "number" || typeof msg.y !== "number") return;
+        if (!Number.isFinite(msg.x) || !Number.isFinite(msg.y)) return;
+        const now = Date.now();
+        if (now - seat.lastMarkAt < MARK_INTERVAL_MS) return;
+        seat.lastMarkAt = now;
+        const from = findPlayer(this.state, seat.playerId);
+        if (!from) return;
+        const x = Math.round(Math.max(0, Math.min(WORLD_CENTER_X * 2, msg.x)));
+        const y = Math.round(Math.max(0, Math.min(WORLD_CENTER_Y * 2, msg.y)));
+        // Al equipo nada más: a los rivales les diría dónde estás mirando.
+        const out = encodeServer({ t: "mark", by: from.id, x, y });
+        for (const c of this.getConnections<ConnState>()) {
+          const viewer = c.state ? findPlayer(this.state, c.state.playerId) : undefined;
+          if (viewer && viewer.team === from.team) c.send(out);
+        }
         return;
       }
 
@@ -748,6 +777,7 @@ export class GameRoom extends Server<Env> {
       goneAt: 0,
       meta: { id: playerId, name, colorIndex: this.freeColorIndex(), ready: true, bot: true },
       inputs: new InputQueue(),
+      lastMarkAt: 0,
       bot: createBotMemory((Date.now() ^ (playerId * 7919)) | 0),
     });
     this.state.players.push(createPlayer(playerId));

@@ -148,6 +148,8 @@ export class WorldView {
   /** Flechas de "te pegaron desde acá", en radianes. */
   private readonly damageArcs: { dir: number; life: number }[] = [];
   private readonly markerLayer = new Graphics();
+  /** Marcas de la pareja, en pantalla: un rombo encima del lugar o una flecha en el borde. */
+  private readonly markLayer = new Graphics();
   private readonly arcLayer = new Graphics();
   /**
    * Flecha hacia la zona cuando estás afuera. Va en el mundo, pegada al
@@ -190,7 +192,7 @@ export class WorldView {
     );
     this.zoneArrow.visible = false;
     this.app.stage.addChild(this.camera, this.screenLayer);
-    this.screenLayer.addChild(this.arcLayer, this.crosshair, this.markerLayer);
+    this.screenLayer.addChild(this.markLayer, this.arcLayer, this.crosshair, this.markerLayer);
 
     this.buildGround();
     this.buildWallRing();
@@ -1171,6 +1173,48 @@ export class WorldView {
     }
   }
 
+  /**
+   * Las marcas de la pareja. Adentro de la pantalla, un rombo que late sobre el
+   * lugar; afuera, una flecha pegada al borde que apunta hacia allá, para que
+   * "voy para el paquete" sirva aunque el paquete esté lejos.
+   */
+  drawMarks(marks: readonly { x: number; y: number; color: number; at: number }[]): void {
+    const g = this.markLayer;
+    g.clear();
+    if (marks.length === 0) return;
+    const w = this.app.screen.width;
+    const h = this.app.screen.height;
+    const margin = 28;
+    const now = performance.now();
+    for (const m of marks) {
+      const s = this.worldToScreen(m.x, m.y);
+      const bob = Math.sin((now - m.at) / 160) * 3;
+      if (s.x > margin && s.x < w - margin && s.y > margin && s.y < h - margin) {
+        const y = s.y - 26 + bob;
+        g.poly([s.x, y - 10, s.x + 8, y, s.x, y + 10, s.x - 8, y])
+          .fill({ color: m.color, alpha: 0.9 })
+          .stroke({ width: 2, color: 0x000000, alpha: 0.6 });
+        g.circle(s.x, s.y, 5).stroke({ width: 2, color: m.color, alpha: 0.8 });
+        continue;
+      }
+      // Afuera: en el borde, en la línea entre el centro de la pantalla y la marca.
+      const cx = w / 2;
+      const cy = h / 2;
+      const dx = s.x - cx;
+      const dy = s.y - cy;
+      const k = Math.min((w / 2 - margin) / Math.abs(dx || 1e-6), (h / 2 - margin) / Math.abs(dy || 1e-6));
+      const ex = cx + dx * k;
+      const ey = cy + dy * k;
+      const a = Math.atan2(dy, dx);
+      const tip = { x: ex + Math.cos(a) * 17, y: ey + Math.sin(a) * 17 };
+      const left = { x: ex + Math.cos(a + 2.5) * 14, y: ey + Math.sin(a + 2.5) * 14 };
+      const right = { x: ex + Math.cos(a - 2.5) * 14, y: ey + Math.sin(a - 2.5) * 14 };
+      g.poly([tip.x, tip.y, left.x, left.y, right.x, right.y])
+        .fill({ color: m.color, alpha: 0.9 })
+        .stroke({ width: 2, color: 0x000000, alpha: 0.6 });
+    }
+  }
+
   // --------------------------------------------------------------- cámara
 
   /** La cámara mira un punto entre el jugador y el cursor: se ve más adelante. */
@@ -1274,6 +1318,7 @@ export class WorldView {
   }
 
   reset(): void {
+    this.markLayer.clear();
     for (const view of this.players.values()) view.root.visible = false;
     this.zoneArrow.visible = false;
     for (const [id, sprite] of this.bullets) {

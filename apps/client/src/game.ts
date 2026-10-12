@@ -49,7 +49,7 @@ import { LocalGrenades } from "./net/grenades.js";
 import { InputController, type SpectateIntent } from "./input.js";
 import { TouchControls } from "./touch.js";
 import { WorldView } from "./render/world.js";
-import { Minimap } from "./render/minimap.js";
+import { Minimap, type Mark } from "./render/minimap.js";
 import { causeIconUrl } from "./render/textures.js";
 import { UI, type Award, type ResultRow } from "./ui.js";
 import { Sound, type Spot } from "./audio.js";
@@ -63,6 +63,8 @@ const CAMERA_LEAD = 0.18;
  * vista), así que lo que entra en la pantalla más grande ya llega.
  */
 const SCOPE_ZOOM = 1.4;
+/** Cuánto dura una marca en pantalla. */
+const MARK_MS = 5000;
 /** Qué tan adelante del muñeco va la mira cuando se apunta con el stick táctil. */
 const TOUCH_CURSOR_DISTANCE = 160;
 
@@ -114,6 +116,8 @@ export class Game {
   private standings = new Map<number, { kills: number; alive: boolean; place: number; team: number }>();
   /** Modo de la sala: 1 todos contra todos, 2 dúos. */
   private teamSize = 1;
+  /** Lugares marcados por la pareja, que se muestran unos segundos. */
+  private marks: Mark[] = [];
   /**
    * Todos los que pasaron por la sala, aunque ya se hayan ido. El roster sólo
    * tiene a los conectados, y en el resultado final tiene que figurar también
@@ -170,9 +174,16 @@ export class Game {
     document.getElementById("stage")!.appendChild(this.app.canvas);
 
     this.world = new WorldView(this.app, this.arena);
-    this.minimap = new Minimap(
-      document.getElementById("minimap") as HTMLCanvasElement,
-      this.arena,
+    const minimapCanvas = document.getElementById("minimap") as HTMLCanvasElement;
+    this.minimap = new Minimap(minimapCanvas, this.arena);
+    // Tocar o clickear el minimapa marca ese lugar para el compañero.
+    minimapCanvas.addEventListener(
+      "pointerdown",
+      (e) => {
+        e.preventDefault();
+        this.markAt(this.minimap.toWorld(e.clientX, e.clientY));
+      },
+      { signal: this.listeners.signal },
     );
 
     const detachKeys = this.input.attach(this.app.canvas);
@@ -351,6 +362,7 @@ export class Game {
     this.grenades.clear();
     this.deferred = [];
     this.announcedAirdrops.clear();
+    this.marks = [];
     this.roster.clear();
     this.world.reset();
     this.input.enabled = false;
@@ -432,6 +444,16 @@ export class Game {
       case "s":
         this.onSnapshot(msg);
         return;
+
+      case "mark": {
+        const now = performance.now();
+        const color = playerColor(this.everyone.get(msg.by)?.colorIndex ?? 0);
+        // Una por persona: la nueva reemplaza a la anterior del mismo.
+        this.marks = this.marks.filter((m) => m.by !== msg.by);
+        this.marks.push({ by: msg.by, x: msg.x, y: msg.y, color, at: now, until: now + MARK_MS });
+        this.sound.mark();
+        return;
+      }
 
       case "err":
         // Cerrar de verdad: si no, PartySocket seguía reintentando por detrás
@@ -724,6 +746,9 @@ export class Game {
     // Se leen siempre, aunque no se esté mirando: si no, lo apretado en otro
     // momento se aplicaría de golpe al morir.
     const intents = this.input.takeSpectateIntents();
+    if (this.input.takeMark()) {
+      this.markAt(this.world.screenToWorld(this.input.mouseX, this.input.mouseY));
+    }
 
     const frame = this.snapshots.sample(now - INTERP_DELAY_MS);
     if (!frame) return;
@@ -778,7 +803,9 @@ export class Game {
     );
     this.updateCamera(frame, localPredicted, intents, dt);
     // Al espectear, el punto destacado del minimapa es el que estás mirando.
-    this.minimap.draw(frame, this.roster, this.watched?.id ?? this.localId, mates);
+    this.marks = this.marks.filter((m) => m.until > now);
+    this.world.drawMarks(this.marks);
+    this.minimap.draw(frame, this.roster, this.watched?.id ?? this.localId, mates, this.marks);
     this.updateHud(frame, localPredicted);
 
     this.world.setCrosshair(this.input.mouseX, this.input.mouseY, this.phase === "playing");
@@ -1199,6 +1226,19 @@ export class Game {
   /** Agregar un bot a la sala. El servidor comprueba que seas el host. */
   addBot(): void {
     this.net?.send({ t: "bot" });
+  }
+
+  /**
+   * Marcar un lugar para el compañero: con F donde apunta el cursor, o tocando
+   * el minimapa. Sin compañero no tiene a quién avisarle.
+   */
+  private markAt(at: { x: number; y: number }): void {
+    if (this.phase !== "playing" || this.localId < 0) return;
+    if (this.mates().size === 0) {
+      this.ui.addNotice("Las marcas son para tu compañero, en dúos");
+      return;
+    }
+    this.net?.send({ t: "mark", x: Math.round(at.x), y: Math.round(at.y) });
   }
 
   /** Tus compañeros de equipo (en dúos, uno; en todos contra todos, nadie). */

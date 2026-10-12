@@ -23,6 +23,17 @@ const DISTRICT_COLORS: Record<number, string> = {
  * El minimapa se dibuja en canvas 2D y no en Pixi: son cuatro círculos y unos
  * puntos, y así no compite por el mismo contexto WebGL que el mundo.
  */
+/** Un lugar marcado por alguien de tu pareja (ver `MarkedMsg`). */
+export interface Mark {
+  by: number;
+  x: number;
+  y: number;
+  color: number;
+  /** Cuándo llegó y hasta cuándo se muestra (performance.now()). */
+  at: number;
+  until: number;
+}
+
 export class Minimap {
   private readonly ctx: CanvasRenderingContext2D;
   private readonly size: number;
@@ -46,11 +57,24 @@ export class Minimap {
     return (y - (WORLD_CENTER_Y - WORLD_RADIUS)) * this.scale + 4;
   }
 
+  /** Del click en el minimapa (píxeles CSS del elemento) al punto del mundo. */
+  toWorld(clientX: number, clientY: number): { x: number; y: number } {
+    const rect = this.canvas.getBoundingClientRect();
+    // El lienzo puede dibujarse más chico que su tamaño (el HUD se achica en el teléfono).
+    const px = ((clientX - rect.left) / rect.width) * this.size;
+    const py = ((clientY - rect.top) / rect.height) * this.size;
+    return {
+      x: (px - 4) / this.scale + (WORLD_CENTER_X - WORLD_RADIUS),
+      y: (py - 4) / this.scale + (WORLD_CENTER_Y - WORLD_RADIUS),
+    };
+  }
+
   draw(
     frame: InterpolatedFrame,
     roster: Map<number, PlayerMeta>,
     localId: number,
     mates: ReadonlySet<number> = new Set(),
+    marks: readonly Mark[] = [],
   ): void {
     const ctx = this.ctx;
     const cx = this.tx(WORLD_CENTER_X);
@@ -206,6 +230,20 @@ export class Minimap {
         ctx.arc(this.tx(p.x), this.ty(p.y), 5, 0, Math.PI * 2);
         ctx.stroke();
       }
+    }
+
+    // Marcas de la pareja: un anillo que se cierra sobre el lugar, del color
+    // del que marcó.
+    const now = performance.now();
+    for (const m of marks) {
+      const t = ((now - m.at) % 900) / 900;
+      ctx.strokeStyle = `#${m.color.toString(16).padStart(6, "0")}`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(this.tx(m.x), this.ty(m.y), 10 - t * 6, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.fillRect(this.tx(m.x) - 1.5, this.ty(m.y) - 1.5, 3, 3);
     }
   }
 }

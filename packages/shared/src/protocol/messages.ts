@@ -66,7 +66,23 @@ export interface ModeMsg {
   teamSize: number;
 }
 
-export type ClientMsg = JoinMsg | ReadyMsg | InputMsg | PingMsg | StartMsg | KickMsg | AddBotMsg | ModeMsg;
+/** Marcar un lugar del mapa para el compañero ("acá hay alguien", "vamos para allá"). */
+export interface MarkMsg {
+  t: "mark";
+  x: number;
+  y: number;
+}
+
+export type ClientMsg =
+  | JoinMsg
+  | ReadyMsg
+  | InputMsg
+  | PingMsg
+  | StartMsg
+  | KickMsg
+  | AddBotMsg
+  | ModeMsg
+  | MarkMsg;
 
 export const BTN_SHOOT = 1;
 export const BTN_RELOAD = 2;
@@ -230,6 +246,14 @@ export interface PongMsg {
   s: number;
 }
 
+/** Una marca de alguien de tu equipo (o tuya). Sólo le llega a la pareja. */
+export interface MarkedMsg {
+  t: "mark";
+  by: number;
+  x: number;
+  y: number;
+}
+
 export interface ErrorMsg {
   t: "err";
   code: "room_full" | "bad_name" | "in_progress" | "bad_msg" | "kicked" | "version";
@@ -243,4 +267,5 @@ export type ServerMsg =
   | ItemsMsg
   | MatchStartMsg
   | PongMsg
+  | MarkedMsg
   | ErrorMsg;

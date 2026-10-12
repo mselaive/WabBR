@@ -135,6 +135,14 @@ export class Sound {
     this.tone(out, { freq: 90, endFreq: 50, decay: 0.15, gain: 0.5, type: "sine" });
   }
 
+  /** Alguien de tu pareja marcó un lugar: dos notas cortas que suben. */
+  mark(): void {
+    const out = this.voice(undefined, 0.3);
+    if (!out) return;
+    this.tone(out, { freq: 880, decay: 0.07, gain: 1, type: "sine" });
+    this.tone(out, { freq: 1320, decay: 0.1, gain: 1, type: "sine", delay: 0.07 });
+  }
+
   /** Recarga: dos clics. */
   reload(): void {
     const out = this.voice(undefined, 0.6);

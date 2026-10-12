@@ -40,6 +40,7 @@ Con dos jugadores listos arranca la partida.
 | `Shift` | correr (gasta estamina) |
 | `G` | tirar una granada |
 | `H` | tirar una granada de humo |
+| `F` / click en el minimapa | marcar un lugar para tu compañero (dúos) |
 | `Tab` | tabla de posiciones |
 | `M` | silenciar el sonido |
 | Click / `←` `→` (muerto) | mirar a otro jugador |
@@ -135,6 +136,14 @@ dos, y si gana, gana entera, también el que cayó antes. Muerto, la cámara sig
 compañero. Los bots juegan en pareja igual (no se tiran entre ellos ni huyen de la
 granada del compañero). En la simulación, todos contra todos es lo mismo con equipos de
 uno (`PlayerState.team` es el propio id), así que no hay dos caminos para cada regla.
+
+**Marcas.** En dúos, `F` marca donde apunta el cursor y un click (o un toque) en el
+minimapa marca ese lugar: a tu compañero le aparece un rombo del color tuyo encima del
+lugar —o una flecha en el borde si está fuera de pantalla—, un anillo en el minimapa y
+un sonido corto, durante 5 segundos. Una por persona (la nueva reemplaza a la anterior)
+y a lo sumo dos por segundo. El servidor se la manda sólo a la pareja: a un rival le
+diría dónde estás mirando. Se puede marcar también muerto, mirando: el compañero sigue
+jugando por los dos. `node scripts/marks.mjs` lo prueba contra el servidor local.
 
 **Marcador de la sala.** Al lado de cada nombre, cuántas ganó de las que jugó en esa sala y cuántas
 kills lleva sumadas ("2/5 ganadas · 11 kills"). Para la noche en que se juegan varias rondas entre

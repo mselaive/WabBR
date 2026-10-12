@@ -156,6 +156,15 @@ export interface BulletState {
   rewind: number;
 }
 
+/** Paquete aéreo cayendo. Al tocar el piso suelta su botín y desaparece. */
+export interface AirdropState {
+  id: number;
+  x: number;
+  y: number;
+  /** Tick en que aterriza. */
+  landTick: number;
+}
+
 /** Granada en vuelo o rodando. Rebota contra las paredes y estalla por tiempo. */
 export interface GrenadeState {
   id: number;
@@ -196,6 +205,8 @@ export interface GameState {
   bullets: BulletState[];
   grenades: GrenadeState[];
   nextGrenadeId: number;
+  airdrops: AirdropState[];
+  nextAirdropId: number;
   items: GroundItem[];
   nextItemId: number;
   /**
@@ -253,4 +264,6 @@ export type SimEvent =
   | { t: "drop"; item: GroundItem }
   | { t: "heal"; byId: number; amount: number }
   | { t: "crate"; crateId: number; x: number; y: number; byId: number }
-  | { t: "explosion"; x: number; y: number; byId: number };
+  | { t: "explosion"; x: number; y: number; byId: number }
+  /** Aterrizó un paquete aéreo: su botín llega con eventos "drop". */
+  | { t: "airdrop"; x: number; y: number };

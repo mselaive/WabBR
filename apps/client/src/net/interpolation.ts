@@ -2,11 +2,13 @@ import {
   MS_PER_TICK,
   lerp,
   lerpAngle,
+  unpackAirdrop,
   unpackBullet,
   unpackGrenade,
   unpackPlayer,
   unpackZone,
   type SnapshotMsg,
+  type UnpackedAirdrop,
   type UnpackedGrenade,
   type UnpackedPlayer,
   type UnpackedZone,
@@ -18,6 +20,7 @@ export interface Frame {
   recvAt: number;
   players: Map<number, UnpackedPlayer>;
   grenades: Map<number, UnpackedGrenade>;
+  airdrops: Map<number, UnpackedAirdrop>;
   zone: UnpackedZone;
 }
 
@@ -54,6 +57,8 @@ export interface InterpolatedFrame {
   players: UnpackedPlayer[];
   bullets: InterpolatedBullet[];
   grenades: UnpackedGrenade[];
+  /** Paquetes aéreos cayendo, con lo que les falta para aterrizar interpolado. */
+  airdrops: UnpackedAirdrop[];
   zone: UnpackedZone;
 }
 
@@ -82,6 +87,7 @@ export class SnapshotBuffer {
       recvAt,
       players,
       grenades: new Map(msg.gr.map(unpackGrenade).map((g) => [g.id, g])),
+      airdrops: new Map((msg.ad ?? []).map(unpackAirdrop).map((a) => [a.id, a])),
       zone: unpackZone(msg.zone),
     });
     if (this.frames.length > MAX_FRAMES) this.frames.shift();
@@ -155,6 +161,7 @@ export class SnapshotBuffer {
         players: [...last.players.values()],
         bullets,
         grenades: [...last.grenades.values()],
+        airdrops: [...last.airdrops.values()],
         zone: last.zone,
       };
     }
@@ -164,6 +171,7 @@ export class SnapshotBuffer {
         players: [...first.players.values()],
         bullets,
         grenades: [...first.grenades.values()],
+        airdrops: [...first.airdrops.values()],
         zone: first.zone,
       };
     }
@@ -207,11 +215,19 @@ export class SnapshotBuffer {
       );
     }
 
+    // El paquete baja parejo entre snapshots, como todo lo demás.
+    const airdrops: UnpackedAirdrop[] = [];
+    for (const [id, target] of b.airdrops) {
+      const prev = a.airdrops.get(id);
+      airdrops.push(prev ? { ...target, ticksLeft: lerp(prev.ticksLeft, target.ticksLeft, t) } : target);
+    }
+
     return {
       tick: lerp(a.tick, b.tick, t),
       players,
       bullets,
       grenades,
+      airdrops,
       zone: {
         ...b.zone,
         x: lerp(a.zone.x, b.zone.x, t),

@@ -12,6 +12,7 @@ import {
   WORLD_CENTER_X,
   WORLD_CENTER_Y,
   WORLD_RADIUS,
+  AIRDROP_FALL_TICKS,
   ITEM_ARMOR,
   ITEM_GRENADE,
   ITEM_WEAPON,
@@ -110,6 +111,11 @@ export class WorldView {
   private readonly bulletLayer = new Container();
   private readonly effectLayer = new Container();
   private readonly zoneLayer = new Graphics();
+  /** Dónde va a caer cada paquete aéreo: anillo y sombra, debajo de los jugadores. */
+  private readonly airdropGround = new Graphics();
+  /** Lo que está en el aire, por encima de todo. */
+  private readonly skyLayer = new Container();
+  private readonly airdropSprites = new Map<number, Sprite>();
   /** Capa en coordenadas de pantalla (mira). */
   private readonly screenLayer = new Container();
   private readonly crosshair = new Graphics();
@@ -156,10 +162,12 @@ export class WorldView {
       this.groundLayer,
       this.zoneLayer,
       this.itemLayer,
+      this.airdropGround,
       this.shadowLayer,
       this.entityLayer,
       this.bulletLayer,
       this.effectLayer,
+      this.skyLayer,
       this.zoneArrow,
     );
     this.zoneArrow.visible = false;
@@ -784,6 +792,7 @@ export class WorldView {
 
     this.updateBullets(frame);
     this.updateGrenades(frame);
+    this.updateAirdrops(frame);
     this.updateZone(frame);
     this.updateEffects(dt);
     // El sacudón se apaga rápido: si dura, marea en vez de comunicar.
@@ -865,6 +874,72 @@ export class WorldView {
       if (seen.has(id)) continue;
       sprite.destroy();
       this.grenadeSprites.delete(id);
+    }
+  }
+
+  /**
+   * Los paquetes aéreos bajando. Arriba, el cajón con paracaídas que se mece;
+   * en el piso, un anillo que late donde va a caer y una sombra que crece a
+   * medida que se acerca.
+   */
+  private updateAirdrops(frame: InterpolatedFrame): void {
+    const g = this.airdropGround;
+    g.clear();
+    const now = performance.now();
+    const seen = new Set<number>();
+
+    for (const drop of frame.airdrops) {
+      seen.add(drop.id);
+      // 1 recién anunciado, 0 tocando el piso.
+      const fall = Math.max(0, Math.min(1, drop.ticksLeft / AIRDROP_FALL_TICKS));
+      const pulse = 0.5 + 0.5 * Math.sin(now / 180);
+
+      g.circle(drop.x, drop.y, 46).stroke({ width: 3, color: 0xffc94a, alpha: 0.45 + 0.45 * pulse });
+      const shadow = 1 - fall * 0.65;
+      g.ellipse(drop.x, drop.y + 4, 26 * shadow, 10 * shadow).fill({ color: 0x000000, alpha: 0.4 * shadow });
+
+      let sprite = this.airdropSprites.get(drop.id);
+      if (!sprite) {
+        sprite = new Sprite(this.tex.airdrop);
+        sprite.anchor.set(0.5, 1);
+        sprite.scale.set(ART_SCALE);
+        this.skyLayer.addChild(sprite);
+        this.airdropSprites.set(drop.id, sprite);
+      }
+      // Se mece más cuanto más alto está; al llegar al piso ya está quieto.
+      sprite.position.set(drop.x + Math.sin(now / 700 + drop.id) * 8 * fall, drop.y + 6 - fall * 420);
+      sprite.rotation = Math.sin(now / 700 + drop.id) * 0.12 * fall;
+    }
+
+    for (const [id, sprite] of this.airdropSprites) {
+      if (seen.has(id)) continue;
+      sprite.destroy();
+      this.airdropSprites.delete(id);
+    }
+  }
+
+  /** El paquete tocó el piso: una nube de tierra que se abre. */
+  spawnLanding(x: number, y: number): void {
+    const ring = new Graphics();
+    ring.circle(0, 0, 30).fill({ color: 0xd8c49a, alpha: 0.7 });
+    ring.position.set(x, y);
+    this.effectLayer.addChild(ring);
+    this.effects.push({ node: ring, life: 0.5, maxLife: 0.5, vx: 0, vy: 0, kind: "blast" });
+
+    for (let i = 0; i < 12; i++) {
+      const p = new Graphics().rect(0, 0, 5, 5).fill(0xc9b27f);
+      p.position.set(x, y);
+      this.effectLayer.addChild(p);
+      const a = (i / 12) * Math.PI * 2;
+      const speed = 120 + Math.random() * 90;
+      this.effects.push({
+        node: p,
+        life: 0.55,
+        maxLife: 0.55,
+        vx: Math.cos(a) * speed,
+        vy: Math.sin(a) * speed,
+        kind: "blood",
+      });
     }
   }
 

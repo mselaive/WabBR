@@ -490,6 +490,16 @@ export class UI {
     while (this.killfeed.childElementCount > 5) this.killfeed.firstElementChild?.remove();
   }
 
+  /** Un aviso en la columna del kill feed, resaltado: "paquete en camino". */
+  addNotice(text: string): void {
+    const line = document.createElement("div");
+    line.className = "kill-line notice";
+    line.textContent = text;
+    this.killfeed.append(line);
+    setTimeout(() => line.remove(), 6500);
+    while (this.killfeed.childElementCount > 5) this.killfeed.firstElementChild?.remove();
+  }
+
   setScoreboard(
     visible: boolean,
     rows: { name: string; kills: number; alive: boolean; colorIndex: number; isLocal: boolean; away: boolean }[],

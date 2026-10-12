@@ -167,6 +167,17 @@ export class Minimap {
     ctx.arc(this.tx(z.x), this.ty(z.y), Math.max(1, z.radius * this.scale), 0, Math.PI * 2);
     ctx.stroke();
 
+    // Paquetes aéreos: un cuadrado dorado que late. Es lo primero que hay que
+    // ver al abrir el minimapa, porque todos van a ir para ahí.
+    const pulse = 0.55 + 0.45 * Math.sin(performance.now() / 180);
+    for (const drop of frame.airdrops) {
+      ctx.fillStyle = `rgba(255, 201, 74, ${pulse.toFixed(2)})`;
+      ctx.fillRect(this.tx(drop.x) - 4, this.ty(drop.y) - 4, 8, 8);
+      ctx.strokeStyle = "#000000aa";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(this.tx(drop.x) - 4.5, this.ty(drop.y) - 4.5, 9, 9);
+    }
+
     for (const p of frame.players) {
       if (!p.alive) continue;
       const isLocal = p.id === localId;

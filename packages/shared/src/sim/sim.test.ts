@@ -8,6 +8,7 @@ import {
   WORLD_CENTER_Y,
   WORLD_RADIUS,
   ZONE_PHASES,
+  AIRDROP_FALL_TICKS,
 } from "../constants.js";
 import {
   buildingInterior,
@@ -773,5 +774,65 @@ describe("aparición", () => {
         if (a !== b) expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThan(400);
       }
     }
+  });
+});
+
+describe("paquetes aéreos", () => {
+  /** Una partida de dos que no se mueven ni se mueren: lo que se mira es el cielo. */
+  function quietMatch(seed: number): GameState {
+    const state = createGameState(1);
+    state.players.push(createPlayer(1), createPlayer(2));
+    startMatch(state, seed, arena);
+    for (const p of state.players) p.hp = 1e9;
+    return state;
+  }
+
+  const idle = (state: GameState, events: SimEvent[] = []): void => {
+    step(state, new Map(state.players.map((p) => [p.id, [] as PlayerInput[]])), events, arena);
+  };
+
+  it("cae uno cuando la zona empieza a cerrarse, adentro de la próxima zona y en un lugar libre", () => {
+    const state = quietMatch(4242);
+    while (!state.zone.shrinking) idle(state);
+
+    expect(state.airdrops).toHaveLength(1);
+    const drop = state.airdrops[0]!;
+    const z = state.zone;
+    expect(Math.hypot(drop.x - z.targetX, drop.y - z.targetY)).toBeLessThanOrEqual(z.targetRadius * 0.7 + 1);
+    for (const o of arena.obstacles) expect(circleHitsBox(drop.x, drop.y, 40, o)).toBe(false);
+  });
+
+  it("al aterrizar suelta un arma épica o legendaria, el chaleco pesado, un botiquín y granadas", () => {
+    const state = quietMatch(4242);
+    while (!state.zone.shrinking) idle(state);
+    const before = state.items.length;
+
+    const events: SimEvent[] = [];
+    for (let t = 0; t < AIRDROP_FALL_TICKS; t++) idle(state, events);
+
+    expect(state.airdrops).toHaveLength(0);
+    expect(events.some((e) => e.t === "airdrop")).toBe(true);
+    const loot = state.items.slice(before);
+    const weapon = loot.find((i) => i.kind === ITEM_WEAPON)!;
+    expect(weapon.ref).not.toBe(0);
+    expect(weapon.tier).toBe(Math.min(weaponAt(weapon.ref).maxTier, weapon.tier));
+    expect(weapon.tier).toBeGreaterThanOrEqual(3);
+    expect(loot.filter((i) => i.kind !== ITEM_WEAPON)).toHaveLength(3);
+  });
+
+  it("son dos por partida: en las fases tardías ya no hace falta juntar a nadie", () => {
+    const state = quietMatch(777);
+    let launched = 0;
+    let lastId = 0;
+    while (state.zone.phase < 3 && state.phase === "playing") {
+      idle(state);
+      for (const d of state.airdrops) {
+        if (d.id > lastId) {
+          launched++;
+          lastId = d.id;
+        }
+      }
+    }
+    expect(launched).toBe(2);
   });
 });

@@ -186,6 +186,19 @@ no puedan discrepar. Las acciones (recoger, cambiar de arma, curarse) viajan en
 el campo `act` del mensaje de input que ya se manda 20 veces por segundo: no
 agregan ni un mensaje nuevo, que es lo que importa para la factura de Cloudflare.
 
+## Paquetes aéreos
+
+Cuando la zona empieza a cerrarse en las dos primeras fases, cae un paquete con
+botín de lujo: un arma épica o legendaria (hasta el techo de cada una), el chaleco
+pesado, un botiquín y dos granadas. Cae en un lugar despejado **adentro de la
+próxima zona**, tarda 10 segundos en llegar y mientras tanto se lo ve bajar con su
+paracaídas, con un anillo dorado en el piso y un cuadrado que late en el minimapa.
+
+Es lo que más ayuda con pocos jugadores en un mapa pensado para 16: todos saben
+dónde va a caer lo mejor, y eso los junta. Al tocar el piso el botín queda en
+corona, como el de las cajas, y se recoge con `E`. Dónde cae no es secreto: viaja a
+todos en el snapshot (`ad`), aunque no lo tengan a la vista.
+
 ## Correr y granadas
 
 **Correr** (`Shift`) va 1,45× más rápido y gasta estamina: unos 3 segundos de

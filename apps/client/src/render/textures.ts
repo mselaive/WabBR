@@ -395,6 +395,40 @@ function muzzleFlash(): Texture {
   });
 }
 
+/** Paquete aéreo bajando: paracaídas a rayas, cuerdas y el cajón con una franja dorada. */
+function airdrop(): Texture {
+  return make(24, 34, (ctx) => {
+    // Paracaídas: una cúpula con gajos alternados.
+    ctx.fillStyle = "#1b1410";
+    ctx.beginPath();
+    ctx.ellipse(12, 9, 12, 9, 0, Math.PI, 0);
+    ctx.fill();
+    const stripes = ["#e64a3c", "#f4efe6", "#e64a3c", "#f4efe6", "#e64a3c"];
+    stripes.forEach((color, i) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(12, 9);
+      ctx.arc(12, 9, 10.5, Math.PI + (i / 5) * Math.PI, Math.PI + ((i + 1) / 5) * Math.PI);
+      ctx.closePath();
+      ctx.fill();
+    });
+    // Cuerdas hasta las esquinas del cajón.
+    ctx.strokeStyle = "#3a3026";
+    ctx.lineWidth = 1;
+    for (const [fromX, toX] of [[2, 7], [9, 10], [15, 14], [22, 17]] as const) {
+      ctx.beginPath();
+      ctx.moveTo(fromX + 0.5, 9.5);
+      ctx.lineTo(toX + 0.5, 22.5);
+      ctx.stroke();
+    }
+    // Cajón.
+    rect(ctx, 6, 22, 12, 11, "#8a5a2b");
+    rect(ctx, 6, 22, 12, 2, "#a8743c");
+    rect(ctx, 6, 26, 12, 3, "#ffc94a");
+    outline(ctx, 5, 21, 14, 13);
+  });
+}
+
 function shadowBlob(): Texture {
   return make(16, 8, (ctx) => {
     ellipse(ctx, 8, 4, 7, 3.5, "#00000040");
@@ -421,6 +455,7 @@ export interface TexturePack {
   playerBody: Texture;
   playerShirt: Texture;
   gun: Texture;
+  airdrop: Texture;
   bullet: Texture;
   muzzleFlash: Texture;
   shadow: Texture;
@@ -465,6 +500,7 @@ export function getTextures(): TexturePack {
     playerBody: playerBody(),
     playerShirt: playerShirt(),
     gun: gun(),
+    airdrop: airdrop(),
     bullet: bullet(),
     muzzleFlash: muzzleFlash(),
     shadow: shadowBlob(),

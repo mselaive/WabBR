@@ -4,6 +4,7 @@ import type {
   SnapBullet,
   SnapGrenade,
   SnapItem,
+  SnapAirdrop,
   SnapPlayer,
   SnapResult,
   SnapZone,
@@ -292,6 +293,22 @@ export function unpackZone(s: SnapZone): UnpackedZone {
     shrinking: s[7] === 1,
     ticksLeft: s[8],
   };
+}
+
+export function packAirdrops(state: GameState): SnapAirdrop[] {
+  return state.airdrops.map((a) => [a.id, q(a.x, P), q(a.y, P), Math.max(0, a.landTick - state.tick)]);
+}
+
+export interface UnpackedAirdrop {
+  id: number;
+  x: number;
+  y: number;
+  /** Ticks que le faltan para tocar el piso. */
+  ticksLeft: number;
+}
+
+export function unpackAirdrop(s: SnapAirdrop): UnpackedAirdrop {
+  return { id: s[0], x: s[1], y: s[2], ticksLeft: s[3] };
 }
 
 /** Las estadísticas de los que jugaron, para el resultado final. */

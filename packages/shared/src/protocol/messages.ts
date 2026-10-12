@@ -92,6 +92,12 @@ export type SnapStanding = [number, number, number, number];
  */
 export type SnapResult = [number, number, number, number, number, number];
 
+/**
+ * [id, x, y, ticksParaAterrizar] de cada paquete aéreo cayendo. Va a todos, no
+ * sólo a los que lo ven: dónde cae no es un secreto, se anuncia.
+ */
+export type SnapAirdrop = [number, number, number, number];
+
 /** [id, kind, ref, tier, x, y, count] */
 export type SnapItem = [number, number, number, number, number, number, number];
 
@@ -174,6 +180,8 @@ export interface SnapshotMsg {
   ev?: SimEvent[];
   /** Estadísticas finales. Sólo con la partida terminada (fase "ended"). */
   res?: SnapResult[];
+  /** Paquetes aéreos cayendo. Sólo cuando hay alguno. */
+  ad?: SnapAirdrop[];
 }
 
 export interface ItemsMsg {

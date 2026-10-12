@@ -164,6 +164,14 @@ body {
   animation: fade 6.5s forwards;
 }
 
+/* Avisos de la partida (paquete aéreo): dorados, para que no se lean como una kill. */
+.kill-line.notice {
+  max-width: 220px;
+  border-color: var(--gold);
+  color: var(--gold);
+  white-space: normal;
+}
+
 /* Cuando mataste o te mataron, la línea se destaca. */
 .kill-line.mine {
   border-color: var(--gold);

@@ -15,6 +15,8 @@ import {
   STAMINA_MAX,
   STAMINA_REGEN,
   STAMINA_REGEN_DELAY,
+  AIRDROP_FALL_TICKS,
+  AIRDROP_PHASES,
   ENDED_TICKS,
   LAG_COMP_MAX_TICKS,
   PLAYER_MAX_HP,
@@ -35,6 +37,8 @@ import {
   CRATE_REACH,
   PICKUP_RADIUS,
   STARTING_WEAPON,
+  WEAPON_IDS,
+  clampTier,
   consumableAt,
   weaponStats,
   type GroundItem,
@@ -145,6 +149,8 @@ export function createGameState(seed = 1): GameState {
     bullets: [],
     grenades: [],
     nextGrenadeId: 1,
+    airdrops: [],
+    nextAirdropId: 1,
     items: [],
     nextItemId: 1,
     openedCrates: [],
@@ -165,6 +171,8 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
   state.bullets.length = 0;
   state.grenades = [];
   state.nextGrenadeId = 1;
+  state.airdrops = [];
+  state.nextAirdropId = 1;
   state.zone = createZone();
   state.rng = seed | 0;
   state.winnerId = -1;
@@ -1011,9 +1019,98 @@ function stepBullets(state: GameState, arena: ArenaMap, events: SimEvent[]): voi
   state.bullets = kept;
 }
 
+// ------------------------------------------------------ paquetes aéreos
+
+/** Armas que puede traer un paquete: cualquiera menos la pistola, que es la de arranque. */
+const AIRDROP_WEAPONS = WEAPON_IDS.map((_, i) => i).filter((i) => i !== STARTING_WEAPON);
+
+/**
+ * Anuncia un paquete que va a caer dentro de la próxima zona. Se elige un punto
+ * despejado: si cayera encima de una pared, la mitad del botín quedaría adentro.
+ */
+function launchAirdrop(state: GameState, arena: ArenaMap): void {
+  const z = state.zone;
+  const random = (): number => {
+    const r = nextRandom(state.rng);
+    state.rng = r.state;
+    return r.value;
+  };
+
+  let x = z.targetX;
+  let y = z.targetY;
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const angle = random() * Math.PI * 2;
+    // Hacia adentro de la próxima zona, no pegado a su borde: que valga la pena ir.
+    const d = Math.sqrt(random()) * z.targetRadius * 0.7;
+    const cx = z.targetX + Math.cos(angle) * d;
+    const cy = z.targetY + Math.sin(angle) * d;
+    if (airdropClear(cx, cy, arena)) {
+      x = cx;
+      y = cy;
+      break;
+    }
+  }
+
+  state.airdrops.push({ id: state.nextAirdropId++, x, y, landTick: state.tick + AIRDROP_FALL_TICKS });
+}
+
+/** Lugar libre para que el botín quede en el piso y al alcance. */
+function airdropClear(x: number, y: number, arena: ArenaMap): boolean {
+  const dx = x - WORLD_CENTER_X;
+  const dy = y - WORLD_CENTER_Y;
+  if (dx * dx + dy * dy > (WORLD_RADIUS - 120) ** 2) return false;
+  arena.grid.query(x, y, 64, nearby);
+  for (let i = 0; i < nearby.length; i++) {
+    if (circleHitsBox(x, y, 64, arena.obstacles[nearby[i]!]!)) return false;
+  }
+  return true;
+}
+
+/**
+ * Aterriza lo que tenga que aterrizar. Trae lo que hace que valga la pena
+ * cruzar el mapa: un arma épica o legendaria (hasta el techo de cada una), el
+ * chaleco pesado, un botiquín y dos granadas.
+ */
+function stepAirdrops(state: GameState, events: SimEvent[]): void {
+  if (state.airdrops.length === 0) return;
+  const pending = [];
+  for (const drop of state.airdrops) {
+    if (state.tick < drop.landTick) {
+      pending.push(drop);
+      continue;
+    }
+    const r1 = nextRandom(state.rng);
+    const r2 = nextRandom(r1.state);
+    state.rng = r2.state;
+    const weapon = AIRDROP_WEAPONS[Math.floor(r1.value * AIRDROP_WEAPONS.length)]!;
+    const tier = clampTier(weapon, r2.value < 0.5 ? 3 : 4);
+
+    const loot: Omit<GroundItem, "id" | "x" | "y">[] = [
+      { kind: ITEM_WEAPON, ref: weapon, tier, count: 1 },
+      { kind: ITEM_ARMOR, ref: ARMORS.length - 1, tier: 3, count: 1 },
+      { kind: ITEM_CONSUMABLE, ref: 1, tier: 3, count: 1 },
+      { kind: ITEM_GRENADE, ref: 0, tier: 3, count: 2 },
+    ];
+    loot.forEach((content, i) => {
+      // En corona, como las cajas: se ve todo y se elige qué levantar.
+      const angle = (i / loot.length) * Math.PI * 2 + Math.PI / 4;
+      const item: GroundItem = {
+        id: state.nextItemId++,
+        ...content,
+        x: drop.x + Math.cos(angle) * 34,
+        y: drop.y + Math.sin(angle) * 34,
+      };
+      state.items.push(item);
+      events.push({ t: "drop", item });
+    });
+    events.push({ t: "airdrop", x: drop.x, y: drop.y });
+  }
+  state.airdrops = pending;
+}
+
 // ------------------------------------------------------------ zona
 
-function stepZone(state: GameState, events: SimEvent[]): void {
+function stepZone(state: GameState, arena: ArenaMap, events: SimEvent[]): void {
   const z = state.zone;
   const cfg = ZONE_PHASES[z.phase];
 
@@ -1038,6 +1135,8 @@ function stepZone(state: GameState, events: SimEvent[]): void {
         const off = Math.sqrt(r2.value) * maxOffset;
         z.targetX = z.x + Math.cos(angle) * off;
         z.targetY = z.y + Math.sin(angle) * off;
+
+        if (z.phase < AIRDROP_PHASES) launchAirdrop(state, arena);
       }
     } else {
       if (z.ticksLeft > 0) z.ticksLeft--;
@@ -1144,7 +1243,8 @@ export function step(
 
   stepGrenades(state, arena, events);
   stepBullets(state, arena, events);
-  stepZone(state, events);
+  stepZone(state, arena, events);
+  stepAirdrops(state, events);
 
   const alive = state.players.filter((p) => p.alive);
 

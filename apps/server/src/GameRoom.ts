@@ -20,6 +20,7 @@ import {
   packBullet,
   packGrenade,
   packItem,
+  packAirdrops,
   packPlayer,
   packResults,
   packSnapshotArrays,
@@ -503,6 +504,7 @@ export class GameRoom extends Server<Env> {
       zone: packed.zone,
       alive: packed.alive,
       winner: s.winnerId,
+      ...(s.airdrops.length > 0 ? { ad: packAirdrops(s) } : {}),
     };
 
     // Fuera de la partida no hay nada que ocultar: un solo mensaje para todos.

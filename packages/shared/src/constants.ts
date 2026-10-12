@@ -67,6 +67,17 @@ export const GRENADE_FUSE_TICKS = 40;
 export const GRENADE_BOUNCE = 0.45;
 export const GRENADE_MAX_STACK = 3;
 
+// -------------------------------------------------------- paquetes aéreos
+
+/**
+ * Cuando la zona empieza a cerrarse en las primeras fases cae un paquete con
+ * botín de lujo dentro de la próxima zona. Con pocos jugadores en un mapa
+ * grande es lo que los junta: todos saben dónde va a caer.
+ */
+export const AIRDROP_PHASES = 2;
+/** Lo que tarda en llegar al piso desde que se anuncia: tiempo para ir a buscarlo. */
+export const AIRDROP_FALL_TICKS = 10 * TICK_RATE;
+
 export const EXPLOSION_RADIUS = 130;
 export const EXPLOSION_MAX_DAMAGE = 95;
 /** Daño en el borde del radio. Entre medio interpola lineal. */

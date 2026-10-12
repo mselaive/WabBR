@@ -71,6 +71,8 @@ export class Game {
    * llegara a la pared.
    */
   private deferred: { at: number; run: () => void }[] = [];
+  /** Paquetes aéreos ya anunciados, para avisar una sola vez de cada uno. */
+  private announcedAirdrops = new Set<number>();
 
   private localId = -1;
   private hostId = -1;
@@ -158,6 +160,11 @@ export class Game {
         sprite: () => this.world.debugPlayer(this.localId),
         camara: () => this.world.debugCamera(),
         cortar: () => this.net?.simulateDrop(),
+        paquetes: () => [...(this.snapshots.latest?.airdrops.values() ?? [])],
+        // Espectando: lleva la cámara libre a un punto, para mirar algo de cerca.
+        mirar: (x: number, y: number) => {
+          this.freeCam = { x, y };
+        },
         enFrame: () => {
           const frame = this.snapshots.sample(performance.now() - INTERP_DELAY_MS);
           const mine = frame?.players.find((p) => p.id === this.localId);
@@ -235,6 +242,7 @@ export class Game {
     this.snapshots.clear();
     this.shots.clear();
     this.deferred = [];
+    this.announcedAirdrops.clear();
     this.roster.clear();
     this.world.reset();
     this.input.enabled = false;
@@ -294,6 +302,7 @@ export class Game {
         this.snapshots.clear();
         this.shots.clear();
         this.deferred = [];
+        this.announcedAirdrops.clear();
         this.world.reset();
         this.openedCrates.clear();
         this.world.resetCrates();
@@ -331,6 +340,11 @@ export class Game {
   private onSnapshot(msg: SnapshotMsg): void {
     this.snapshots.push(msg, performance.now());
     this.aliveCount = msg.alive;
+    for (const [id] of msg.ad ?? []) {
+      if (this.announcedAirdrops.has(id)) continue;
+      this.announcedAirdrops.add(id);
+      this.ui.addNotice("Cae un paquete aéreo");
+    }
     this.standings = new Map(
       msg.st.map((r) => [r[0], { kills: r[1], alive: r[2] === 1, place: r[3] ?? 0 }]),
     );
@@ -450,6 +464,18 @@ export class Game {
             this.defer(() => this.world.spawnImpact(ev.x, ev.y));
           }
           break;
+        case "airdrop": {
+          // En el reloj atrasado, que es en el que se lo ve bajar.
+          this.defer(() => {
+            this.world.spawnLanding(ev.x, ev.y);
+            const me = this.lastLocal;
+            if (me?.alive) {
+              const dist = Math.hypot(me.x - ev.x, me.y - ev.y);
+              this.world.addShake(Math.max(0, 8 * (1 - dist / 400)));
+            }
+          });
+          break;
+        }
         case "explosion": {
           this.world.spawnExplosion(ev.x, ev.y);
           // El sacudón cae con la distancia: una explosión lejos se ve, no se siente.

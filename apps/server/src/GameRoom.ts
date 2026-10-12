@@ -8,6 +8,7 @@ import {
   InputQueue,
   MAX_PLAYERS,
   MIN_PLAYERS,
+  PROTOCOL_VERSION,
   RECONNECT_GRACE_MS,
   MS_PER_TICK,
   PLAYER_COLORS,
@@ -114,6 +115,20 @@ export class GameRoom extends Server<Env> {
 
   override onConnect(conn: Connection<ConnState>, ctx: ConnectionContext): void {
     const url = new URL(ctx.request.url);
+
+    // Un cliente de otra versión no puede jugar con este servidor. Sin versión
+    // es uno de antes de que existiera el número: se lo deja pasar.
+    const version = url.searchParams.get("v");
+    if (version !== null && version !== String(PROTOCOL_VERSION)) {
+      this.sendTo(conn, {
+        t: "err",
+        code: "version",
+        message: "Hay una versión nueva del juego: recargá la página.",
+      });
+      conn.close(4002, "version");
+      return;
+    }
+
     const token = sanitizeToken(url.searchParams.get("token"));
 
     // Vuelve alguien a quien se le cortó la conexión: recupera su asiento, y si

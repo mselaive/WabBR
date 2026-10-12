@@ -133,4 +133,10 @@ export const MAX_INPUT_BUFFER = 8;
  */
 export const RECONNECT_GRACE_MS = 15_000;
 export const ROOM_CODE_LENGTH = 6;
+/**
+ * Versión del protocolo. Subila cuando un cliente viejo y un servidor nuevo (o
+ * al revés) ya no puedan jugar juntos: el que tiene la pestaña abierta durante
+ * un despliegue ve "recargá la página" en vez de un juego que falla raro.
+ */
+export const PROTOCOL_VERSION = 1;
 export const MAX_NAME_LENGTH = 14;

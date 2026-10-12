@@ -322,9 +322,11 @@ export class Game {
         return;
 
       case "err":
+        // Cerrar de verdad: si no, PartySocket seguía reintentando por detrás
+        // y el servidor lo rechazaba una y otra vez (sala llena, echado...).
+        this.disconnect();
         this.ui.showScreen("menu");
         this.ui.showError(msg.message);
-        this.reset();
         return;
     }
   }

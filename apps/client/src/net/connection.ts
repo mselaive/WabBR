@@ -1,5 +1,11 @@
 import PartySocket from "partysocket";
-import { decodeServer, encodeClient, type ClientMsg, type ServerMsg } from "@wabbr/shared";
+import {
+  PROTOCOL_VERSION,
+  decodeServer,
+  encodeClient,
+  type ClientMsg,
+  type ServerMsg,
+} from "@wabbr/shared";
 
 export interface NetOptions {
   room: string;
@@ -112,7 +118,7 @@ export class Net {
       party: "game-room",
       room: opts.room,
       // El mismo token en cada reintento: PartySocket reusa la query al reconectar.
-      query: { name: opts.name, token: reconnectToken(opts.room) },
+      query: { name: opts.name, token: reconnectToken(opts.room), v: String(PROTOCOL_VERSION) },
     });
 
     this.socket.addEventListener("open", () => {

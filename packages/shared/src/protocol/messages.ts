@@ -206,7 +206,7 @@ export interface PongMsg {
 
 export interface ErrorMsg {
   t: "err";
-  code: "room_full" | "bad_name" | "in_progress" | "bad_msg" | "kicked";
+  code: "room_full" | "bad_name" | "in_progress" | "bad_msg" | "kicked" | "version";
   message: string;
 }
 

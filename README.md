@@ -555,6 +555,14 @@ En `apps/server/wrangler.jsonc`:
 - `DO_LOCATION_HINT`: región donde se crean las salas (`sam` para Sudamérica). Sin esto, la sala se
   crea cerca del primero que entra y el resto paga el ping.
 
+### Si cambiás el protocolo
+
+Desplegá **primero el servidor** y después el cliente, y mantené el servidor nuevo
+compatible con clientes viejos (campos nuevos opcionales). Si un cambio no se puede
+hacer compatible, subí `PROTOCOL_VERSION` en `constants.ts`: el cliente la manda al
+conectarse y el servidor rechaza las que no coinciden con "Hay una versión nueva del
+juego: recargá la página", en vez de dejar jugar a un cliente que va a fallar raro.
+
 ### Cliente (Vercel)
 
 Importá el repo y agregá la variable de entorno:

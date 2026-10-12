@@ -7,6 +7,12 @@
  * ejercita el ciclo completo: lobby, countdown, combate, muertes, zona y
  * victoria. También mide el ritmo real del tick del servidor y cuánto pesa
  * un snapshot, que es lo que hay que saber antes de invitar gente.
+ *
+ * Para jugar contra ellos desde el navegador:
+ *
+ *   node scripts/bot.mjs --url wss://<tu-servidor> --room PRB7X9 --bots 5 --seconds 1800 --humano
+ *
+ * y entrás a la misma sala con el link del juego (?room=PRB7X9).
  */
 import WebSocket from "ws";
 
@@ -28,6 +34,14 @@ const SECONDS = Number(arg("seconds", 40));
  * antes de que Chromium termine de cargar.
  */
 const WAIT = Number(arg("wait", 0));
+/**
+ * Con --humano los bots no marcan "listo" hasta que en la sala hay alguien que
+ * no es un bot. Sin esto, solos ya están todos listos y la partida arranca
+ * antes de que entres, y te toca mirar. Así arranca cuando vos marcás listo.
+ */
+const HUMAN = args.includes("--humano");
+let humanPresent = false;
+const isBotName = (name) => /^Bot\d+$/.test(name);
 const startAt = Date.now() + WAIT * 1000;
 const TICK_MS = 50;
 
@@ -117,8 +131,11 @@ function makeBot(index) {
       return;
     }
 
-    if (msg.t === "welcome") {
-      id = msg.you;
+    if (msg.t === "welcome" || msg.t === "roster") {
+      if (msg.t === "welcome") id = msg.you;
+      const someone = msg.roster.find((p) => !isBotName(p.name));
+      if (index === 0 && someone && !humanPresent) console.log(`Entró ${someone.name}.`);
+      humanPresent = Boolean(someone);
       return;
     }
 
@@ -137,7 +154,14 @@ function makeBot(index) {
       if (msg.phase === "lobby") readySent = false;
     }
 
-    if (phase === "lobby" && !readySent && Date.now() >= startAt) {
+    if (index === 0 && stats.snapshots === 0) {
+      // La tabla de posiciones trae el puesto desde la versión con podio: es
+      // la forma más simple de saber si el servidor ya está actualizado.
+      const nuevo = (msg.st?.[0]?.length ?? 0) >= 4;
+      console.log(`Servidor: ${nuevo ? "versión nueva (con podio y compensación de lag)" : "versión VIEJA, falta desplegar"}.`);
+    }
+
+    if (phase === "lobby" && !readySent && Date.now() >= startAt && (!HUMAN || humanPresent)) {
       readySent = true;
       ws.send(JSON.stringify({ t: "ready", ready: true }));
     }

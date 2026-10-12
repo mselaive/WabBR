@@ -15,7 +15,10 @@ import {
   WORLD_RADIUS,
   AIRDROP_FALL_TICKS,
   ITEM_ARMOR,
+  GRENADE_SMOKE,
   ITEM_GRENADE,
+  SMOKE_RADIUS,
+  smokeRadius,
   ITEM_WEAPON,
   itemColor,
   rarityAt,
@@ -115,6 +118,9 @@ export class WorldView {
   private readonly shadowLayer = new Graphics();
   private readonly bulletLayer = new Container();
   private readonly effectLayer = new Container();
+  /** Nubes de humo: encima de jugadores, balas y efectos, que es lo que tapan. */
+  private readonly smokeLayer = new Container();
+  private readonly smokeClouds = new Map<number, Container>();
   private readonly zoneLayer = new Graphics();
   /** Dónde va a caer cada paquete aéreo: anillo y sombra, debajo de los jugadores. */
   private readonly airdropGround = new Graphics();
@@ -178,6 +184,7 @@ export class WorldView {
       this.entityLayer,
       this.bulletLayer,
       this.effectLayer,
+      this.smokeLayer,
       this.skyLayer,
       this.zoneArrow,
     );
@@ -819,6 +826,7 @@ export class WorldView {
 
     this.updateBullets(frame);
     this.updateGrenades(frame);
+    this.updateSmokes(frame, localOverride);
     this.updateAirdrops(frame);
     this.updateZone(frame);
     this.updateEffects(dt);
@@ -872,7 +880,7 @@ export class WorldView {
     if (item.kind === ITEM_ARMOR) {
       return this.tex.itemArmor[item.ref] ?? this.tex.itemArmor[0]!;
     }
-    if (item.kind === ITEM_GRENADE) return this.tex.itemGrenade;
+    if (item.kind === ITEM_GRENADE) return item.ref === GRENADE_SMOKE ? this.tex.itemSmoke : this.tex.itemGrenade;
     return item.ref === 0
       ? this.tex.itemBandage
       : item.ref === 1
@@ -886,7 +894,7 @@ export class WorldView {
       seen.add(g.id);
       let sprite = this.grenadeSprites.get(g.id);
       if (!sprite) {
-        sprite = new Sprite(this.tex.grenade);
+        sprite = new Sprite(g.kind === GRENADE_SMOKE ? this.tex.smokeGrenade : this.tex.grenade);
         sprite.anchor.set(0.5, 0.8);
         sprite.scale.set(ART_SCALE);
         this.bulletLayer.addChild(sprite);
@@ -901,6 +909,58 @@ export class WorldView {
       if (seen.has(id)) continue;
       sprite.destroy();
       this.grenadeSprites.delete(id);
+    }
+  }
+
+  /**
+   * Las nubes de humo: bocanadas superpuestas que se mueven apenas, crecen al
+   * formarse y se achican al irse, al mismo ritmo que lo que tapan
+   * (`smokeRadius`). Si estás adentro, la tuya se aclara para que te veas.
+   */
+  private updateSmokes(frame: InterpolatedFrame, local: { x: number; y: number } | null): void {
+    const seen = new Set<number>();
+    const t = performance.now() / 1000;
+    for (const s of frame.smokes) {
+      seen.add(s.id);
+      let cloud = this.smokeClouds.get(s.id);
+      if (!cloud) {
+        cloud = new Container();
+        // Un centro y dos anillos. El giro de cada anillo sale del id: dos
+        // nubes no quedan iguales.
+        const rings = [
+          { count: 1, at: 0 },
+          { count: 6, at: 0.45 },
+          { count: 9, at: 0.8 },
+        ];
+        for (const ring of rings) {
+          for (let i = 0; i < ring.count; i++) {
+            const angle = (i / ring.count) * Math.PI * 2 + s.id * 1.7 + ring.at * 3;
+            const puff = new Sprite(this.tex.smokePuff);
+            puff.anchor.set(0.5);
+            puff.position.set(Math.cos(angle) * ring.at * SMOKE_RADIUS, Math.sin(angle) * ring.at * SMOKE_RADIUS);
+            // Diámetro de cada bocanada: algo más de la mitad del radio.
+            puff.scale.set((SMOKE_RADIUS * (ring.at === 0.8 ? 0.62 : 0.75)) / 32);
+            cloud.addChild(puff);
+          }
+        }
+        this.smokeLayer.addChild(cloud);
+        this.smokeClouds.set(s.id, cloud);
+      }
+      const r = smokeRadius(s) / SMOKE_RADIUS;
+      cloud.position.set(s.x, s.y);
+      cloud.scale.set(Math.max(0.05, r));
+      cloud.children.forEach((puff, i) => {
+        // Un vaivén lento por bocanada: quieto se ve pintado.
+        puff.rotation = Math.sin(t * 0.4 + i) * 0.15;
+        puff.pivot.set(Math.sin(t * 0.7 + i * 2.1) * 2, Math.cos(t * 0.5 + i * 1.3) * 2);
+      });
+      const inside = local !== null && Math.hypot(local.x - s.x, local.y - s.y) < smokeRadius(s);
+      cloud.alpha = (inside ? 0.6 : 0.95) * Math.min(1, r * 1.5);
+    }
+    for (const [id, cloud] of this.smokeClouds) {
+      if (seen.has(id)) continue;
+      cloud.destroy({ children: true });
+      this.smokeClouds.delete(id);
     }
   }
 
@@ -1223,6 +1283,10 @@ export class WorldView {
     for (const [id, sprite] of this.grenadeSprites) {
       sprite.destroy();
       this.grenadeSprites.delete(id);
+    }
+    for (const [id, cloud] of this.smokeClouds) {
+      cloud.destroy({ children: true });
+      this.smokeClouds.delete(id);
     }
     for (const fx of this.effects) fx.node.destroy();
     this.effects.length = 0;

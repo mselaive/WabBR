@@ -39,6 +39,7 @@ Con dos jugadores listos arranca la partida.
 | `3` / `4` / `5` | vendas, botiquín, adrenalina |
 | `Shift` | correr (gasta estamina) |
 | `G` | tirar una granada |
+| `H` | tirar una granada de humo |
 | `Tab` | tabla de posiciones |
 | `M` | silenciar el sonido |
 | Click / `←` `→` (muerto) | mirar a otro jugador |
@@ -255,6 +256,21 @@ tiró** — es lo que hace que tirarla a los pies de alguien que te está corrie
 sea una decisión y no un botón gratis. Una pared frena la esquirla: la explosión
 usa la misma `hasLineOfSight` que la visión, así que no se puede granadear a
 través de una casa.
+
+**Humo** (`H`): rueda igual que la granada y a los 2 segundos suelta una nube de
+115 px de radio que dura 10 segundos. Tapa la vista, no las balas: nadie ve a
+través de la nube, ni de afuera hacia adentro ni al revés, salvo que estén a
+menos de 70 px. Sirve para cruzar una calle abierta, para curarte o para escapar
+de un francotirador. Adentro, disparar no te delata (en un arbusto sí): desde
+afuera se ven las balas salir, no quién tira.
+
+Funciona con la misma regla que los arbustos, `concealedFrom`, así que el
+servidor no te manda a los que el humo tapa y los bots tampoco los ven. La nube
+crece en medio segundo y se achica en los últimos dos, y lo que tapa sigue ese
+radio (`smokeRadius`) tal como se dibuja. Las nubes viajan en el snapshot a
+todos, porque se ven de lejos y son lo que explica que de golpe no veas a nadie.
+Sale de las cajas y del piso; los bots no la juntan porque no la usan. Con esto
+el protocolo pasó a la versión 2: un cliente viejo ve "recargá la página".
 
 **Los barriles explotan.** Tres tiros de pistola (`BARREL_HP`) y estallan igual que
 una granada, con el daño a cuenta del que los hizo estallar: tirarle al barril que

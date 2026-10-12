@@ -20,7 +20,7 @@ const check = (ok, que) => {
 };
 
 const estado = { id: -1, roster: [], phase: "", kills: 0, res: null, alive: 0, vio: new Set() };
-const ws = new WebSocket(`${WS}/parties/game-room/${ROOM}?name=Host&v=1`);
+const ws = new WebSocket(`${WS}/parties/game-room/${ROOM}?name=Host&v=2`);
 ws.on("message", (raw) => {
   const m = JSON.parse(raw.toString());
   if (m.t === "welcome") estado.id = m.you;

@@ -303,7 +303,11 @@ export const ARMORS: readonly ArmorDef[] = [
 export const ITEM_WEAPON = 0;
 export const ITEM_CONSUMABLE = 1;
 export const ITEM_ARMOR = 2;
-/** Granadas. No ocupan ranura: se cuentan aparte y se tiran con G. */
+/**
+ * Granadas. No ocupan ranura: se cuentan aparte. `ref` dice cuál: 0 la que
+ * estalla (se tira con G), 1 la de humo (con H). Mismos números que
+ * GRENADE_FRAG y GRENADE_SMOKE.
+ */
 export const ITEM_GRENADE = 3;
 
 export interface GroundItem {
@@ -341,6 +345,9 @@ export function itemName(item: GroundItem): string {
     return `${weaponAt(item.ref).name} ${rarityAt(item.tier).name.toLowerCase()}`;
   }
   if (item.kind === ITEM_ARMOR) return ARMORS[item.ref]?.name ?? "Chaleco";
+  if (item.kind === ITEM_GRENADE && item.ref === 1) {
+    return item.count > 1 ? `Humo x${item.count}` : "Granada de humo";
+  }
   if (item.kind === ITEM_GRENADE) {
     return item.count > 1 ? `Granadas x${item.count}` : "Granada";
   }

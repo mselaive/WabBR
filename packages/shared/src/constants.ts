@@ -67,6 +67,21 @@ export const GRENADE_FUSE_TICKS = 40;
 export const GRENADE_BOUNCE = 0.45;
 export const GRENADE_MAX_STACK = 3;
 
+/**
+ * Granada de humo: rueda igual que la otra y en vez de estallar suelta una nube
+ * que tapa la vista (no las balas). Se lleva aparte y se tira con H.
+ */
+export const SMOKE_MAX_STACK = 2;
+/** Radio de la nube ya formada. Alcanza para tapar una calle o una puerta. */
+export const SMOKE_RADIUS = 115;
+/** Cuánto dura la nube: diez segundos. */
+export const SMOKE_TICKS = 10 * 20;
+/** Lo que tarda en formarse y en disiparse: tapa de a poco, no de golpe. */
+export const SMOKE_GROW_TICKS = 15;
+export const SMOKE_FADE_TICKS = 40;
+/** Más cerca que esto se ven igual adentro del humo: lo tenés encima. */
+export const SMOKE_SPOT_DISTANCE = 70;
+
 // -------------------------------------------------------- paquetes aéreos
 
 /**
@@ -153,5 +168,5 @@ export const ROOM_CODE_LENGTH = 6;
  * al revés) ya no puedan jugar juntos: el que tiene la pestaña abierta durante
  * un despliegue ve "recargá la página" en vez de un juego que falla raro.
  */
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 export const MAX_NAME_LENGTH = 14;

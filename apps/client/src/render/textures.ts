@@ -493,6 +493,9 @@ export interface TexturePack {
   fence: Texture;
   grenade: Texture;
   itemGrenade: Texture;
+  smokeGrenade: Texture;
+  itemSmoke: Texture;
+  smokePuff: Texture;
   pump: Texture;
 }
 
@@ -540,6 +543,9 @@ export function getTextures(): TexturePack {
     fence: fence(),
     grenade: grenade(),
     itemGrenade: grenadeIcon(),
+    smokeGrenade: smokeGrenade(),
+    itemSmoke: smokeIcon(),
+    smokePuff: smokePuff(),
     pump: pump(),
   };
   return pack;
@@ -767,6 +773,41 @@ function grenadeIcon(): Texture {
     rect(ctx, 4, 8, 8, 1, "#2c3f21");
     rect(ctx, 7, 4, 2, 3, "#8a8f95");
     rect(ctx, 9, 3, 2, 1, "#b9c0c8");
+  });
+}
+
+/** La de humo: un tarro gris con banda blanca, para que no se confunda con la otra. */
+function smokeGrenade(): Texture {
+  return make(10, 12, (ctx) => {
+    rect(ctx, 2, 3, 6, 8, "#6d747c");
+    rect(ctx, 2, 3, 2, 8, "#8a929b");
+    rect(ctx, 2, 6, 6, 2, "#e8ecef");
+    rect(ctx, 3, 1, 4, 2, "#4a5057");
+    rect(ctx, 6, 0, 2, 1, "#b9c0c8");
+    outline(ctx, 1, 0, 8, 12, "#22262b");
+  });
+}
+
+function smokeIcon(): Texture {
+  return plate((ctx) => {
+    rect(ctx, 5, 5, 6, 8, "#6d747c");
+    rect(ctx, 5, 5, 2, 8, "#8a929b");
+    rect(ctx, 5, 8, 6, 2, "#e8ecef");
+    rect(ctx, 6, 3, 4, 2, "#4a5057");
+    rect(ctx, 9, 2, 2, 1, "#b9c0c8");
+  });
+}
+
+/**
+ * Una bocanada de humo. La nube son varias de éstas superpuestas y moviéndose
+ * apenas: una sola, por grande que sea, se lee como un círculo gris.
+ */
+function smokePuff(): Texture {
+  return make(32, 32, (ctx) => {
+    ellipse(ctx, 16, 17, 15, 14, "#9aa1a8");
+    ellipse(ctx, 16, 15, 13, 12, "#b4bac0");
+    ellipse(ctx, 13, 12, 8, 7, "#cdd2d6");
+    ellipse(ctx, 11, 10, 3, 3, "#e1e4e7");
   });
 }
 

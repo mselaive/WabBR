@@ -408,9 +408,11 @@ export class UI {
     );
   }
 
-  /** Aviso de que estás escondido en un arbusto. */
-  setHidden(hidden: boolean): void {
-    if (this.hiddenTag.hidden !== !hidden) this.hiddenTag.hidden = !hidden;
+  /** Aviso de que estás escondido: dónde ("en el arbusto", "en el humo"), o null. */
+  setHidden(where: string | null): void {
+    if (this.hiddenTag.hidden !== (where === null)) this.hiddenTag.hidden = where === null;
+    const text = where === null ? "" : `Escondido ${where}`;
+    if (where !== null && this.hiddenTag.textContent !== text) this.hiddenTag.textContent = text;
   }
 
   /** Aviso de "apretá E para recoger". null lo esconde. */

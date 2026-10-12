@@ -10,6 +10,8 @@ import {
   GRENADE_MAX_STACK,
   GRENADE_RADIUS,
   GRENADE_SPEED,
+  SMOKE_MAX_STACK,
+  SMOKE_TICKS,
   SPRINT_MULT,
   STAMINA_DRAIN,
   STAMINA_MAX,
@@ -63,10 +65,13 @@ import {
   ACT_PICKUP,
   ACT_SLOT_0,
   ACT_THROW,
+  ACT_SMOKE,
   ACT_SLOT_1,
   CAUSE_EXPLOSION,
   CAUSE_ZONE,
   ACT_USE_BASE,
+  GRENADE_FRAG,
+  GRENADE_SMOKE,
   type BulletState,
   type GameState,
   type GrenadeState,
@@ -112,6 +117,7 @@ export function createPlayer(id: number, x = 0, y = 0): PlayerState {
     stamina: STAMINA_MAX,
     staminaDelay: 0,
     grenades: 0,
+    smokes: 0,
     fireCd: 0,
     reloadCd: 0,
     lastSeq: 0,
@@ -162,6 +168,7 @@ export function createGameState(seed = 1): GameState {
     bullets: [],
     grenades: [],
     nextGrenadeId: 1,
+    smokes: [],
     airdrops: [],
     nextAirdropId: 1,
     barrelHp: new Map(),
@@ -186,6 +193,7 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
   state.bullets.length = 0;
   state.grenades = [];
   state.nextGrenadeId = 1;
+  state.smokes = [];
   state.airdrops = [];
   state.nextAirdropId = 1;
   state.barrelHp = new Map();
@@ -229,6 +237,7 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
     p.stamina = STAMINA_MAX;
     p.staminaDelay = 0;
     p.grenades = 0;
+    p.smokes = 0;
     p.fireCd = 0;
     p.reloadCd = 0;
     p.diedAtTick = -1;
@@ -444,6 +453,12 @@ function takeItem(
     return true;
   }
 
+  if (item.kind === ITEM_GRENADE && item.ref === GRENADE_SMOKE) {
+    if (p.smokes >= SMOKE_MAX_STACK) return false;
+    p.smokes = Math.min(SMOKE_MAX_STACK, p.smokes + item.count);
+    return true;
+  }
+
   if (item.kind === ITEM_GRENADE) {
     if (p.grenades >= GRENADE_MAX_STACK) return false;
     p.grenades = Math.min(GRENADE_MAX_STACK, p.grenades + item.count);
@@ -568,10 +583,12 @@ function handleAction(
     return;
   }
 
-  if (act === ACT_THROW) {
-    if (!canThrow(p)) return;
-    p.grenades--;
-    state.grenades.push({ id: state.nextGrenadeId++, ownerId: p.id, ...grenadeLaunch(p) });
+  if (act === ACT_THROW || act === ACT_SMOKE) {
+    const kind = act === ACT_SMOKE ? GRENADE_SMOKE : GRENADE_FRAG;
+    if (!canThrow(p, kind)) return;
+    if (kind === GRENADE_SMOKE) p.smokes--;
+    else p.grenades--;
+    state.grenades.push({ id: state.nextGrenadeId++, ownerId: p.id, kind, ...grenadeLaunch(p) });
     return;
   }
 
@@ -847,8 +864,12 @@ function killPlayer(
     victim.slotAmmo[slot] = 0;
   }
   if (victim.grenades > 0) {
-    dropItem(state, victim, ITEM_GRENADE, 0, 0, victim.grenades, events);
+    dropItem(state, victim, ITEM_GRENADE, GRENADE_FRAG, 0, victim.grenades, events);
     victim.grenades = 0;
+  }
+  if (victim.smokes > 0) {
+    dropItem(state, victim, ITEM_GRENADE, GRENADE_SMOKE, 0, victim.smokes, events);
+    victim.smokes = 0;
   }
   for (let i = 0; i < victim.consumables.length; i++) {
     const count = victim.consumables[i] ?? 0;
@@ -972,9 +993,9 @@ function grenadeBlocked(x: number, y: number, arena: ArenaMap): boolean {
   return false;
 }
 
-/** ¿Puede tirar una granada? Curándose no: tiene las manos ocupadas. */
-export function canThrow(p: PlayerState): boolean {
-  return p.grenades > 0 && p.useCd === 0;
+/** ¿Puede tirar una granada (o una de humo)? Curándose no: tiene las manos ocupadas. */
+export function canThrow(p: PlayerState, kind: number = GRENADE_FRAG): boolean {
+  return (kind === GRENADE_SMOKE ? p.smokes : p.grenades) > 0 && p.useCd === 0;
 }
 
 /** Dónde aparece y con qué velocidad sale una granada tirada ahora. */
@@ -1027,13 +1048,24 @@ function stepGrenades(state: GameState, arena: ArenaMap, events: SimEvent[]): vo
 
   for (const g of state.grenades) {
     if (!advanceGrenade(g, arena)) {
-      applyExplosion(state, g.x, g.y, g.ownerId, arena, events, g.id);
+      if (g.kind === GRENADE_SMOKE) {
+        state.smokes.push({ id: g.id, x: g.x, y: g.y, ticksLeft: SMOKE_TICKS });
+        events.push({ t: "smoke", x: g.x, y: g.y });
+      } else {
+        applyExplosion(state, g.x, g.y, g.ownerId, arena, events, g.id);
+      }
       continue;
     }
     kept.push(g);
   }
 
   state.grenades = kept;
+}
+
+function stepSmokes(state: GameState): void {
+  if (state.smokes.length === 0) return;
+  for (const s of state.smokes) s.ticksLeft--;
+  state.smokes = state.smokes.filter((s) => s.ticksLeft > 0);
 }
 
 // ------------------------------------------------------------ balas
@@ -1326,7 +1358,8 @@ export function step(
           handleAction(state, p, one.act, arena, events);
           // Como el "shot" de las balas: le dice al que la tiró cuál es la suya.
           if (state.nextGrenadeId > before) {
-            events.push({ t: "throw", byId: p.id, seq: one.seq, grenade: before });
+            const kind = state.grenades[state.grenades.length - 1]!.kind;
+            events.push({ t: "throw", byId: p.id, seq: one.seq, grenade: before, kind });
           }
         }
         stepConsumable(p, one, events);
@@ -1355,6 +1388,7 @@ export function step(
     p.inBush = bushAt(arena, p.x, p.y);
   }
 
+  stepSmokes(state);
   stepGrenades(state, arena, events);
   stepBullets(state, arena, events);
   stepZone(state, arena, events);

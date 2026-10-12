@@ -1,6 +1,9 @@
 import {
   ACT_NONE,
+  ACT_SMOKE,
   ACT_THROW,
+  GRENADE_FRAG,
+  GRENADE_SMOKE,
   PLAYER_MAX_HP,
   activeTier,
   applySelfAction,
@@ -39,6 +42,8 @@ export interface PredictedShot {
 /** Una granada tirada desde acá: con qué input y cómo sale. */
 export interface PredictedThrow {
   seq: number;
+  /** GRENADE_FRAG o GRENADE_SMOKE. */
+  kind: number;
   launch: ReturnType<typeof grenadeLaunch>;
 }
 
@@ -115,11 +120,13 @@ export class Predictor {
    */
   private step(input: PlayerInput, arena: ArenaMap): number {
     stepPlayerMovement(this.state, input, arena);
-    if (input.act === ACT_THROW) {
+    if (input.act === ACT_THROW || input.act === ACT_SMOKE) {
       // El mismo orden que el servidor: después de moverse, antes del arma.
-      if (canThrow(this.state)) {
-        this.state.grenades--;
-        if (!this.replaying) this.thrown = { seq: input.seq, launch: grenadeLaunch(this.state) };
+      const kind = input.act === ACT_SMOKE ? GRENADE_SMOKE : GRENADE_FRAG;
+      if (canThrow(this.state, kind)) {
+        if (kind === GRENADE_SMOKE) this.state.smokes--;
+        else this.state.grenades--;
+        if (!this.replaying) this.thrown = { seq: input.seq, kind, launch: grenadeLaunch(this.state) };
       }
     } else if (input.act !== ACT_NONE) {
       applySelfAction(this.state, input.act);
@@ -162,6 +169,7 @@ export class Predictor {
     s.useCd = server.useCd;
     s.useIndex = server.useIndex;
     s.grenades = server.grenades;
+    s.smokes = server.smokes;
     s.fireCd = server.fireCd;
     s.reloadCd = server.reloadCd;
 

@@ -138,6 +138,7 @@ describe("granadas", () => {
     state.grenades.push({
       id: 1,
       ownerId: thrower.id,
+      kind: 0,
       x: WORLD_CENTER_X,
       y: WORLD_CENTER_Y,
       vx: 0,
@@ -165,6 +166,7 @@ describe("granadas", () => {
     state.grenades.push({
       id: 1,
       ownerId: thrower.id,
+      kind: 0,
       x: thrower.x + 20,
       y: thrower.y,
       vx: 0,
@@ -187,6 +189,7 @@ describe("granadas", () => {
     state.grenades.push({
       id: 1,
       ownerId: 99,
+      kind: 0,
       x: WORLD_CENTER_X,
       y: WORLD_CENTER_Y,
       vx: 0,
@@ -205,6 +208,7 @@ describe("granadas", () => {
     state.grenades.push({
       id: 1,
       ownerId: 1,
+      kind: 0,
       x: WORLD_CENTER_X,
       y: WORLD_CENTER_Y,
       vx: 400,
@@ -290,6 +294,7 @@ describe("eventos de combate", () => {
     state.grenades.push({
       id: 1,
       ownerId: 99,
+      kind: 0,
       x: a.x,
       y: a.y,
       vx: 0,
@@ -574,7 +579,7 @@ describe("barriles", () => {
     const map = barrels([WORLD_CENTER_X + 150, WORLD_CENTER_Y - 15]);
     const state = range(0, 600);
     // Una granada quieta a 50 px del barril, a punto de estallar.
-    state.grenades.push({ id: 1, ownerId: 1, x: WORLD_CENTER_X + 115, y: WORLD_CENTER_Y + 40, vx: 0, vy: 0, fuse: 1 });
+    state.grenades.push({ id: 1, ownerId: 1, kind: 0, x: WORLD_CENTER_X + 115, y: WORLD_CENTER_Y + 40, vx: 0, vy: 0, fuse: 1 });
     step(state, new Map([[1, emptyInput(1)]]), [], map);
     expect(state.explodedBarrels).toEqual([0]);
   });

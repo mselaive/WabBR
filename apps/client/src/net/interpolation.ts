@@ -6,7 +6,9 @@ import {
   unpackBullet,
   unpackGrenade,
   unpackPlayer,
+  unpackSmoke,
   unpackZone,
+  type SmokeState,
   type SnapshotMsg,
   type UnpackedAirdrop,
   type UnpackedGrenade,
@@ -21,6 +23,7 @@ export interface Frame {
   players: Map<number, UnpackedPlayer>;
   grenades: Map<number, UnpackedGrenade>;
   airdrops: Map<number, UnpackedAirdrop>;
+  smokes: Map<number, SmokeState>;
   zone: UnpackedZone;
 }
 
@@ -59,6 +62,8 @@ export interface InterpolatedFrame {
   grenades: UnpackedGrenade[];
   /** Paquetes aéreos cayendo, con lo que les falta para aterrizar interpolado. */
   airdrops: UnpackedAirdrop[];
+  /** Nubes de humo, con lo que les queda interpolado (crecen y se disipan). */
+  smokes: SmokeState[];
   zone: UnpackedZone;
 }
 
@@ -88,6 +93,7 @@ export class SnapshotBuffer {
       players,
       grenades: new Map(msg.gr.map(unpackGrenade).map((g) => [g.id, g])),
       airdrops: new Map((msg.ad ?? []).map(unpackAirdrop).map((a) => [a.id, a])),
+      smokes: new Map((msg.sm ?? []).map(unpackSmoke).map((s) => [s.id, s])),
       zone: unpackZone(msg.zone),
     });
     if (this.frames.length > MAX_FRAMES) this.frames.shift();
@@ -162,6 +168,7 @@ export class SnapshotBuffer {
         bullets,
         grenades: [...last.grenades.values()],
         airdrops: [...last.airdrops.values()],
+        smokes: [...last.smokes.values()],
         zone: last.zone,
       };
     }
@@ -172,6 +179,7 @@ export class SnapshotBuffer {
         bullets,
         grenades: [...first.grenades.values()],
         airdrops: [...first.airdrops.values()],
+        smokes: [...first.smokes.values()],
         zone: first.zone,
       };
     }
@@ -222,12 +230,19 @@ export class SnapshotBuffer {
       airdrops.push(prev ? { ...target, ticksLeft: lerp(prev.ticksLeft, target.ticksLeft, t) } : target);
     }
 
+    const smokes: SmokeState[] = [];
+    for (const [id, target] of b.smokes) {
+      const prev = a.smokes.get(id);
+      smokes.push(prev ? { ...target, ticksLeft: lerp(prev.ticksLeft, target.ticksLeft, t) } : target);
+    }
+
     return {
       tick: lerp(a.tick, b.tick, t),
       players,
       bullets,
       grenades,
       airdrops,
+      smokes,
       zone: {
         ...b.zone,
         x: lerp(a.zone.x, b.zone.x, t),

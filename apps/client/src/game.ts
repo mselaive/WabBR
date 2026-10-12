@@ -19,6 +19,7 @@ import {
   ZONE_PHASES,
   bushAt,
   segmentBoxT,
+  smokeRadius,
   consumableAt,
   getArena,
   itemName,
@@ -589,6 +590,10 @@ export class Game {
         case "throw":
           if (ev.byId === this.localId) this.grenades.confirm(ev.seq, ev.grenade);
           break;
+        case "smoke":
+          // Junto con la nube, que se dibuja en el reloj atrasado.
+          this.defer(() => this.sound.smoke(this.spot(ev.x, ev.y)));
+          break;
         case "explosion": {
           // La tuya ya estalló en pantalla cuando se le acabó la mecha acá.
           if (this.grenades.covers(ev.grenade)) break;
@@ -704,13 +709,18 @@ export class Game {
 
     const aim = this.currentAim();
     // La misma regla que aplica el servidor (concealedFrom): en un arbusto y
-    // sin haber disparado hace poco. Que alguien muy cerca te vea igual no se
-    // puede saber desde acá, y no hace falta: lo vas a tener encima.
-    const hidden =
+    // sin haber disparado hace poco, o adentro del humo (ahí disparar no te
+    // delata). Que alguien muy cerca te vea igual no se puede saber desde acá,
+    // y no hace falta: lo vas a tener encima.
+    const inBush =
       localPredicted !== null &&
       bushAt(this.arena, localPredicted.x, localPredicted.y) &&
       now - this.lastShotAt > BUSH_SHOT_REVEAL_TICKS * MS_PER_TICK;
-    this.ui.setHidden(hidden);
+    const inSmoke =
+      localPredicted !== null &&
+      frame.smokes.some((s) => Math.hypot(localPredicted.x - s.x, localPredicted.y - s.y) < smokeRadius(s) * 0.9);
+    const hidden = inBush || inSmoke;
+    this.ui.setHidden(inSmoke ? "en el humo" : inBush ? "en el arbusto" : null);
     this.world.update(
       { ...frame, bullets, grenades },
       this.roster,
@@ -747,7 +757,7 @@ export class Game {
     const shot = this.predictor.apply(input, this.arena);
     if (shot) this.onLocalShot(shot);
     const thrown = this.predictor.takeThrow();
-    if (thrown) this.grenades.throw(thrown.seq, thrown.launch);
+    if (thrown) this.grenades.throw(thrown.seq, thrown.kind, thrown.launch);
 
     this.net.send({
       t: "in",
@@ -985,6 +995,7 @@ export class Game {
       })),
       // Las granadas no ocupan ranura: van en la misma columna, con su tecla.
       { key: "G", name: "Granadas", count: shown?.grenades ?? 0 },
+      { key: "H", name: "Humo", count: shown?.smokes ?? 0 },
     ]);
 
     this.updatePickupPrompt(me, localPredicted);

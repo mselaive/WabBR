@@ -106,8 +106,14 @@ export type SnapAirdrop = [number, number, number, number];
 /** [id, kind, ref, tier, x, y, count] */
 export type SnapItem = [number, number, number, number, number, number, number];
 
-/** [id, x, y, fuse] — la mecha se dibuja como cuenta regresiva. */
-export type SnapGrenade = [number, number, number, number];
+/** [id, x, y, fuse, kind] — la mecha se dibuja como cuenta regresiva. */
+export type SnapGrenade = [number, number, number, number, number];
+
+/**
+ * [id, x, y, ticksLeft] de cada nube de humo. Van a todos: el humo se ve de
+ * lejos, y es lo que explica por qué de golpe no ves a nadie.
+ */
+export type SnapSmoke = [number, number, number, number];
 
 /** [id, x, y, vx, vy] — la velocidad permite extrapolar entre snapshots. */
 export type SnapBullet = [number, number, number, number, number];
@@ -139,9 +145,10 @@ export const SP_SLOT_1_TIER = 19;
 export const SP_STAMINA = 20;
 export const SP_STAMINA_DELAY = 21;
 export const SP_GRENADES = 22;
+export const SP_SMOKES = 23;
 /** Sólo en la tupla del propio jugador: ver `packPlayer(p, own)`. */
-export const SP_FIRE_CD = 23;
-export const SP_RELOAD_CD = 24;
+export const SP_FIRE_CD = 24;
+export const SP_RELOAD_CD = 25;
 
 export const FLAG_ALIVE = 1;
 export const FLAG_RELOADING = 2;
@@ -187,6 +194,8 @@ export interface SnapshotMsg {
   res?: SnapResult[];
   /** Paquetes aéreos cayendo. Sólo cuando hay alguno. */
   ad?: SnapAirdrop[];
+  /** Nubes de humo. Sólo cuando hay alguna. */
+  sm?: SnapSmoke[];
 }
 
 export interface ItemsMsg {

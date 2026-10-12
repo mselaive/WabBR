@@ -57,7 +57,7 @@ describe("granadas propias", () => {
       };
       client.apply(input, arena);
       const thrown = client.takeThrow();
-      if (thrown) local.throw(thrown.seq, thrown.launch);
+      if (thrown) local.throw(thrown.seq, thrown.kind, thrown.launch);
       localBlasts.push(...local.tick(arena));
       toServer.push({ at: t + 2, input });
 
@@ -88,7 +88,7 @@ describe("granadas propias", () => {
 
   it("si el servidor no la tiró, la dibujada desaparece al confirmarse ese input", () => {
     const local = new LocalGrenades();
-    local.throw(7, { x: 0, y: 0, vx: 100, vy: 0, fuse: 40 });
+    local.throw(7, 0, { x: 0, y: 0, vx: 100, vy: 0, fuse: 40 });
     expect(local.grenades(0)).toHaveLength(1);
     local.settle(6);
     expect(local.grenades(0)).toHaveLength(1);

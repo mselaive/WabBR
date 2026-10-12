@@ -1,10 +1,11 @@
-import { advanceGrenade, type ArenaMap, type UnpackedGrenade } from "@wabbr/shared";
+import { GRENADE_SMOKE, advanceGrenade, type ArenaMap, type UnpackedGrenade } from "@wabbr/shared";
 
 /** Una granada tuya tirada desde acá, sin esperar al servidor. */
 interface LocalGrenade {
   /** Negativo, para no chocar con los ids del servidor. */
   id: number;
   seq: number;
+  kind: number;
   x: number;
   y: number;
   vx: number;
@@ -33,13 +34,14 @@ export class LocalGrenades {
   private nextId = -1;
 
   /** Se tiró una: aparece ya. El tick de vuelo lo da `tick()`, igual que en el servidor. */
-  throw(seq: number, launch: { x: number; y: number; vx: number; vy: number; fuse: number }): void {
-    this.list.push({ id: this.nextId--, seq, ...launch, prevX: launch.x, prevY: launch.y, serverId: -1 });
+  throw(seq: number, kind: number, launch: { x: number; y: number; vx: number; vy: number; fuse: number }): void {
+    this.list.push({ id: this.nextId--, seq, kind, ...launch, prevX: launch.x, prevY: launch.y, serverId: -1 });
   }
 
   /**
    * Un tick de simulación, al mismo ritmo que los inputs. Devuelve dónde
-   * estallaron las que estallaron, para dibujar la explosión.
+   * estallaron las que estallaron, para dibujar la explosión. Las de humo no
+   * se devuelven: su nube la manda el servidor, que es quien decide qué tapa.
    */
   tick(arena: ArenaMap): { x: number; y: number }[] {
     const blasts: { x: number; y: number }[] = [];
@@ -47,7 +49,7 @@ export class LocalGrenades {
       g.prevX = g.x;
       g.prevY = g.y;
       if (advanceGrenade(g, arena)) return true;
-      blasts.push({ x: g.x, y: g.y });
+      if (g.kind !== GRENADE_SMOKE) blasts.push({ x: g.x, y: g.y });
       return false;
     });
     return blasts;
@@ -79,6 +81,7 @@ export class LocalGrenades {
       x: g.prevX + (g.x - g.prevX) * t,
       y: g.prevY + (g.y - g.prevY) * t,
       fuse: g.fuse,
+      kind: g.kind,
     }));
   }
 

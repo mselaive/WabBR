@@ -48,6 +48,7 @@ const GROUND_TABLE: readonly Entry[] = [
   { kind: ITEM_WEAPON, ref: 1, weight: 4, min: 1, max: 1, tier: 0 }, // subfusil
   { kind: ITEM_WEAPON, ref: 3, weight: 2, min: 1, max: 1, tier: 0 }, // escopeta
   { kind: ITEM_GRENADE, ref: 0, weight: 6, min: 1, max: 1, tier: 2 }, // granadas
+  { kind: ITEM_GRENADE, ref: 1, weight: 4, min: 1, max: 1, tier: 1 }, // humo
 ];
 
 /** Lo que sale de abrir una caja: armas, chalecos y curación buena. */
@@ -63,6 +64,7 @@ const CRATE_TABLE: readonly Entry[] = [
   { kind: ITEM_CONSUMABLE, ref: 2, weight: 13, min: 1, max: 2, tier: 2 }, // adrenalina
   { kind: ITEM_CONSUMABLE, ref: 0, weight: 17, min: 2, max: 4, tier: 0 }, // vendas
   { kind: ITEM_GRENADE, ref: 0, weight: 11, min: 1, max: 2, tier: 2 }, // granadas
+  { kind: ITEM_GRENADE, ref: 1, weight: 7, min: 1, max: 2, tier: 1 }, // humo
 ];
 
 /** Sólo armas: garantiza que abrir una caja siempre valga la pena. */

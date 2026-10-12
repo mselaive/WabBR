@@ -260,7 +260,8 @@ export function wants(me: PlayerState, item: GroundItem): boolean {
     const def = consumableAt(item.ref);
     return def !== undefined && (me.consumables[item.ref] ?? 0) < def.maxStack;
   }
-  if (item.kind === ITEM_GRENADE) return me.grenades < GRENADE_MAX_STACK;
+  // El humo no lo usan: juntarlo sería sólo sacárselo a otro.
+  if (item.kind === ITEM_GRENADE) return item.ref === 0 && me.grenades < GRENADE_MAX_STACK;
   if (item.kind === ITEM_ARMOR) return (ARMORS[item.ref]?.shield ?? 0) > me.shield;
   return false;
 }

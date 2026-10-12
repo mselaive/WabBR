@@ -35,6 +35,8 @@ export const ACT_SLOT_1 = 3;
 export const ACT_USE_BASE = 4;
 /** Tirar una granada. Va después del rango de consumibles (4, 5 y 6). */
 export const ACT_THROW = 7;
+/** Tirar una granada de humo. */
+export const ACT_SMOKE = 8;
 
 /** Causas de muerte que no son un arma, para el kill feed. */
 export const CAUSE_ZONE = -1;
@@ -93,6 +95,8 @@ export interface PlayerState {
   /** Ticks que faltan para empezar a recuperar estamina. */
   staminaDelay: number;
   grenades: number;
+  /** Granadas de humo. */
+  smokes: number;
   /** Ticks restantes de cooldown de disparo. */
   fireCd: number;
   /** Ticks restantes de recarga. 0 = no está recargando. */
@@ -171,10 +175,15 @@ export interface AirdropState {
   landTick: number;
 }
 
+export const GRENADE_FRAG = 0;
+export const GRENADE_SMOKE = 1;
+
 /** Granada en vuelo o rodando. Rebota contra las paredes y estalla por tiempo. */
 export interface GrenadeState {
   id: number;
   ownerId: number;
+  /** GRENADE_FRAG estalla; GRENADE_SMOKE suelta una nube. */
+  kind: number;
   x: number;
   y: number;
   vx: number;
@@ -204,6 +213,16 @@ export interface ZoneState {
   pace: number;
 }
 
+/** Una nube de humo. Tapa la vista, no las balas. */
+export interface SmokeState {
+  /** El id de la granada que la soltó. */
+  id: number;
+  x: number;
+  y: number;
+  /** Ticks que le quedan. Empieza en SMOKE_TICKS. */
+  ticksLeft: number;
+}
+
 export interface GameState {
   tick: number;
   phase: MatchPhase;
@@ -213,6 +232,8 @@ export interface GameState {
   bullets: BulletState[];
   grenades: GrenadeState[];
   nextGrenadeId: number;
+  /** Nubes de humo que tapan la vista. */
+  smokes: SmokeState[];
   airdrops: AirdropState[];
   nextAirdropId: number;
   /** Vida que les queda a los barriles tocados, por índice de obstáculo. */
@@ -291,6 +312,8 @@ export type SimEvent =
   /** Estalló un barril (índice de obstáculo): se dibuja quemado desde ahora. */
   | { t: "barrel"; index: number }
   /** Tiró una granada: con el seq del input, el que la tiró reconoce la suya. */
-  | { t: "throw"; byId: number; seq: number; grenade: number }
+  | { t: "throw"; byId: number; seq: number; grenade: number; kind: number }
+  /** Una granada de humo soltó su nube. */
+  | { t: "smoke"; x: number; y: number }
   /** Aterrizó un paquete aéreo: su botín llega con eventos "drop". */
   | { t: "airdrop"; x: number; y: number };

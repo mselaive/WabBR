@@ -127,6 +127,14 @@ export class Sound {
     this.tone(out, { freq: 70, endFreq: 35, decay: 0.5, gain: 1, type: "sine" });
   }
 
+  /** Una granada de humo se abre: un siseo largo que baja. */
+  smoke(at?: Spot): void {
+    const out = this.voice(at, 0.5);
+    if (!out) return;
+    this.noiseBurst(out, { type: "highpass", freq: 3500, endFreq: 1200, decay: 0.9, gain: 0.8 });
+    this.tone(out, { freq: 90, endFreq: 50, decay: 0.15, gain: 0.5, type: "sine" });
+  }
+
   /** Recarga: dos clics. */
   reload(): void {
     const out = this.voice(undefined, 0.6);

@@ -26,6 +26,7 @@ import {
   packGrenade,
   packItem,
   packAirdrops,
+  packSmokes,
   packPlayer,
   packResults,
   packSnapshotArrays,
@@ -535,7 +536,7 @@ export class GameRoom extends Server<Env> {
       this.lastSeen.set(viewer.id, seen);
     }
 
-    // Visto: sin pared en el medio y sin estar escondido en un arbusto.
+    // Visto: sin pared en el medio y sin estar escondido en un arbusto o en el humo.
     if (
       !concealedFrom(this.state, target, viewer.x, viewer.y) &&
       hasLineOfSight(viewer.x, viewer.y, target.x, target.y, this.arena)
@@ -570,6 +571,7 @@ export class GameRoom extends Server<Env> {
       alive: packed.alive,
       winner: s.winnerId,
       ...(s.airdrops.length > 0 ? { ad: packAirdrops(s) } : {}),
+      ...(s.smokes.length > 0 ? { sm: packSmokes(s) } : {}),
     };
 
     // Fuera de la partida no hay nada que ocultar: un solo mensaje para todos.
@@ -652,6 +654,8 @@ export class GameRoom extends Server<Env> {
     s.phase = "lobby";
     s.phaseTicksLeft = 0;
     s.bullets = [];
+    s.grenades = [];
+    s.smokes = [];
     s.winnerId = -1;
     s.tick = 0;
     for (const p of s.players) {

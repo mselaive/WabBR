@@ -1,6 +1,13 @@
+import {
+  SMOKE_FADE_TICKS,
+  SMOKE_GROW_TICKS,
+  SMOKE_RADIUS,
+  SMOKE_SPOT_DISTANCE,
+  SMOKE_TICKS,
+} from "../constants.js";
 import { segmentBoxT } from "./collision.js";
 import type { ArenaMap, ObstacleKind } from "../map/arena.js";
-import type { GameState, PlayerState } from "./types.js";
+import type { GameState, PlayerState, SmokeState } from "./types.js";
 
 /**
  * Línea de vista. Una sola función, usada por los dos lados: el servidor la usa
@@ -77,16 +84,54 @@ export const BUSH_SPOT_DISTANCE = 90;
 export const BUSH_SHOT_REVEAL_TICKS = 30;
 
 /**
- * ¿El objetivo está escondido en un arbusto para quien mira desde (x, y)?
- * Esconderse no frena las balas, sólo la vista: el que tira a ciegas al
- * arbusto puede pegarte igual. Disparar te delata un rato, y de muy cerca se
- * te ve. La usan el servidor —para no mandarte a los que no ves— y los bots,
- * para no hacer trampa.
+ * ¿El objetivo está escondido para quien mira desde (x, y), en un arbusto o
+ * detrás de humo? Esconderse no frena las balas, sólo la vista: el que tira a
+ * ciegas puede pegarte igual. La usan el servidor —para no mandarte a los que
+ * no ves— y los bots, para no hacer trampa.
+ *
+ * En el arbusto, disparar te delata un rato. En el humo no: desde afuera no se
+ * ve quién tira adentro, sólo las balas que salen.
  */
 export function concealedFrom(state: GameState, target: PlayerState, x: number, y: number): boolean {
-  if (!target.inBush) return false;
-  if (state.tick - target.lastShotTick <= BUSH_SHOT_REVEAL_TICKS) return false;
   const dx = target.x - x;
   const dy = target.y - y;
-  return dx * dx + dy * dy > BUSH_SPOT_DISTANCE * BUSH_SPOT_DISTANCE;
+  const dist2 = dx * dx + dy * dy;
+  if (
+    target.inBush &&
+    state.tick - target.lastShotTick > BUSH_SHOT_REVEAL_TICKS &&
+    dist2 > BUSH_SPOT_DISTANCE * BUSH_SPOT_DISTANCE
+  ) {
+    return true;
+  }
+  return dist2 > SMOKE_SPOT_DISTANCE * SMOKE_SPOT_DISTANCE && smokeBetween(state.smokes, x, y, target.x, target.y);
+}
+
+/**
+ * Radio que tapa de una nube ahora: crece al formarse y se achica al
+ * disiparse. Un poco menos que lo que se dibuja, porque el borde es ralo y si
+ * el borde escondiera se sentiría injusto.
+ */
+export function smokeRadius(s: SmokeState): number {
+  const age = SMOKE_TICKS - s.ticksLeft;
+  const grow = Math.min(1, age / SMOKE_GROW_TICKS);
+  const fade = Math.min(1, s.ticksLeft / SMOKE_FADE_TICKS);
+  return SMOKE_RADIUS * Math.min(grow, fade);
+}
+
+/** ¿Hay humo en el segmento A→B? También si A o B están adentro de una nube. */
+export function smokeBetween(smokes: readonly SmokeState[], ax: number, ay: number, bx: number, by: number): boolean {
+  if (smokes.length === 0) return false;
+  const dx = bx - ax;
+  const dy = by - ay;
+  const len2 = dx * dx + dy * dy;
+  for (const s of smokes) {
+    const r = smokeRadius(s) * 0.9;
+    if (r <= 0) continue;
+    // Punto del segmento más cercano al centro de la nube.
+    const t = len2 > 0 ? Math.max(0, Math.min(1, ((s.x - ax) * dx + (s.y - ay) * dy) / len2)) : 0;
+    const cx = ax + dx * t - s.x;
+    const cy = ay + dy * t - s.y;
+    if (cx * cx + cy * cy < r * r) return true;
+  }
+  return false;
 }

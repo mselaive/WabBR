@@ -7,6 +7,7 @@ import type {
   SnapAirdrop,
   SnapPlayer,
   SnapResult,
+  SnapSmoke,
   SnapZone,
 } from "./messages.js";
 import {
@@ -32,6 +33,7 @@ import {
   SP_SLOT_1,
   SP_SLOT_1_TIER,
   SP_GRENADES,
+  SP_SMOKES,
   SP_STAMINA,
   SP_STAMINA_DELAY,
   SP_USE_CD,
@@ -45,6 +47,7 @@ import type {
   GameState,
   GrenadeState,
   PlayerState,
+  SmokeState,
   ZoneState,
 } from "../sim/types.js";
 
@@ -138,6 +141,7 @@ export function packPlayer(p: PlayerState, own = false): SnapPlayer {
     Math.round(p.stamina),
     p.staminaDelay,
     p.grenades,
+    p.smokes,
   ];
   if (own) packed.push(p.fireCd, p.reloadCd);
   return packed;
@@ -152,11 +156,11 @@ export function unpackItem(s: SnapItem): GroundItem {
 }
 
 export function packGrenade(g: GrenadeState): SnapGrenade {
-  return [g.id, q(g.x, P), q(g.y, P), g.fuse];
+  return [g.id, q(g.x, P), q(g.y, P), g.fuse, g.kind];
 }
 
 export function unpackGrenade(s: SnapGrenade): UnpackedGrenade {
-  return { id: s[0], x: s[1], y: s[2], fuse: s[3] };
+  return { id: s[0], x: s[1], y: s[2], fuse: s[3], kind: s[4] ?? 0 };
 }
 
 export interface UnpackedGrenade {
@@ -164,6 +168,16 @@ export interface UnpackedGrenade {
   x: number;
   y: number;
   fuse: number;
+  /** GRENADE_FRAG o GRENADE_SMOKE. */
+  kind: number;
+}
+
+export function packSmokes(state: GameState): SnapSmoke[] {
+  return state.smokes.map((s) => [s.id, q(s.x, P), q(s.y, P), s.ticksLeft]);
+}
+
+export function unpackSmoke(s: SnapSmoke): SmokeState {
+  return { id: s[0], x: s[1], y: s[2], ticksLeft: s[3] };
 }
 
 export function packBullet(b: BulletState): SnapBullet {
@@ -221,6 +235,7 @@ export interface UnpackedPlayer {
   stamina: number;
   staminaDelay: number;
   grenades: number;
+  smokes: number;
   /** Ticks de cadencia y de recarga que faltan. Sólo vienen en el propio; en los demás, 0. */
   fireCd: number;
   reloadCd: number;
@@ -272,6 +287,7 @@ export function unpackPlayer(s: SnapPlayer): UnpackedPlayer {
     stamina: s[SP_STAMINA] ?? 0,
     staminaDelay: s[SP_STAMINA_DELAY] ?? 0,
     grenades: s[SP_GRENADES] ?? 0,
+    smokes: s[SP_SMOKES] ?? 0,
     fireCd: s[SP_FIRE_CD] ?? 0,
     reloadCd: s[SP_RELOAD_CD] ?? 0,
   };

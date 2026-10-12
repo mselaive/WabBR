@@ -13,6 +13,7 @@ import {
   WORLD_CENTER_X,
   WORLD_CENTER_Y,
   WORLD_RADIUS,
+  ZONE_PHASES,
   consumableAt,
   getArena,
   itemName,
@@ -20,6 +21,7 @@ import {
   playerColor,
   packAim,
   rarityAt,
+  unpackAim,
   unpackItem,
   weaponStats,
   type ArenaMap,
@@ -33,12 +35,13 @@ import {
 } from "@wabbr/shared";
 import { Net, diagnoseConnection } from "./net/connection.js";
 import { SnapshotBuffer } from "./net/interpolation.js";
-import { Predictor } from "./net/prediction.js";
+import { Predictor, type PredictedShot } from "./net/prediction.js";
+import { LocalShots } from "./net/shots.js";
 import { InputController } from "./input.js";
 import { WorldView } from "./render/world.js";
 import { Minimap } from "./render/minimap.js";
 import { causeIconUrl } from "./render/textures.js";
-import { UI } from "./ui.js";
+import { UI, type ResultRow } from "./ui.js";
 
 /** Cuánto tira la cámara hacia el cursor (0 = centrada en el jugador). */
 const CAMERA_LEAD = 0.18;
@@ -53,6 +56,16 @@ export class Game {
 
   private net: Net | null = null;
   private predictor: Predictor | null = null;
+  /** Tus balas, que se dibujan desde el click sin esperar al servidor. */
+  private readonly shots = new LocalShots();
+  /**
+   * Efectos de lo que no es tuyo, esperando a que el dibujo llegue a su momento.
+   * Los demás jugadores se ven `INTERP_DELAY_MS` en el pasado: si el fogonazo
+   * de un tiro ajeno se dibujara al recibirlo, saldría antes de que el que
+   * dispara levantara el arma en pantalla, y la chispa antes de que la bala
+   * llegara a la pared.
+   */
+  private deferred: { at: number; run: () => void }[] = [];
 
   private localId = -1;
   private hostId = -1;
@@ -67,8 +80,18 @@ export class Game {
    * servidor oculta lo que no ves, `frame.players` ya no sirve para el marcador:
    * alguien detrás de una pared se vería como muerto y con cero kills.
    */
-  private standings = new Map<number, { kills: number; alive: boolean }>();
+  private standings = new Map<number, { kills: number; alive: boolean; place: number }>();
+  /**
+   * Todos los que pasaron por la sala, aunque ya se hayan ido. El roster sólo
+   * tiene a los conectados, y en el resultado final tiene que figurar también
+   * el que se fue en el medio, con su nombre.
+   */
+  private everyone = new Map<number, PlayerMeta>();
   private lastLocal: UnpackedPlayer | null = null;
+  /** Dónde se dibujó tu muñeco en el último cuadro: de ahí salen tus disparos en pantalla. */
+  private lastDrawn: { x: number; y: number } | null = null;
+  /** Tick del servidor que se mostró en el último cuadro: viaja con cada input (compensación de lag). */
+  private viewTick = -1;
   /**
    * Loot del piso. No viene en el snapshot: llega entero al empezar la ronda y
    * después se mantiene con los eventos de recogida y de suelta.
@@ -174,6 +197,8 @@ export class Game {
     this.phase = "lobby";
     this.predictor = null;
     this.snapshots.clear();
+    this.shots.clear();
+    this.deferred = [];
     this.roster.clear();
     this.world.reset();
     this.input.enabled = false;
@@ -181,8 +206,11 @@ export class Game {
     this.spectateId = -1;
     this.spawned = false;
     this.lastLocal = null;
+    this.lastDrawn = null;
+    this.viewTick = -1;
     this.items.clear();
     this.standings.clear();
+    this.everyone.clear();
     this.openedCrates.clear();
     this.world.resetCrates();
   }
@@ -208,7 +236,11 @@ export class Game {
         this.predictor = new Predictor(this.localId);
         this.spawned = false;
         this.seq = 1;
+        // El tick del servidor vuelve a cero con la ronda.
+        this.viewTick = -1;
         this.snapshots.clear();
+        this.shots.clear();
+        this.deferred = [];
         this.world.reset();
         this.openedCrates.clear();
         this.world.resetCrates();
@@ -237,6 +269,7 @@ export class Game {
 
   private setRoster(roster: PlayerMeta[]): void {
     this.roster = new Map(roster.map((p) => [p.id, p]));
+    for (const p of roster) this.everyone.set(p.id, p);
     this.ui.setRoster(roster, this.hostId, this.localId);
   }
 
@@ -245,7 +278,9 @@ export class Game {
   private onSnapshot(msg: SnapshotMsg): void {
     this.snapshots.push(msg, performance.now());
     this.aliveCount = msg.alive;
-    this.standings = new Map(msg.st.map((r) => [r[0], { kills: r[1], alive: r[2] === 1 }]));
+    this.standings = new Map(
+      msg.st.map((r) => [r[0], { kills: r[1], alive: r[2] === 1, place: r[3] ?? 0 }]),
+    );
 
     const previousPhase = this.phase;
     this.phase = msg.phase;
@@ -266,6 +301,9 @@ export class Game {
     }
 
     if (msg.ev) this.handleEvents(msg.ev);
+    // Después de los eventos: un tiro predicho cuyo input ya se procesó y no
+    // trajo su "shot" en este mismo snapshot no salió nunca.
+    if (me) this.shots.settle(me.lastSeq);
     if (previousPhase !== this.phase) this.onPhaseChange(this.phase, msg);
   }
 
@@ -289,22 +327,42 @@ export class Game {
       this.ui.showScreen("lobby");
       this.world.reset();
       this.snapshots.clear();
+      this.shots.clear();
+      this.deferred = [];
       this.predictor = null;
       this.spawned = false;
       this.spectateId = -1;
     }
   }
 
+  /**
+   * El resultado se ordena por puesto —cuánto aguantaste—, que es lo que
+   * decide un battle royale; las kills desempatan y se muestran al lado.
+   */
   private showResult(msg: SnapshotMsg): void {
-    const rows = [...this.roster.values()]
-      .map((meta) => {
-        const row = msg.st.find((r) => r[0] === meta.id);
-        return { name: meta.name, kills: row?.[1] ?? 0, colorIndex: meta.colorIndex };
-      })
-      .sort((a, b) => b.kills - a.kills);
+    const rows: ResultRow[] = [];
+    for (const [id, kills, , place = 0] of msg.st) {
+      // Sin puesto es que no jugó esta partida: entró a mirar.
+      if (place <= 0) continue;
+      const meta = this.everyone.get(id);
+      rows.push({
+        name: meta?.name ?? "Alguien",
+        kills,
+        colorIndex: meta?.colorIndex ?? 0,
+        place,
+        isLocal: id === this.localId,
+        left: !this.roster.has(id),
+      });
+    }
+    rows.sort((a, b) => a.place - b.place || b.kills - a.kills);
 
-    const winner = msg.winner >= 0 ? this.roster.get(msg.winner) : undefined;
-    const title = msg.winner === this.localId ? "¡Ganaste!" : "Fin de la partida";
+    const mine = rows.find((r) => r.isLocal);
+    const title = !mine
+      ? "Fin de la partida"
+      : mine.place === 1
+        ? "¡Ganaste!"
+        : `Quedaste en el puesto ${mine.place}`;
+    const winner = msg.winner >= 0 ? this.everyone.get(msg.winner) : undefined;
     const subtitle = winner
       ? `${winner.name} quedó último en pie.`
       : "Nadie sobrevivió a la zona.";
@@ -314,21 +372,21 @@ export class Game {
   private handleEvents(events: SimEvent[]): void {
     for (const ev of events) {
       switch (ev.t) {
-        case "shot": {
-          this.world.spawnMuzzleFlash(ev.x, ev.y, ev.aim);
-          // Retroceso propio, proporcional al arma: el francotirador patea, el
-          // subfusil apenas cosquillea.
-          if (ev.byId === this.localId) {
-            const me = this.lastLocal;
-            const held = me ? (me.slots[me.activeSlot] ?? -1) : -1;
-            if (held >= 0) {
-              this.world.addShake(weaponStats(held, me!.slotTiers[me!.activeSlot] ?? 0).damage * 0.055);
-            }
-          }
+        case "shot":
+          // El tuyo ya salió cuando apretaste el gatillo: acá sólo se confirma.
+          // Si no estaba predicho, sus balas se dibujan atrasadas como las de
+          // cualquiera, y el fogonazo con ellas.
+          if (ev.byId === this.localId && this.shots.confirm(ev.seq, ev.firstBullet, ev.pellets)) break;
+          // Un tick antes que el resto: es cuando la bala está en el caño (ver
+          // SnapshotBuffer.sample).
+          this.defer(() => this.world.spawnMuzzleFlash(ev.x, ev.y, ev.aim), -MS_PER_TICK);
           break;
-        }
         case "impact":
-          this.world.spawnImpact(ev.x, ev.y);
+          if (this.shots.covers(ev.bullet)) {
+            if (this.shots.serverImpact(ev.bullet)) this.world.spawnImpact(ev.x, ev.y);
+          } else {
+            this.defer(() => this.world.spawnImpact(ev.x, ev.y));
+          }
           break;
         case "explosion": {
           this.world.spawnExplosion(ev.x, ev.y);
@@ -341,7 +399,14 @@ export class Game {
           break;
         }
         case "hit":
-          this.world.spawnBlood(ev.x, ev.y);
+          this.shots.serverHit(ev.bullet);
+          // Si te toca, es de ahora: tu vida ya bajó en el HUD. Si no, pasó en
+          // el mismo pasado en que se dibuja a los demás.
+          if (ev.byId === this.localId || ev.targetId === this.localId) {
+            this.world.spawnBlood(ev.x, ev.y);
+          } else {
+            this.defer(() => this.world.spawnBlood(ev.x, ev.y));
+          }
           // El número y la marca son sólo de tus propios impactos: con los de
           // todos, la pantalla se llena de información que no es tuya.
           if (ev.byId === this.localId && ev.targetId !== this.localId) {
@@ -395,18 +460,30 @@ export class Game {
       this.tickInput();
     }
 
-    const frame = this.snapshots.sample(performance.now() - INTERP_DELAY_MS);
+    const now = performance.now();
+    this.runDeferred(now);
+
+    const frame = this.snapshots.sample(now - INTERP_DELAY_MS);
     if (!frame) return;
+    this.viewTick = frame.tick;
+
+    // Tus balas chocan contra los demás tal como los ves, que es contra lo que apuntaste.
+    const targets = frame.players.filter((p) => p.alive && p.id !== this.localId);
+    this.shots.update(now, this.arena, targets, (x, y) => this.world.spawnImpact(x, y));
+    // Las del servidor que ya dibujamos nosotros no se dibujan dos veces.
+    const bullets = frame.bullets.filter((b) => !this.shots.covers(b.id));
+    bullets.push(...this.shots.bullets());
 
     // Cuánto se avanzó del tick en curso: con esto el muñeco se dibuja entre dos
     // pasos de simulación en vez de saltar de uno al otro.
     const alpha = this.inputAccumulator / MS_PER_TICK;
     const localPredicted =
       this.predictor && this.lastLocal?.alive ? this.predictor.renderPosition(dt, alpha) : null;
+    this.lastDrawn = localPredicted;
 
     const aim = this.currentAim();
     this.world.update(
-      frame,
+      { ...frame, bullets },
       this.roster,
       this.localId,
       localPredicted ? { ...localPredicted, aim } : null,
@@ -431,9 +508,13 @@ export class Game {
     if (!this.net || !this.predictor) return;
     if (this.phase !== "playing" || !this.lastLocal?.alive) return;
 
-    const aim = this.currentAim();
-    const input = this.input.sample(this.seq++, aim);
-    this.predictor.apply(input, this.arena);
+    // El ángulo viaja redondeado a milésimas de radián. La predicción usa el
+    // mismo redondeo: si no, tu bala dibujada y la real saldrían separadas.
+    const aim = unpackAim(packAim(this.currentAim()));
+    // Lo que viste en el último cuadro, que es a lo que apuntaste.
+    const input = this.input.sample(this.seq++, aim, this.viewTick);
+    const shot = this.predictor.apply(input, this.arena);
+    if (shot) this.onLocalShot(shot);
 
     this.net.send({
       t: "in",
@@ -446,7 +527,36 @@ export class Game {
         (input.reload ? BTN_RELOAD : 0) |
         (input.sprint ? BTN_SPRINT : 0),
       act: input.act,
+      ...(input.view >= 0 ? { vt: Math.round(input.view * 10) } : {}),
     });
+  }
+
+  /** Disparaste: la bala, el fogonazo y el retroceso salen ya, sin esperar al servidor. */
+  private onLocalShot(shot: PredictedShot): void {
+    const me = this.predictor!.state;
+    // La bala sale de la posición simulada, que es por donde va la real, pero
+    // en pantalla arranca del arma tal como se ve.
+    // Más lejos que esto no es el suavizado sino un salto (un respawn, una
+    // corrección grande): ahí la bala sale de donde está de verdad.
+    let drawn: { x: number; y: number } = this.lastDrawn ?? me;
+    if (Math.hypot(drawn.x - me.x, drawn.y - me.y) > 40) drawn = me;
+    this.shots.fire(shot, performance.now(), drawn.x - me.x, drawn.y - me.y);
+    this.world.spawnMuzzleFlash(drawn.x, drawn.y, me.aim);
+    // Retroceso proporcional al arma: el francotirador patea, el subfusil apenas cosquillea.
+    this.world.addShake(weaponStats(shot.weapon, shot.tier).damage * 0.055);
+  }
+
+  /** Programa un efecto para cuando el dibujo atrasado llegue a su momento. */
+  private defer(run: () => void, offsetMs = 0): void {
+    this.deferred.push({ at: performance.now() + INTERP_DELAY_MS + offsetMs, run });
+  }
+
+  private runDeferred(now: number): void {
+    if (this.deferred.length === 0) return;
+    const due = this.deferred.filter((d) => d.at <= now);
+    if (due.length === 0) return;
+    this.deferred = this.deferred.filter((d) => d.at > now);
+    for (const d of due) d.run();
   }
 
   /** Ángulo del jugador hacia el cursor, en coordenadas del mundo. */
@@ -532,6 +642,7 @@ export class Game {
 
     this.updatePickupPrompt(me, localPredicted);
     this.updateChannel(me);
+    this.updateZoneAlert(frame, me, localPredicted);
 
     if (this.phase === "countdown") {
       this.ui.setZoneBanner("EMPIEZA EN", String(Math.ceil(this.phaseTicksLeft / TICK_RATE)), false);
@@ -611,6 +722,39 @@ export class Game {
     }
 
     this.ui.setPickup(closest ? itemName(closest) : null);
+  }
+
+  /**
+   * Afuera de la zona: aviso, borde rojo y una flecha para volver. Se mide con
+   * tu posición predicha contra la zona tal como se dibuja, así el aviso salta
+   * justo cuando ves que cruzás la línea.
+   */
+  private updateZoneAlert(
+    frame: NonNullable<ReturnType<SnapshotBuffer["sample"]>>,
+    me: UnpackedPlayer | null,
+    localPredicted: { x: number; y: number } | null,
+  ): void {
+    const z = frame.zone;
+    const outside =
+      this.phase === "playing" &&
+      me?.alive &&
+      localPredicted !== null &&
+      Math.hypot(localPredicted.x - z.x, localPredicted.y - z.y) > z.radius;
+
+    if (!outside || !me || !localPredicted) {
+      this.ui.setZoneAlert(null);
+      this.world.setZoneArrow(null);
+      return;
+    }
+
+    // El mismo daño que aplica stepZone: pasada la última fase, el de la última.
+    const dps = (ZONE_PHASES[z.phase] ?? ZONE_PHASES[ZONE_PHASES.length - 1]!).dps;
+    // La zona no mira el chaleco, así que lo que aguantás sale sólo de la vida.
+    this.ui.setZoneAlert({ dps, seconds: Math.floor(me.hp / dps) });
+    this.world.setZoneArrow(
+      { x: localPredicted.x, y: localPredicted.y, dir: Math.atan2(z.y - localPredicted.y, z.x - localPredicted.x) },
+      performance.now(),
+    );
   }
 
   private updateChannel(me: UnpackedPlayer | null): void {

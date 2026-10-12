@@ -115,16 +115,27 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     pellets: 1,
     maxTier: 4,
   },
+  /**
+   * La reina de la corta distancia: dos tiros matan hasta unos 100 px, y de
+   * ahí para afuera pierde contra el rifle. Antes el cono abría 0,3 rad y a
+   * 120 px entraban tres perdigones de ocho (23 de daño): sólo servía pegado
+   * al otro. Con 0,16 entran todos hasta ~80 px y la mitad a 150.
+   *
+   * El daño por perdigón tiene techo: en legendaria es 12 × 8 = 96, y un
+   * perdigón más de daño mataría de un tiro (ver el test de rareza máxima).
+   */
   shotgun: {
     id: "shotgun",
     name: "Escopeta",
-    damage: 7,
-    fireCd: 14,
+    damage: 8,
+    fireCd: 12,
     magSize: 6,
     reloadTicks: 44,
-    bulletSpeed: 520,
-    spread: 0.3,
-    lifeTicks: 13,
+    // Más rápidos para que lleguen antes de que el otro se corra; con un tick
+    // menos de vuelo el alcance queda igual que antes (~380 px).
+    bulletSpeed: 600,
+    spread: 0.16,
+    lifeTicks: 12,
     pellets: 8,
     maxTier: 4,
   },

@@ -18,6 +18,7 @@
     <div id="stage"></div>
 
     <div id="hud" hidden>
+      <div id="zoneVignette" class="zone-vignette"></div>
       <div class="hud-corner hud-tl">
         <div class="stat"><span class="stat-key">VIVOS</span><span id="alive">0</span></div>
         <div class="stat stat-kills"><span class="stat-key">KILLS</span><span id="kills">0</span></div>
@@ -27,6 +28,11 @@
         <span class="warn">&#9888;</span>
         <span id="zoneLabel">CIERRA EN</span>
         <span id="zoneTime">00:00</span>
+      </div>
+
+      <div id="zoneAlert" class="zone-alert" hidden>
+        <span class="zone-alert-title">&#9888; FUERA DE LA ZONA</span>
+        <span id="zoneAlertInfo"></span>
       </div>
 
       <canvas id="minimap" class="hud-corner hud-tr" width="200" height="200"></canvas>
@@ -115,6 +121,7 @@
       <section id="screenResult" class="screen" hidden>
         <h2 id="resultTitle">Fin de la partida</h2>
         <p id="resultSubtitle" class="tagline"></p>
+        <div id="podium" class="podium"></div>
         <ol id="standings" class="standings"></ol>
         <p class="hint">Volviendo al lobby...</p>
       </section>

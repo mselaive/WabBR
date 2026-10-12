@@ -1,4 +1,5 @@
 import {
+  MS_PER_TICK,
   lerp,
   lerpAngle,
   unpackBullet,
@@ -6,7 +7,6 @@ import {
   unpackPlayer,
   unpackZone,
   type SnapshotMsg,
-  type UnpackedBullet,
   type UnpackedGrenade,
   type UnpackedPlayer,
   type UnpackedZone,
@@ -17,9 +17,24 @@ export interface Frame {
   /** Reloj local en que llegó, que es contra el que se interpola. */
   recvAt: number;
   players: Map<number, UnpackedPlayer>;
-  bullets: UnpackedBullet[];
   grenades: Map<number, UnpackedGrenade>;
   zone: UnpackedZone;
+}
+
+/** Lo que se sabe de una bala del servidor, para ubicarla en cualquier instante. */
+interface BulletTrack {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  /** Llegada del último snapshot que la trajo: de ahí sale x/y. */
+  seenAt: number;
+  /** Número de ese snapshot, para saber cuáles dejaron de venir. */
+  seenIn: number;
+  /** Llegada del primer snapshot que la trajo. */
+  bornAt: number;
+  /** Llegada del primero que ya no la trajo. Infinity mientras siga viniendo. */
+  goneAt: number;
 }
 
 export interface InterpolatedBullet {
@@ -30,6 +45,12 @@ export interface InterpolatedBullet {
 }
 
 export interface InterpolatedFrame {
+  /**
+   * Tick del servidor que se está mostrando, con fracción: entre dos snapshots
+   * se dibuja una mezcla de los dos. El servidor lo usa para saber dónde veías
+   * a los demás cuando disparaste.
+   */
+  tick: number;
   players: UnpackedPlayer[];
   bullets: InterpolatedBullet[];
   grenades: UnpackedGrenade[];
@@ -46,8 +67,11 @@ const MAX_FRAMES = 30;
  */
 export class SnapshotBuffer {
   private frames: Frame[] = [];
+  private readonly bulletTracks = new Map<number, BulletTrack>();
+  private pushed = 0;
 
   push(msg: SnapshotMsg, recvAt: number): void {
+    this.trackBullets(msg, recvAt);
     const players = new Map<number, UnpackedPlayer>();
     for (const raw of msg.players) {
       const p = unpackPlayer(raw);
@@ -57,7 +81,6 @@ export class SnapshotBuffer {
       tick: msg.tick,
       recvAt,
       players,
-      bullets: msg.bullets.map(unpackBullet),
       grenades: new Map(msg.gr.map(unpackGrenade).map((g) => [g.id, g])),
       zone: unpackZone(msg.zone),
     });
@@ -66,6 +89,34 @@ export class SnapshotBuffer {
 
   clear(): void {
     this.frames.length = 0;
+    this.bulletTracks.clear();
+  }
+
+  private trackBullets(msg: SnapshotMsg, recvAt: number): void {
+    const n = ++this.pushed;
+    for (const raw of msg.bullets) {
+      const b = unpackBullet(raw);
+      const track = this.bulletTracks.get(b.id);
+      if (track) {
+        track.x = b.x;
+        track.y = b.y;
+        track.vx = b.vx;
+        track.vy = b.vy;
+        track.seenAt = recvAt;
+        track.seenIn = n;
+        // Volvió a la vista después de esconderse detrás de algo.
+        track.goneAt = Infinity;
+      } else {
+        this.bulletTracks.set(b.id, { ...b, seenAt: recvAt, seenIn: n, bornAt: recvAt, goneAt: Infinity });
+      }
+    }
+
+    for (const [id, track] of this.bulletTracks) {
+      if (track.seenIn === n) continue;
+      if (track.goneAt === Infinity) track.goneAt = recvAt;
+      // Ni el reloj atrasado la va a volver a necesitar.
+      else if (recvAt - track.goneAt > 1000) this.bulletTracks.delete(id);
+    }
   }
 
   get latest(): Frame | undefined {
@@ -81,18 +132,26 @@ export class SnapshotBuffer {
 
     // Las balas viajan en línea recta, así que su posición exacta en cualquier
     // instante sale de la ecuación: no hace falta interpolar entre snapshots.
-    const bullets: InterpolatedBullet[] = last.bullets.map((b) => {
-      const dt = (renderTime - last.recvAt) / 1000;
-      return {
-        id: b.id,
-        x: b.x + b.vx * dt,
-        y: b.y + b.vy * dt,
-        angle: Math.atan2(b.vy, b.vx),
-      };
-    });
+    //
+    // Lo que sí hace falta es que vivan en el mismo reloj atrasado que los
+    // jugadores. Antes se tomaban del último snapshot y se corrían hacia atrás
+    // los 100 ms de la interpolación: una bala recién disparada aparecía metida
+    // dentro del que la tiró, que todavía no había disparado en pantalla, y una
+    // que ya había chocado desaparecía antes de llegar a la pared.
+    //
+    // Ahora aparece cuando el reloj atrasado llega al momento en que salió —un
+    // tick antes del snapshot que la trajo, que es cuando estaba en el caño— y
+    // se va cuando llega al primer snapshot que ya no la trajo.
+    const bullets: InterpolatedBullet[] = [];
+    for (const [id, b] of this.bulletTracks) {
+      if (renderTime < b.bornAt - MS_PER_TICK || renderTime >= b.goneAt) continue;
+      const dt = (renderTime - b.seenAt) / 1000;
+      bullets.push({ id, x: b.x + b.vx * dt, y: b.y + b.vy * dt, angle: Math.atan2(b.vy, b.vx) });
+    }
 
     if (renderTime >= last.recvAt) {
       return {
+        tick: last.tick,
         players: [...last.players.values()],
         bullets,
         grenades: [...last.grenades.values()],
@@ -101,6 +160,7 @@ export class SnapshotBuffer {
     }
     if (renderTime <= first.recvAt) {
       return {
+        tick: first.tick,
         players: [...first.players.values()],
         bullets,
         grenades: [...first.grenades.values()],
@@ -148,6 +208,7 @@ export class SnapshotBuffer {
     }
 
     return {
+      tick: lerp(a.tick, b.tick, t),
       players,
       bullets,
       grenades,

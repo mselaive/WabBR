@@ -64,6 +64,9 @@ function scriptedInput(tick: number, seq: number): PlayerInput {
     reload: tick % 97 === 0,
     // Corre a ratos: mete la estamina dentro del test de determinismo.
     sprint: tick % 13 < 6,
+    // Disparando con lo que veía unos ticks antes: mete el rebobinado de la
+    // compensación de lag dentro del test de determinismo.
+    view: tick - 3.4,
     // Recoger cada tanto: mete el inventario dentro del test de determinismo.
     act: tick % 11 === 0 ? ACT_PICKUP : ACT_NONE,
   };
@@ -727,5 +730,48 @@ describe("cajas de botín", () => {
       }
     }
     expect(crateHeals).toBeGreaterThan(groundHeals * 2);
+  });
+});
+
+describe("aparición", () => {
+  /** Ángulo alrededor del centro en que aparece cada jugador, en una partida de `n`. */
+  function spawnAngles(n: number, seed: number): number[] {
+    const state = createGameState(1);
+    for (let id = 1; id <= n; id++) state.players.push(createPlayer(id));
+    startMatch(state, seed, arena);
+    return state.players.map((p) => Math.atan2(p.y - WORLD_CENTER_Y, p.x - WORLD_CENTER_X));
+  }
+
+  const quadrant = (a: number): number =>
+    Math.floor(((a + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 2));
+
+  it("el que crea la sala no aparece siempre en el mismo lugar", () => {
+    // Antes el ángulo salía del orden de llegada: el primero, siempre al este.
+    const quadrants = new Set<number>();
+    for (let seed = 1; seed <= 40; seed++) quadrants.add(quadrant(spawnAngles(3, seed * 7919)[0]!));
+    expect(quadrants.size).toBe(4);
+  });
+
+  it("tampoco se repite al lado de quién aparecés", () => {
+    // Con el anillo girando pero el orden fijo, el segundo en entrar quedaría
+    // siempre del mismo lado del primero.
+    const sides = new Set<boolean>();
+    for (let seed = 1; seed <= 40; seed++) {
+      const [a, b] = spawnAngles(3, seed * 7919);
+      const d = Math.atan2(Math.sin(b! - a!), Math.cos(b! - a!));
+      sides.add(d > 0);
+    }
+    expect(sides.size).toBe(2);
+  });
+
+  it("siguen apareciendo lejos unos de otros", () => {
+    const state = createGameState(1);
+    for (let id = 1; id <= 8; id++) state.players.push(createPlayer(id));
+    startMatch(state, 31337, arena);
+    for (const a of state.players) {
+      for (const b of state.players) {
+        if (a !== b) expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThan(400);
+      }
+    }
   });
 });

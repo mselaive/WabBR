@@ -1,12 +1,11 @@
 import { Server, type Connection, type ConnectionContext, type WSMessage } from "partyserver";
 import {
-  ACT_NONE,
   BTN_RELOAD,
   BTN_SHOOT,
   BTN_SPRINT,
   COUNTDOWN_TICKS,
   EMPTY_ROOM_SHUTDOWN_TICKS,
-  MAX_INPUT_BUFFER,
+  InputQueue,
   MAX_PLAYERS,
   MIN_PLAYERS,
   MS_PER_TICK,
@@ -55,10 +54,8 @@ interface Seat {
   playerId: number;
   connId: string;
   meta: PlayerMeta;
-  /** Inputs pendientes. Se consume exactamente uno por tick. */
-  queue: PlayerInput[];
-  /** Último input consumido: se repite si la cola quedó vacía por jitter. */
-  last: PlayerInput;
+  /** Inputs pendientes. Cada uno se procesa exactamente una vez: ver InputQueue. */
+  inputs: InputQueue;
 }
 
 /** Cada cuánto se le da una oportunidad de correr al loop (no es el ritmo del tick). */
@@ -71,17 +68,6 @@ const MAX_TICKS_PER_PUMP = 5;
  * margen, caminar al lado de una columna hace parpadear al otro jugador.
  */
 const SIGHT_GRACE_TICKS = 6;
-
-const NEUTRAL_INPUT: PlayerInput = {
-  seq: 0,
-  moveX: 0,
-  moveY: 0,
-  aim: 0,
-  shoot: false,
-  reload: false,
-  sprint: false,
-  act: ACT_NONE,
-};
 
 /**
  * Una partida = un Durable Object. Mantiene el estado autoritativo y corre el
@@ -144,8 +130,7 @@ export class GameRoom extends Server<Env> {
       playerId,
       connId: conn.id,
       meta: { id: playerId, name, colorIndex: this.freeColorIndex(), ready: false },
-      queue: [],
-      last: { ...NEUTRAL_INPUT },
+      inputs: new InputQueue(),
     };
     this.seats.set(playerId, seat);
     conn.setState({ playerId });
@@ -208,11 +193,8 @@ export class GameRoom extends Server<Env> {
   private handle(conn: Connection<ConnState>, seat: Seat, msg: ClientMsg): void {
     switch (msg.t) {
       case "in": {
-        // Descartar reenvíos y paquetes fuera de orden: el seq solo avanza.
-        if (typeof msg.seq !== "number" || msg.seq <= seat.last.seq) return;
-        if (seat.queue.length > 0 && msg.seq <= seat.queue[seat.queue.length - 1]!.seq) return;
-
-        seat.queue.push({
+        if (typeof msg.seq !== "number") return;
+        seat.inputs.push({
           seq: msg.seq,
           // Clamp a -1/0/1: el cliente no decide su propia velocidad.
           moveX: clampAxis(msg.mx),
@@ -221,14 +203,13 @@ export class GameRoom extends Server<Env> {
           shoot: (msg.btn & BTN_SHOOT) !== 0,
           reload: (msg.btn & BTN_RELOAD) !== 0,
           sprint: (msg.btn & BTN_SPRINT) !== 0,
+          // Lo que diga se acota al rebobinar (LAG_COMP_MAX_TICKS): mentir acá
+          // no da más que eso.
+          view: typeof msg.vt === "number" && Number.isFinite(msg.vt) && msg.vt >= 0 ? msg.vt / 10 : -1,
           // Acción puntual (recoger, cambiar de arma, curarse). Se valida en la
           // simulación: acá sólo nos aseguramos de que sea un número sano.
           act: typeof msg.act === "number" && msg.act >= 0 && msg.act < 32 ? msg.act | 0 : 0,
         });
-
-        // Si la cola se desborda es que el cliente manda de más o vamos atrasados:
-        // se tiran los más viejos, que ya no le importan a nadie.
-        while (seat.queue.length > MAX_INPUT_BUFFER) seat.queue.shift();
         return;
       }
 
@@ -371,20 +352,10 @@ export class GameRoom extends Server<Env> {
       }
     }
 
-    // Un input por tick y por jugador. Si la cola está vacía se repite el último,
-    // así el movimiento no se corta por un paquete perdido.
-    const inputs = new Map<number, PlayerInput>();
-    for (const seat of this.seats.values()) {
-      const next = seat.queue.shift();
-      if (next) seat.last = next;
-      const input = seat.last;
-      inputs.set(seat.playerId, input);
-
-      // Moverse y disparar se repiten sin problema, pero una acción es de un
-      // solo tick: si no la borráramos, un input repetido por falta de paquetes
-      // recogería el mismo objeto una y otra vez.
-      if (input.act !== ACT_NONE) seat.last = { ...input, act: ACT_NONE };
-    }
+    // Normalmente un input por jugador, pero pueden ser cero o dos: cada uno
+    // se procesa una sola vez y en orden, igual que en la predicción.
+    const inputs = new Map<number, PlayerInput[]>();
+    for (const seat of this.seats.values()) inputs.set(seat.playerId, seat.inputs.take());
 
     step(s, inputs, this.events, this.arena);
 
@@ -437,7 +408,7 @@ export class GameRoom extends Server<Env> {
     const s = this.state;
     const packed = packSnapshotArrays(s);
     // El marcador es público y va igual para todos.
-    const standings: SnapStanding[] = s.players.map((p) => [p.id, p.kills, p.alive ? 1 : 0]);
+    const standings: SnapStanding[] = s.players.map((p) => [p.id, p.kills, p.alive ? 1 : 0, p.place]);
 
     const base = {
       t: "s" as const,
@@ -471,7 +442,9 @@ export class GameRoom extends Server<Env> {
       const viewer = viewerId === undefined ? undefined : findPlayer(s, viewerId);
 
       const players: SnapPlayer[] = [];
-      for (const p of s.players) if (this.canSee(viewer, p)) players.push(packPlayer(p));
+      for (const p of s.players) {
+        if (this.canSee(viewer, p)) players.push(packPlayer(p, p.id === viewerId));
+      }
 
       const bullets: SnapBullet[] = [];
       for (const b of s.bullets) {
@@ -533,8 +506,7 @@ export class GameRoom extends Server<Env> {
     }
     for (const seat of this.seats.values()) {
       seat.meta.ready = false;
-      seat.queue.length = 0;
-      seat.last = { ...NEUTRAL_INPUT };
+      seat.inputs.clear();
     }
     this.broadcastRoster();
   }

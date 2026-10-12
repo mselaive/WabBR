@@ -45,6 +45,8 @@ function snapshotOf(p: PlayerState, lastSeq: number): UnpackedPlayer {
     stamina: 100,
     staminaDelay: 0,
     grenades: 0,
+    fireCd: 0,
+    reloadCd: 0,
   };
 }
 
@@ -57,6 +59,7 @@ function scripted(tick: number, seq: number): PlayerInput {
     shoot: false,
     reload: false,
     sprint: false,
+    view: -1,
     act: 0,
   };
 }
@@ -177,7 +180,7 @@ describe("reconciliación", () => {
 
     const antes = client.renderPosition(0, 1).x;
     client.apply(
-      { seq: 1, moveX: 1, moveY: 0, aim: 0, shoot: false, reload: false, sprint: false, act: 0 },
+      { seq: 1, moveX: 1, moveY: 0, aim: 0, shoot: false, reload: false, sprint: false, view: -1, act: 0 },
       arena,
     );
     const despues = client.renderPosition(0, 1).x;

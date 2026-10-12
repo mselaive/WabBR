@@ -1,10 +1,18 @@
 import {
+  ACT_NONE,
   PLAYER_MAX_HP,
+  activeTier,
+  applySelfAction,
   createPlayer,
+  shotPellets,
+  stepConsumable,
   stepPlayerMovement,
+  stepWeaponState,
   type ArenaMap,
+  type Pellet,
   type PlayerInput,
   type PlayerState,
+  type SimEvent,
   type UnpackedPlayer,
 } from "@wabbr/shared";
 
@@ -14,6 +22,19 @@ const SNAP_THRESHOLD = 60;
 const IGNORE_THRESHOLD = 0.25;
 /** Constante de tiempo con la que se disuelve el error de predicción. */
 const ERROR_DECAY_TAU = 0.06;
+
+/** Un disparo propio, decidido acá sin esperar al servidor. */
+export interface PredictedShot {
+  /** Input que lo disparó: es lo que lo empareja con el del servidor. */
+  seq: number;
+  weapon: number;
+  /** Rareza del arma: cambia el daño, y con él el retroceso que se siente. */
+  tier: number;
+  pellets: Pellet[];
+}
+
+/** Los eventos que generan las funciones compartidas no le importan a la predicción. */
+const discard: SimEvent[] = [];
 
 /**
  * Predicción y reconciliación del jugador local.
@@ -55,12 +76,37 @@ export class Predictor {
     this.prevY = y;
   }
 
-  /** Un input nuevo: se aplica ya mismo y se guarda hasta que el servidor lo confirme. */
-  apply(input: PlayerInput, arena: ArenaMap): void {
+  /**
+   * Un input nuevo: se aplica ya mismo y se guarda hasta que el servidor lo
+   * confirme. Si con él sale un disparo, lo devuelve para dibujarlo ya.
+   */
+  apply(input: PlayerInput, arena: ArenaMap): PredictedShot | null {
     this.pending.push(input);
     this.prevX = this.state.x;
     this.prevY = this.state.y;
+    const weapon = this.step(input, arena);
+    if (weapon < 0) return null;
+    return {
+      seq: input.seq,
+      weapon,
+      tier: activeTier(this.state),
+      pellets: shotPellets(this.state, weapon, input.seq),
+    };
+  }
+
+  /**
+   * Lo mismo que corre el servidor para este jugador en un tick, en el mismo
+   * orden, menos lo que necesita el mundo (recoger, granadas). El arma va
+   * incluida porque de ella depende si el disparo sale: con la cadencia, la
+   * munición o la curación mal predichas, se dibujarían balas que no existen.
+   */
+  private step(input: PlayerInput, arena: ArenaMap): number {
     stepPlayerMovement(this.state, input, arena);
+    if (input.act !== ACT_NONE) applySelfAction(this.state, input.act);
+    stepConsumable(this.state, input, discard);
+    const weapon = stepWeaponState(this.state, input, discard);
+    discard.length = 0;
+    return weapon;
   }
 
   /** Llega el estado autoritativo: rebobinar y volver a aplicar lo no confirmado. */
@@ -80,11 +126,29 @@ export class Predictor {
     this.state.staminaDelay = server.staminaDelay;
     this.state.boostTicks = server.boostTicks;
 
+    // El arma y lo que la condiciona se rebobinan igual, por el mismo motivo:
+    // de esto depende si el próximo disparo sale o no.
+    const s = this.state;
+    s.hp = server.hp;
+    s.slots[0] = server.slots[0] ?? -1;
+    s.slots[1] = server.slots[1] ?? -1;
+    s.slotTier[0] = server.slotTiers[0] ?? 0;
+    s.slotTier[1] = server.slotTiers[1] ?? 0;
+    s.activeSlot = server.activeSlot;
+    s.slotAmmo[server.activeSlot] = server.ammo;
+    s.slotAmmo[server.activeSlot === 0 ? 1 : 0] = server.ammoOther;
+    s.consumables = [...server.consumables];
+    s.useCd = server.useCd;
+    s.useIndex = server.useIndex;
+    s.fireCd = server.fireCd;
+    s.reloadCd = server.reloadCd;
+
     for (const input of this.pending) {
       // Igual que en apply(): el tramo a interpolar es el del último paso.
       this.prevX = this.state.x;
       this.prevY = this.state.y;
-      stepPlayerMovement(this.state, input, arena);
+      // Los disparos que salgan acá ya se dibujaron cuando se apretó el gatillo.
+      this.step(input, arena);
     }
 
     const dx = prevX - this.state.x;

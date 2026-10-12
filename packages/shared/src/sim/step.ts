@@ -16,6 +16,7 @@ import {
   STAMINA_REGEN,
   STAMINA_REGEN_DELAY,
   ENDED_TICKS,
+  LAG_COMP_MAX_TICKS,
   PLAYER_MAX_HP,
   PLAYER_RADIUS,
   PLAYER_SPEED,
@@ -24,7 +25,7 @@ import {
   WORLD_RADIUS,
   ZONE_PHASES,
 } from "../constants.js";
-import { lerp, nextRandom } from "../math.js";
+import { lerp, makeRng, nextRandom } from "../math.js";
 import {
   ARMORS,
   ITEM_ARMOR,
@@ -72,6 +73,8 @@ const scratch: Resolved = { x: 0, y: 0 };
 const nearby: number[] = [];
 
 const SLOTS = 2;
+/** Ticks de historia por jugador: lo máximo que se rebobina más el par a interpolar. */
+const TRAIL_LENGTH = LAG_COMP_MAX_TICKS + 2;
 const CONSUMABLE_KINDS = 3;
 
 // ------------------------------------------------------------ construcción
@@ -106,6 +109,8 @@ export function createPlayer(id: number, x = 0, y = 0): PlayerState {
     lastSeq: 0,
     diedAtTick: -1,
     killerId: -1,
+    place: -1,
+    trail: new Array<number>(TRAIL_LENGTH * 2).fill(0).map((_, i) => (i % 2 === 0 ? x : y)),
   };
 }
 
@@ -165,8 +170,17 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
   state.nextItemId = state.items.length + 1;
   state.openedCrates = [];
 
+  // Qué lugar del anillo le toca a cada uno, sorteado. Sin esto el orden de
+  // llegada a la sala decidía al lado de quién aparecías, siempre igual.
+  const slots = active.map((_, i) => i);
+  const pick = makeRng(seed ^ 0x51ed270b);
+  for (let i = slots.length - 1; i > 0; i--) {
+    const j = Math.floor(pick() * (i + 1));
+    [slots[i], slots[j]] = [slots[j]!, slots[i]!];
+  }
+
   active.forEach((p, i) => {
-    const sp = spawnPoint(i, active.length, seed, arena);
+    const sp = spawnPoint(slots[i]!, active.length, seed, arena);
     p.x = sp.x;
     p.y = sp.y;
     p.vx = 0;
@@ -190,6 +204,12 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
     p.reloadCd = 0;
     p.diedAtTick = -1;
     p.killerId = -1;
+    p.place = 0;
+    // Sin historia previa: hasta que la haya, rebobinarlo da donde apareció.
+    for (let i = 0; i < TRAIL_LENGTH; i++) {
+      p.trail[i * 2] = p.x;
+      p.trail[i * 2 + 1] = p.y;
+    }
     // Mirando al centro de la arena.
     p.aim = Math.atan2(WORLD_CENTER_Y - sp.y, WORLD_CENTER_X - sp.x);
   });
@@ -197,6 +217,57 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
 
 export function findPlayer(state: GameState, id: number): PlayerState | undefined {
   return state.players.find((p) => p.id === id);
+}
+
+// --------------------------------------------------- compensación de lag
+
+function trailSlot(tick: number): number {
+  return (((tick % TRAIL_LENGTH) + TRAIL_LENGTH) % TRAIL_LENGTH) * 2;
+}
+
+function recordTrail(p: PlayerState, tick: number): void {
+  const i = trailSlot(tick);
+  p.trail[i] = p.x;
+  p.trail[i + 1] = p.y;
+}
+
+/**
+ * Dónde estaba `p` hace `rewind` ticks, interpolando entre los dos que rodean
+ * ese instante, igual que el cliente interpola entre snapshots.
+ *
+ * Es la compensación de lag. El que dispara ve a los demás atrasados —la
+ * interpolación (100 ms) más el viaje del snapshot— y su input tarda otro
+ * tanto en llegar. Si el servidor probara la bala contra donde están ahora,
+ * le pegaría a algo distinto de lo que vio: había que adelantar el tiro todo
+ * el ping más 100 ms, y la bala que en tu pantalla le pegaba no hacía daño.
+ * Probándola contra donde los veías, lo que ves es lo que pasa.
+ */
+export function pastPosition(p: PlayerState, tick: number, rewind: number, out: Resolved): void {
+  if (rewind <= 0) {
+    out.x = p.x;
+    out.y = p.y;
+    return;
+  }
+  const t = tick - rewind;
+  const t0 = Math.floor(t);
+  const f = t - t0;
+  const a = trailSlot(t0);
+  const b = trailSlot(t0 + 1);
+  out.x = lerp(p.trail[a]!, p.trail[b]!, f);
+  out.y = lerp(p.trail[a + 1]!, p.trail[b + 1]!, f);
+}
+
+/**
+ * Cuántos ticks rebobinar para una bala disparada ahora con lo que el jugador
+ * veía en `view`.
+ *
+ * El medio tick es porque cada paso del servidor mueve la bala un tick entero
+ * de vuelo, y mientras tanto el que disparó ve avanzar a los demás: el blanco
+ * representativo de ese tramo es el del medio, no el del principio.
+ */
+export function shotRewind(tick: number, view: number): number {
+  if (view < 0) return 0;
+  return Math.max(0, Math.min(LAG_COMP_MAX_TICKS, tick - view - 0.5));
 }
 
 export function activeWeapon(p: PlayerState): number {
@@ -462,17 +533,6 @@ function handleAction(
     return;
   }
 
-  if (act === ACT_SLOT_0 || act === ACT_SLOT_1) {
-    const slot = act === ACT_SLOT_0 ? 0 : 1;
-    if (slot === p.activeSlot || p.slots[slot] === -1) return;
-    p.activeSlot = slot;
-    // Cambiar de arma corta la recarga y la curación: es el costo de cambiar.
-    p.reloadCd = 0;
-    p.useCd = 0;
-    p.useIndex = -1;
-    return;
-  }
-
   if (act === ACT_THROW) {
     if (p.grenades <= 0 || p.useCd > 0) return;
     p.grenades--;
@@ -490,7 +550,28 @@ function handleAction(
     return;
   }
 
-  if (act >= ACT_USE_BASE) {
+  applySelfAction(p, act);
+}
+
+/**
+ * Las acciones que sólo tocan al propio jugador: cambiar de arma y empezar a
+ * curarse. Van aparte porque el cliente las predice —deciden si el próximo
+ * disparo sale y con qué arma— y no puede correr las que necesitan el mundo,
+ * como recoger o tirar una granada.
+ */
+export function applySelfAction(p: PlayerState, act: number): void {
+  if (act === ACT_SLOT_0 || act === ACT_SLOT_1) {
+    const slot = act === ACT_SLOT_0 ? 0 : 1;
+    if (slot === p.activeSlot || p.slots[slot] === -1) return;
+    p.activeSlot = slot;
+    // Cambiar de arma corta la recarga y la curación: es el costo de cambiar.
+    p.reloadCd = 0;
+    p.useCd = 0;
+    p.useIndex = -1;
+    return;
+  }
+
+  if (act >= ACT_USE_BASE && act < ACT_THROW) {
     const index = act - ACT_USE_BASE;
     const def = consumableAt(index);
     if (!def) return;
@@ -505,7 +586,11 @@ function handleAction(
 }
 
 /** Avanza la canalización. Moverse la cancela: por eso curarse es una decisión. */
-function stepConsumable(p: PlayerState, input: PlayerInput | undefined, events: SimEvent[]): void {
+export function stepConsumable(
+  p: PlayerState,
+  input: PlayerInput | undefined,
+  events: SimEvent[],
+): void {
   if (p.useCd <= 0) return;
 
   const moving = input ? input.moveX !== 0 || input.moveY !== 0 : false;
@@ -537,23 +622,26 @@ function stepConsumable(p: PlayerState, input: PlayerInput | undefined, events: 
 
 // ------------------------------------------------------------ arma
 
-function stepWeapon(
-  state: GameState,
-  p: PlayerState,
-  input: PlayerInput,
-  events: SimEvent[],
-): void {
+/**
+ * Cadencia, recarga y munición del arma en mano durante un tick. Devuelve el
+ * índice del arma si disparó, o -1.
+ *
+ * No crea las balas: el servidor las mete en la partida y el cliente las dibuja
+ * por su cuenta en el mismo instante en que apretás el gatillo. Para eso la
+ * decisión de si el disparo sale tiene que ser la misma función en los dos lados.
+ */
+export function stepWeaponState(p: PlayerState, input: PlayerInput, events: SimEvent[]): number {
   if (p.fireCd > 0) p.fireCd--;
 
   const weaponIndex = activeWeapon(p);
-  if (weaponIndex < 0) return;
+  if (weaponIndex < 0) return -1;
   const slot = p.activeSlot;
   const def = weaponStats(weaponIndex, p.slotTier[slot] ?? 0);
 
   if (p.reloadCd > 0) {
     p.reloadCd--;
     if (p.reloadCd === 0) p.slotAmmo[slot] = def.magSize;
-    return;
+    return -1;
   }
 
   const ammo = p.slotAmmo[slot] ?? 0;
@@ -561,54 +649,111 @@ function stepWeapon(
   if (input.reload && ammo < def.magSize) {
     p.reloadCd = def.reloadTicks;
     events.push({ t: "reload", byId: p.id });
-    return;
+    return -1;
   }
 
-  if (!input.shoot || p.fireCd > 0) return;
+  if (!input.shoot || p.fireCd > 0) return -1;
   // Curarse y disparar son excluyentes.
-  if (p.useCd > 0) return;
+  if (p.useCd > 0) return -1;
 
   if (ammo <= 0) {
     p.reloadCd = def.reloadTicks;
     events.push({ t: "reload", byId: p.id });
-    return;
+    return -1;
   }
 
   p.slotAmmo[slot] = ammo - 1;
   p.fireCd = def.fireCd;
+  return weaponIndex;
+}
 
+/** Posición y velocidad iniciales de un proyectil. */
+export interface Pellet {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+}
+
+/**
+ * Azar de un perdigón, fijado por quién disparó, con qué input y cuál de los
+ * perdigones es. No sale del rng de la partida porque ése el cliente no lo
+ * conoce: así puede calcular la misma dispersión que el servidor y dibujar la
+ * bala exactamente por donde va a ir, sin esperar a que se la confirmen.
+ */
+function pelletRandom(playerId: number, seq: number, pellet: number): number {
+  const seed =
+    Math.imul(seq, 0x9e3779b1) ^ Math.imul(playerId + 1, 0x85ebca6b) ^ Math.imul(pellet + 1, 0xc2b2ae35);
+  return nextRandom(seed).value;
+}
+
+/** Los proyectiles de un disparo, saliendo del caño del arma hacia `p.aim`. */
+export function shotPellets(p: PlayerState, weaponIndex: number, seq: number): Pellet[] {
+  const def = weaponStats(weaponIndex, activeTier(p));
   const muzzle = PLAYER_RADIUS + 8;
+  const pellets: Pellet[] = [];
 
   for (let i = 0; i < def.pellets; i++) {
-    const r = nextRandom(state.rng);
-    state.rng = r.state;
+    const r = pelletRandom(p.id, seq, i);
 
     // Un solo proyectil se desvía al azar; la escopeta reparte los perdigones
     // por el cono y le agrega un poco de ruido a cada uno.
     const spread =
       def.pellets === 1
-        ? (r.value * 2 - 1) * def.spread
-        : ((i / (def.pellets - 1)) * 2 - 1) * def.spread * 0.85 +
-          (r.value * 2 - 1) * def.spread * 0.2;
+        ? (r * 2 - 1) * def.spread
+        : ((i / (def.pellets - 1)) * 2 - 1) * def.spread * 0.85 + (r * 2 - 1) * def.spread * 0.2;
 
     const angle = p.aim + spread;
     const cos = Math.cos(angle);
     const sin = Math.sin(angle);
+    pellets.push({
+      x: p.x + cos * muzzle,
+      y: p.y + sin * muzzle,
+      vx: cos * def.bulletSpeed,
+      vy: sin * def.bulletSpeed,
+    });
+  }
 
+  return pellets;
+}
+
+function stepWeapon(
+  state: GameState,
+  p: PlayerState,
+  input: PlayerInput,
+  events: SimEvent[],
+): void {
+  const weaponIndex = stepWeaponState(p, input, events);
+  if (weaponIndex < 0) return;
+
+  const def = weaponStats(weaponIndex, activeTier(p));
+  const firstBullet = state.nextBulletId;
+
+  for (const pellet of shotPellets(p, weaponIndex, input.seq)) {
     state.bullets.push({
       id: state.nextBulletId++,
       ownerId: p.id,
       damage: def.damage,
       weapon: weaponIndex,
-      x: p.x + cos * muzzle,
-      y: p.y + sin * muzzle,
-      vx: cos * def.bulletSpeed,
-      vy: sin * def.bulletSpeed,
+      x: pellet.x,
+      y: pellet.y,
+      vx: pellet.vx,
+      vy: pellet.vy,
       life: def.lifeTicks,
+      rewind: shotRewind(state.tick, input.view),
     });
   }
 
-  events.push({ t: "shot", x: p.x, y: p.y, aim: p.aim, byId: p.id });
+  events.push({
+    t: "shot",
+    x: p.x,
+    y: p.y,
+    aim: p.aim,
+    byId: p.id,
+    seq: input.seq,
+    firstBullet,
+    pellets: def.pellets,
+  });
 }
 
 // ------------------------------------------------------------ daño
@@ -715,6 +860,7 @@ export function applyExplosion(
       byId,
       amount: damage,
       dir: Math.atan2(p.y - y, p.x - x),
+      bullet: -1,
     });
     applyDamage(state, p, damage, byId, CAUSE_EXPLOSION, events);
   }
@@ -779,10 +925,12 @@ function stepBullets(state: GameState, arena: ArenaMap, events: SimEvent[]): voi
     let bestT = 1;
     let hitPlayer: PlayerState | null = null;
 
-    // Impacto contra jugadores (test de segmento: la bala no puede atravesarlos).
+    // Impacto contra jugadores (test de segmento: la bala no puede atravesarlos),
+    // cada uno donde lo veía el que disparó.
     for (const target of state.players) {
       if (!target.alive || target.id === b.ownerId) continue;
-      const t = segmentCircleT(b.x, b.y, dx, dy, target.x, target.y, PLAYER_RADIUS + BULLET_RADIUS);
+      pastPosition(target, state.tick, b.rewind, scratch);
+      const t = segmentCircleT(b.x, b.y, dx, dy, scratch.x, scratch.y, PLAYER_RADIUS + BULLET_RADIUS);
       if (t >= 0 && t < bestT) {
         bestT = t;
         hitPlayer = target;
@@ -815,13 +963,14 @@ function stepBullets(state: GameState, arena: ArenaMap, events: SimEvent[]): voi
         byId: b.ownerId,
         amount: b.damage,
         dir: Math.atan2(b.vy, b.vx),
+        bullet: b.id,
       });
       applyDamage(state, hitPlayer, b.damage, b.ownerId, b.weapon, events);
       continue;
     }
 
     if (hitBox) {
-      events.push({ t: "impact", x: nx, y: ny });
+      events.push({ t: "impact", x: nx, y: ny, bullet: b.id });
       continue;
     }
 
@@ -830,7 +979,7 @@ function stepBullets(state: GameState, arena: ArenaMap, events: SimEvent[]): voi
     const cy = ny - WORLD_CENTER_Y;
     const limit = WORLD_RADIUS - BULLET_RADIUS;
     if (cx * cx + cy * cy >= limit * limit) {
-      events.push({ t: "impact", x: nx, y: ny });
+      events.push({ t: "impact", x: nx, y: ny, bullet: b.id });
       continue;
     }
 
@@ -906,13 +1055,24 @@ function stepZone(state: GameState, events: SimEvent[]): void {
 
 // ------------------------------------------------------------ tick completo
 
+function isInputList(v: PlayerInput | readonly PlayerInput[]): v is readonly PlayerInput[] {
+  return Array.isArray(v);
+}
+
 /**
- * Un tick autoritativo. `inputs` mapea id de jugador -> input de este tick
- * (el servidor repite el último si no llegó nada nuevo).
+ * Un tick autoritativo. `inputs` mapea id de jugador -> lo que hizo en este
+ * tick: un input, o una lista. La lista existe porque el servidor procesa cada
+ * input del cliente exactamente una vez y en orden, aunque lleguen a destiempo:
+ * vacía si no llegó nada (el jugador espera), dos si quedó atrasado y se está
+ * poniendo al día. Es lo que la predicción del cliente hace con los mismos
+ * inputs, así que movimiento y disparos coinciden sin corregir nada.
+ *
+ * Un jugador que no figura en el mapa se queda quieto pero el tiempo le corre
+ * igual: las recargas y curaciones siguen.
  */
 export function step(
   state: GameState,
-  inputs: Map<number, PlayerInput>,
+  inputs: Map<number, PlayerInput | readonly PlayerInput[]>,
   events: SimEvent[],
   arena: ArenaMap = getArena(),
 ): void {
@@ -936,10 +1096,13 @@ export function step(
     }
 
     if (input) {
-      stepPlayerMovement(p, input, arena);
-      if (input.act !== 0) handleAction(state, p, input.act, arena, events);
-      stepConsumable(p, input, events);
-      stepWeapon(state, p, input, events);
+      const list: readonly PlayerInput[] = isInputList(input) ? input : [input];
+      for (const one of list) {
+        stepPlayerMovement(p, one, arena);
+        if (one.act !== 0) handleAction(state, p, one.act, arena, events);
+        stepConsumable(p, one, events);
+        stepWeapon(state, p, one, events);
+      }
     } else {
       p.vx = 0;
       p.vy = 0;
@@ -955,14 +1118,27 @@ export function step(
     }
   }
 
+  // Antes de las balas: las de este tick se prueban contra la historia, y el
+  // tramo más reciente es el de ahora.
+  for (const p of state.players) if (p.alive) recordTrail(p, state.tick);
+
   stepGrenades(state, arena, events);
   stepBullets(state, arena, events);
   stepZone(state, events);
 
   const alive = state.players.filter((p) => p.alive);
+
+  // Puestos: el que cae queda detrás de todos los que siguen en pie. Se mira
+  // acá y no al morir para cubrir también al que se desconecta, y para que dos
+  // que caen en el mismo tick (una granada, la zona) empaten.
+  for (const p of state.players) {
+    if (p.place === 0 && !p.alive) p.place = alive.length + 1;
+  }
+
   if (alive.length <= 1) {
     state.phase = "ended";
     state.phaseTicksLeft = ENDED_TICKS;
     state.winnerId = alive.length === 1 ? alive[0]!.id : -1;
+    if (alive.length === 1) alive[0]!.place = 1;
   }
 }

@@ -8,6 +8,7 @@ export * from "./map/loot.js";
 export * from "./sim/types.js";
 export * from "./sim/collision.js";
 export * from "./sim/step.js";
+export * from "./sim/inputQueue.js";
 export * from "./sim/sight.js";
 export * from "./protocol/messages.js";
 export * from "./protocol/codec.js";

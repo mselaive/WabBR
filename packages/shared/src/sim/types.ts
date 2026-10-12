@@ -14,6 +14,12 @@ export interface PlayerInput {
   reload: boolean;
   sprint: boolean;
   /**
+   * Tick del servidor que el jugador tenía en pantalla al mandar este input,
+   * con fracción (los demás se dibujan interpolados entre dos snapshots). Con
+   * esto el servidor sabe dónde veía a los demás al disparar. -1 = sin dato.
+   */
+  view: number;
+  /**
    * Acción puntual de este tick (ver ACT_*). Va como un número y no como bits
    * porque son excluyentes: no podés recoger y curarte en el mismo tick.
    * El WebSocket es TCP, así que no se pierde y alcanza con mandarla una vez.
@@ -43,6 +49,7 @@ export function emptyInput(seq = 0): PlayerInput {
     shoot: false,
     reload: false,
     sprint: false,
+    view: -1,
     act: ACT_NONE,
   };
 }
@@ -95,6 +102,17 @@ export interface PlayerState {
   /** Tick en que murió, para el kill feed y la cámara de espectador. -1 si vive. */
   diedAtTick: number;
   killerId: number;
+  /**
+   * Puesto final en la partida: 1 el ganador, 2 el último en caer, etc. 0
+   * mientras sigue en pie y -1 si no jugó esta partida (entró a mirar).
+   */
+  place: number;
+  /**
+   * Dónde estuvo en los últimos ticks, como pares x,y en un anillo indexado por
+   * tick. Es lo que permite rebobinarlo para la compensación de lag. Sólo lo
+   * usa el servidor y no viaja en el snapshot.
+   */
+  trail: number[];
 }
 
 /** Datos estáticos del jugador: se mandan solo cuando cambia el roster. */
@@ -119,6 +137,11 @@ export interface BulletState {
   vy: number;
   /** Ticks que le quedan de vida. */
   life: number;
+  /**
+   * Cuántos ticks atrás se rebobina a los blancos para esta bala: el atraso
+   * con que el que disparó los veía. Ver `pastPosition`.
+   */
+  rewind: number;
 }
 
 /** Granada en vuelo o rodando. Rebota contra las paredes y estalla por tiempo. */
@@ -186,6 +209,8 @@ export type SimEvent =
       amount: number;
       /** Dirección de la que vino, en radianes. */
       dir: number;
+      /** Id de la bala que pegó, o -1 si fue una explosión. */
+      bullet: number;
     }
   | {
       t: "kill";
@@ -194,8 +219,23 @@ export type SimEvent =
       /** Índice de arma, o CAUSE_ZONE / CAUSE_EXPLOSION. */
       cause: number;
     }
-  | { t: "shot"; x: number; y: number; aim: number; byId: number }
-  | { t: "impact"; x: number; y: number }
+  | {
+      t: "shot";
+      x: number;
+      y: number;
+      aim: number;
+      byId: number;
+      /**
+       * Input que lo disparó y qué balas salieron (`firstBullet` y las
+       * siguientes, una por perdigón). Con esto el que disparó reconoce su
+       * propio tiro, que ya venía dibujando desde que apretó el gatillo, y no
+       * lo dibuja dos veces.
+       */
+      seq: number;
+      firstBullet: number;
+      pellets: number;
+    }
+  | { t: "impact"; x: number; y: number; bullet: number }
   | { t: "reload"; byId: number }
   | { t: "pickup"; itemId: number; byId: number }
   | { t: "drop"; item: GroundItem }

@@ -12,6 +12,15 @@ export const MS_PER_TICK = 1000 / TICK_RATE;
 /** Cuántos ticks atrás se dibujan las entidades remotas (interpolación). */
 export const INTERP_DELAY_MS = 100;
 
+/**
+ * Hasta cuántos ticks atrás rebobina el servidor a los demás para ver si tu
+ * bala les pegó (ver `pastPosition` en step.ts). Hace falta el atraso de la
+ * interpolación (2 ticks) más el ping: 8 ticks = 400 ms alcanzan para pings de
+ * hasta unos 200 ms. Más alto ayudaría a conexiones peores a costa del que
+ * recibe: le pueden pegar hasta ese tiempo después de haberse cubierto.
+ */
+export const LAG_COMP_MAX_TICKS = 8;
+
 // ---------------------------------------------------------------- mundo
 
 /**

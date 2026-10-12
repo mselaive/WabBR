@@ -13,6 +13,10 @@ Battle royale 2D con vista cenital y estética pixel art, para jugar con amigos 
 
 ## Empezar
 
+Hace falta **Node 22** o más nuevo: es lo que pide wrangler, el servidor local. Con uno más viejo
+`npm run dev` avisa y no arranca, en vez de levantar sólo el cliente y dejarte un menú que no
+conecta con nada.
+
 ```bash
 npm install
 npm run dev          # levanta el servidor (:8787) y el cliente (:5173) a la vez
@@ -109,6 +113,11 @@ caían en los laterales la casa quedaba sellada — y en pantalla se veía perfe
 Para agrandar o achicar el mapa alcanza con `WORLD_RADIUS` en `constants.ts`: el
 generador, el minimapa y el límite de cámara salen todos de ahí.
 
+Se aparece en un anillo cerca del muro (`spawnPoint`), repartidos parejo para que
+nadie arranque al lado de otro. El anillo gira con cada partida y el lugar de cada
+uno se sortea: antes salía del orden de llegada a la sala, así que el que la creaba
+aparecía siempre al este y el segundo siempre enfrente.
+
 ## Loot
 
 Hay dos fuentes de botín, y la separación es lo que mantiene el mapa legible:
@@ -136,7 +145,10 @@ lista una vez al arrancar, más los eventos de "lo agarró tal", "se abrió la c
 mapa, y su id es su orden de aparición.
 
 - **Cinco armas** (`packages/shared/src/items.ts`): pistola, subfusil, rifle,
-  escopeta y francotirador. Dos ranuras, así que hay que elegir.
+  escopeta y francotirador. Dos ranuras, así que hay que elegir. La escopeta es
+  para pelear de cerca: dos tiros matan hasta unos 100 px, y de ahí para afuera
+  pierde contra el rifle. Su cono abría el doble y a 120 px entraban tres
+  perdigones de ocho; hay tests que fijan las dos cosas.
 - **Cinco rarezas** (común → legendaria), que multiplican daño, recarga,
   cargador y precisión. No tocan la cadencia ni el alcance a propósito: un rifle
   legendario sigue siendo un rifle, no una escopeta mejor.
@@ -207,6 +219,30 @@ impacto dice **cuánto** y **desde qué dirección**, y el de muerte dice **con 
 (índice de arma, o granada, o zona). Hay tests que lo verifican, porque son parte
 del contrato entre servidor y cliente.
 
+### Fuera de la zona
+
+Si quedás afuera, el borde de la pantalla se tiñe de rojo y late, aparece el cartel
+**FUERA DE LA ZONA** con cuánto te saca por segundo y cuántos segundos aguantás así,
+y una flecha del color del borde de la zona sale de tu muñeco apuntando para volver.
+En los últimos cinco segundos el cartel late más rápido.
+
+Los segundos salen sólo de la vida, porque la zona no mira el chaleco. Y se mide con
+tu posición predicha contra la zona tal como se dibuja: el aviso salta justo cuando
+ves que cruzás la línea, no un ping después.
+
+## Fin de la partida
+
+El resultado se ordena por **puesto**, que es lo que decide un battle royale: el
+último en pie es el 1, el último en caer el 2, y así. Las kills van al lado y
+desempatan. Arriba hay un podio con los tres primeros —cada uno con su muñeco y su
+color— y abajo la tabla completa, con tu fila marcada.
+
+El puesto lo calcula el servidor (`PlayerState.place`) al final de cada tick y no al
+morir, por dos motivos: así también le toca al que se desconecta en el medio (que
+figura con "se fue"), y dos que caen en el mismo tick —una granada, la zona— empatan
+en vez de quedar ordenados por casualidad. Si no sobrevive nadie, los últimos en caer
+comparten el primer puesto. El que entró a mirar con la partida empezada no figura.
+
 ## Línea de vista
 
 Las paredes tapan la vista, no sólo las balas. La regla es **la cobertura baja
@@ -257,7 +293,7 @@ apps/client/         juego
 ## Cómo se siente fluido
 
 Un shooter en el que el cliente sólo dibuja lo que manda el servidor se siente pesado: cada
-movimiento llega con el retraso del ping. Acá hay tres piezas:
+movimiento llega con el retraso del ping. Acá hay seis piezas:
 
 1. **Predicción** (`net/prediction.ts`): tu input se aplica localmente al instante, con la misma
    función `stepPlayerMovement` que corre el servidor.
@@ -276,9 +312,91 @@ movimiento llega con el retraso del ping. Acá hay tres piezas:
    fraccionaria casi siempre (1,25 a 800 px de alto, 1,6875 en 1080p). Con la grilla ya desalineada
    el redondeo no daba nitidez y sí cortaba el movimiento. Y como la cámara te sigue, lo que se
    traba es el mundo entero: se nota mucho más que el propio muñeco.
+6. **Disparos predichos** (`net/shots.ts`): tu bala, el fogonazo y el retroceso salen en el mismo
+   input en que apretás el gatillo. Ver la sección siguiente.
 
 Para probarlo sin desplegar nada, agregá `?lag=200` a la URL: simula 200 ms de ida y vuelta.
-Tu personaje tiene que seguir respondiendo al instante.
+Tu personaje tiene que seguir respondiendo al instante, y tus balas también.
+
+### Por qué las balas salían con retraso
+
+Las balas eran lo único tuyo que no se predecía. Entre el click y verla salir se sumaban:
+
+| | Cuánto |
+|---|---|
+| Esperar al próximo input (salen a 20 Hz) | 0-50 ms |
+| Ida y vuelta al servidor | el ping |
+| Esperar al próximo tick del servidor | 0-50 ms |
+| Dibujarla con el atraso de la interpolación, como a los demás | 100 ms |
+| La cola de inputs del servidor atrasada (ver abajo) | 0-350 ms |
+
+Y como mientras tanto te seguías moviendo, salía de donde estabas hace un rato: de atrás tuyo.
+
+Ahora el cliente decide el disparo con la misma función que el servidor (`stepWeaponState`: cadencia,
+munición, recarga, cambio de arma, curación) y lo dibuja al toque. Para que la bala dibujada vaya
+por el mismo camino que la real, la dispersión ya no sale del rng de la partida —que el cliente no
+conoce— sino de quién disparó, el `seq` del input y el número de perdigón (`shotPellets`). Por lo
+mismo el ángulo se redondea antes de predecir, igual que viaja por la red.
+
+El evento `shot` trae el `seq` y los ids de las balas que creó. Con eso el cliente empareja su tiro
+con el del servidor y deja de dibujar las del servidor, que serían un duplicado atrasado. Si predijo
+un tiro que el servidor no hizo —recogiste un arma en ese mismo instante, por ejemplo—, lo borra en
+cuanto el servidor confirma ese input sin el `shot`; si el servidor hizo uno que no se predijo, sus
+balas se dibujan como las de cualquiera. Para esto la tupla de tu propio jugador trae, al final, los
+ticks de cadencia y de recarga que faltan; a los demás no se les mandan.
+
+Lo que decide si le pegaste sigue siendo el servidor. Tu bala se frena contra el jugador tal como lo
+ves, pero la sangre y el número de daño llegan sólo con el evento `hit`. Para que los dos coincidan
+está la compensación de lag (abajo).
+
+Las balas de los demás también cambiaron. Se tomaban del último snapshot y se corrían 100 ms para
+atrás, así que una recién disparada aparecía metida dentro del que la tiró y una que ya había
+chocado desaparecía antes de llegar a la pared, con la chispa adelantada. Ahora viven en el mismo
+reloj atrasado que los jugadores: nacen en el caño cuando el otro dispara en pantalla y se van
+cuando llegan a la pared. El fogonazo, la chispa y la sangre de lo que no te toca se atrasan lo
+mismo.
+
+### La cola de inputs del servidor
+
+El servidor procesa **cada input exactamente una vez y en orden** (`InputQueue`), igual que la
+predicción. Antes sacaba uno por tick y, si no había ninguno, repetía el último. Eso tenía dos
+problemas:
+
+- **La cola sólo crecía.** El cliente manda 20 inputs por segundo y el servidor sacaba exactamente
+  20, así que cada pico de la red que juntaba varios dejaba la cola más larga para siempre. Simulando
+  5 minutos de WiFi normal, el input se procesaba 200 ms después de mandarse en vez de 56; con una
+  WiFi mala, 400 ms. Tu movimiento no lo notaba —está predicho—, pero tus disparos, tus recogidas y
+  lo que los demás ven de vos llegaban con todo ese atraso. Ahora, si hay más de uno esperando, se
+  procesa uno extra en ese tick: con la misma WiFi queda en 106 y 117 ms.
+- **Repetir inventaba pasos.** Se repetía pensando en paquetes perdidos, pero el WebSocket es TCP y
+  no pierde nada: sólo los atrasa. Repetir hacía que el servidor diera un paso, o un disparo, que el
+  cliente nunca dio. Ahora, si no llegó nada, el jugador espera.
+
+Ponerse al día sólo recupera ticks en que no llegó nada. Si no, un cliente modificado que mandara
+inputs al doble de ritmo caminaría al doble de velocidad; hay un test que lo comprueba.
+
+### Compensación de lag
+
+A los demás los ves atrasados: 100 ms de interpolación más lo que tarda el snapshot, y tu input
+tarda otro tanto en llegar. Sumado, con 100 ms de ping, el que tenés en la mira ya está unos 250 ms
+más adelante cuando el servidor procesa tu tiro. Si la bala se probara contra donde está ahora, le
+pegarías a algo distinto de lo que viste: había que adelantar el tiro todo ese tiempo, y la bala que
+en tu pantalla le pegaba no hacía daño.
+
+Por eso cada input dice qué tick del servidor tenías en pantalla (`view`, con fracción, porque se
+dibuja entre dos snapshots). El servidor guarda dónde estuvo cada jugador en los últimos ticks
+(`PlayerState.trail`) y cada bala lleva cuánto rebobinar (`rewind`): a lo largo de todo el vuelo se
+prueba contra los demás tal como los veía el que disparó (`pastPosition`). Lo que ves es lo que pasa.
+
+El costo lo paga el que recibe: le pueden pegar un instante después de haberse metido detrás de una
+pared, porque en la pantalla del otro todavía no se había metido. Por eso el rebobinado tiene tope,
+`LAG_COMP_MAX_TICKS` (400 ms): alcanza para pings de hasta unos 200 ms, y mentir sobre el tick que
+veías no da más que eso.
+
+`lagComp.test.ts` lo prueba de punta a punta: un francotirador con 200 ms de ping le apunta a alguien
+que corre de costado tal como lo ve en su pantalla. Sin compensar, el servidor cuenta 1 impacto de
+40; compensando, 33. Los 7 que fallan salen justo cuando el otro da la vuelta, con la bala ya en el
+aire, y el test comprueba que no falle ninguno más.
 
 Y para medirlo:
 
@@ -313,6 +431,10 @@ Cubren lo que sostiene todo lo demás: que la simulación sea determinista (mism
 inputs = mismo resultado), que no se pueda atravesar un obstáculo, que las balas no atraviesen
 jugadores a pesar de moverse 32 px por tick, la zona, y que la reconciliación converja con latencia
 y con pérdida de paquetes.
+
+`shots.test.ts` pone a jugar al cliente y al servidor de verdad —predicción, cola de inputs, `step`
+y el codec del snapshot— con latencia y con jitter, y comprueba que cada bala del servidor ya
+estuviera dibujada y por el mismo camino. Con el servidor repitiendo inputs como antes, falla.
 
 ### Ver el juego sin abrirlo a mano
 

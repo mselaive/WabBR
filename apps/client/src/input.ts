@@ -29,6 +29,12 @@ const SPRINT = new Set(["ShiftLeft", "ShiftRight"]);
 export class InputController {
   private keys = new Set<string>();
   private shooting = false;
+  /**
+   * Se arma al apretar el botón y se consume en el próximo input. El input sale
+   * cada 50 ms y un click rápido dura menos: si sólo se mirara si el botón
+   * sigue apretado, ese click se perdería sin disparar.
+   */
+  private shotQueued = false;
   /** Se arma al apretar R y se consume en el próximo input enviado. */
   private reloadQueued = false;
   /** Última acción apretada, pendiente de mandar. */
@@ -71,7 +77,10 @@ export class InputController {
 
     const onMouseDown = (e: MouseEvent) => {
       if (!this.enabled) return;
-      if (e.button === 0) this.shooting = true;
+      if (e.button === 0) {
+        this.shooting = true;
+        this.shotQueued = true;
+      }
     };
 
     const onMouseUp = (e: MouseEvent) => {
@@ -119,19 +128,24 @@ export class InputController {
     return v > 0 ? 1 : v < 0 ? -1 : 0;
   }
 
-  /** Arma el input de este tick. `aim` viene del juego, que sabe dónde está la cámara. */
-  sample(seq: number, aim: number): PlayerInput {
+  /**
+   * Arma el input de este tick. `aim` viene del juego, que sabe dónde está la
+   * cámara, y `view` también: es el tick del servidor que se está dibujando.
+   */
+  sample(seq: number, aim: number, view: number): PlayerInput {
     const input: PlayerInput = {
       seq,
       moveX: this.axis(LEFT, RIGHT),
       moveY: this.axis(UP, DOWN),
       aim,
-      shoot: this.shooting,
+      shoot: this.shooting || this.shotQueued,
       reload: this.reloadQueued,
       sprint: this.isSprinting(),
+      view,
       act: this.pendingAction,
     };
     this.reloadQueued = false;
+    this.shotQueued = false;
     this.pendingAction = ACT_NONE;
     return input;
   }
@@ -139,6 +153,7 @@ export class InputController {
   releaseAll(): void {
     this.keys.clear();
     this.shooting = false;
+    this.shotQueued = false;
     this.pendingAction = ACT_NONE;
   }
 }

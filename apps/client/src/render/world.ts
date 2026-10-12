@@ -130,6 +130,15 @@ export class WorldView {
   private readonly damageArcs: { dir: number; life: number }[] = [];
   private readonly markerLayer = new Graphics();
   private readonly arcLayer = new Graphics();
+  /**
+   * Flecha hacia la zona cuando estás afuera. Va en el mundo, pegada al
+   * jugador, y no en la pantalla: así sigue al muñeco exacto aunque la cámara
+   * se corra hacia el cursor.
+   */
+  private readonly zoneArrow = new Graphics()
+    .poly([46, 0, 32, -10, 32, 10])
+    .fill(0x6fd3ff)
+    .stroke({ width: 2, color: 0x0b0e12 });
 
   private scale = 1;
   private camX = WORLD_CENTER_X;
@@ -151,7 +160,9 @@ export class WorldView {
       this.entityLayer,
       this.bulletLayer,
       this.effectLayer,
+      this.zoneArrow,
     );
+    this.zoneArrow.visible = false;
     this.app.stage.addChild(this.camera, this.screenLayer);
     this.screenLayer.addChild(this.arcLayer, this.crosshair, this.markerLayer);
 
@@ -529,6 +540,18 @@ export class WorldView {
   addDamageArc(dir: number): void {
     this.damageArcs.push({ dir, life: 1.1 });
     if (this.damageArcs.length > 6) this.damageArcs.shift();
+  }
+
+  /**
+   * Flecha alrededor de (x, y) apuntando en `dir`, del color del borde de la
+   * zona: "volvé para el azul". null la esconde.
+   */
+  setZoneArrow(arrow: { x: number; y: number; dir: number } | null, timeMs = 0): void {
+    this.zoneArrow.visible = arrow !== null;
+    if (!arrow) return;
+    this.zoneArrow.position.set(arrow.x, arrow.y);
+    this.zoneArrow.rotation = arrow.dir;
+    this.zoneArrow.alpha = 0.65 + 0.35 * Math.sin(timeMs / 110);
   }
 
   /** Número de daño que sube y se desvanece sobre el que lo recibió. */
@@ -1069,6 +1092,7 @@ export class WorldView {
 
   reset(): void {
     for (const view of this.players.values()) view.root.visible = false;
+    this.zoneArrow.visible = false;
     for (const [id, sprite] of this.bullets) {
       sprite.destroy();
       this.bullets.delete(id);

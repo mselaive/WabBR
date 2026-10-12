@@ -30,6 +30,11 @@ export interface InputMsg {
   btn: number;
   /** Acción puntual del tick: recoger, cambiar de ranura, usar un consumible. */
   act: number;
+  /**
+   * Tick que tenías en pantalla, en décimas (para mandar un entero). Es lo que
+   * usa la compensación de lag. Sin él, el servidor no rebobina nada.
+   */
+  vt?: number;
 }
 
 export interface PingMsg {
@@ -61,7 +66,8 @@ export const BTN_SPRINT = 4;
 /**
  * [id, x, y, aim(mrad), hp, flags, ammo, kills, lastSeq,
  *  shield, activeSlot, slot0, slot1, ammoOtroSlot, consumiblesEmpaquetados,
- *  useCd, boostTicks]
+ *  useCd, boostTicks, …] — la lista completa está en los índices SP_* de abajo.
+ * La tupla del propio jugador trae además fireCd y reloadCd al final.
  *
  * Va como tupla y no como objeto porque esto se manda 20 veces por segundo por
  * cada jugador: las claves pesarían más que los datos.
@@ -69,14 +75,15 @@ export const BTN_SPRINT = 4;
 export type SnapPlayer = number[];
 
 /**
- * [id, kills, vivo(0|1)] para TODOS los jugadores, se vean o no.
+ * [id, kills, vivo(0|1), puesto] para TODOS los jugadores, se vean o no. El
+ * puesto es el de `PlayerState.place`: 0 mientras sigue en pie, -1 si no jugó.
  *
  * Va aparte de `players` porque desde que el servidor oculta lo que no ves, la
  * lista de posiciones ya no sirve para el marcador: alguien detrás de una pared
  * aparecería como muerto y con cero kills. Esto no filtra nada que no sea ya
  * público (el contador de vivos está en el HUD desde el primer día).
  */
-export type SnapStanding = [number, number, number];
+export type SnapStanding = [number, number, number, number];
 
 /** [id, kind, ref, tier, x, y, count] */
 export type SnapItem = [number, number, number, number, number, number, number];
@@ -114,6 +121,9 @@ export const SP_SLOT_1_TIER = 19;
 export const SP_STAMINA = 20;
 export const SP_STAMINA_DELAY = 21;
 export const SP_GRENADES = 22;
+/** Sólo en la tupla del propio jugador: ver `packPlayer(p, own)`. */
+export const SP_FIRE_CD = 23;
+export const SP_RELOAD_CD = 24;
 
 export const FLAG_ALIVE = 1;
 export const FLAG_RELOADING = 2;

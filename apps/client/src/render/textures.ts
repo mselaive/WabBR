@@ -340,31 +340,35 @@ function pebble(): Texture {
  * contorno) y `shirt` con lo que se tiñe del color del jugador. Así el tint de
  * Pixi no le pinta la cara de azul.
  */
+function drawPlayerBody(ctx: Ctx): void {
+  // Sombra en el piso.
+  ellipse(ctx, 8, 16, 6, 2.5, "#00000038");
+  // Hombros / torso.
+  rect(ctx, 3, 7, 10, 8, "#2b3138");
+  // Brazos.
+  rect(ctx, 2, 8, 2, 5, "#d8a074");
+  rect(ctx, 12, 8, 2, 5, "#d8a074");
+  // Cabeza vista desde arriba.
+  ellipse(ctx, 8, 6, 5, 5, "#1b1410");
+  ellipse(ctx, 8, 6, 4.2, 4.2, "#e8b184");
+  ellipse(ctx, 8, 6.5, 3.4, 3.4, "#f0bd90");
+  // Contorno oscuro alrededor del torso: sin esto el muñeco se pierde sobre el pasto.
+  outline(ctx, 2, 6, 12, 10, "#1b1410");
+}
+
+function drawPlayerShirt(ctx: Ctx): void {
+  // Remera (torso) y gorra: son las partes que reciben el color del jugador.
+  rect(ctx, 3, 9, 10, 6, "#ffffff");
+  ellipse(ctx, 8, 4.5, 4.5, 3.5, "#ffffff");
+  rect(ctx, 4, 4, 8, 2, "#dddddd");
+}
+
 function playerBody(): Texture {
-  return make(16, 18, (ctx) => {
-    // Sombra en el piso.
-    ellipse(ctx, 8, 16, 6, 2.5, "#00000038");
-    // Hombros / torso.
-    rect(ctx, 3, 7, 10, 8, "#2b3138");
-    // Brazos.
-    rect(ctx, 2, 8, 2, 5, "#d8a074");
-    rect(ctx, 12, 8, 2, 5, "#d8a074");
-    // Cabeza vista desde arriba.
-    ellipse(ctx, 8, 6, 5, 5, "#1b1410");
-    ellipse(ctx, 8, 6, 4.2, 4.2, "#e8b184");
-    ellipse(ctx, 8, 6.5, 3.4, 3.4, "#f0bd90");
-    // Contorno oscuro alrededor del torso: sin esto el muñeco se pierde sobre el pasto.
-    outline(ctx, 2, 6, 12, 10, "#1b1410");
-  });
+  return make(16, 18, drawPlayerBody);
 }
 
 function playerShirt(): Texture {
-  return make(16, 18, (ctx) => {
-    // Remera (torso) y gorra: son las partes que reciben el color del jugador.
-    rect(ctx, 3, 9, 10, 6, "#ffffff");
-    ellipse(ctx, 8, 4.5, 4.5, 3.5, "#ffffff");
-    rect(ctx, 4, 4, 8, 2, "#dddddd");
-  });
+  return make(16, 18, drawPlayerShirt);
 }
 
 function gun(): Texture {
@@ -763,4 +767,44 @@ export function causeIconUrl(cause: number): string {
     }));
   }
   return causeIcons.get(cause) ?? causeIcons.get(0)!;
+}
+
+const portraits = new Map<number, string>();
+
+/**
+ * El muñeco con la remera del color del jugador, para el podio. Es el mismo
+ * dibujo que en el juego; la remera se multiplica por el color igual que hace
+ * el tint de Pixi, así que se ve idéntico.
+ */
+export function playerPortraitUrl(color: number): string {
+  const cached = portraits.get(color);
+  if (cached) return cached;
+
+  const canvas = (): [HTMLCanvasElement, Ctx] => {
+    const c = document.createElement("canvas");
+    c.width = 16;
+    c.height = 18;
+    return [c, c.getContext("2d")!];
+  };
+
+  const [white, wctx] = canvas();
+  drawPlayerShirt(wctx);
+
+  const [tinted, tctx] = canvas();
+  tctx.drawImage(white, 0, 0);
+  tctx.globalCompositeOperation = "multiply";
+  tctx.fillStyle = `#${color.toString(16).padStart(6, "0")}`;
+  tctx.fillRect(0, 0, 16, 18);
+  // El multiply pinta también lo transparente: se recorta a la forma de la
+  // remera de una sola vez. Dibujando la forma de a partes, cada parte borraría
+  // lo que dejó la anterior.
+  tctx.globalCompositeOperation = "destination-in";
+  tctx.drawImage(white, 0, 0);
+
+  const url = iconUrl(16, 18, (ctx) => {
+    drawPlayerBody(ctx);
+    ctx.drawImage(tinted, 0, 0);
+  });
+  portraits.set(color, url);
+  return url;
 }

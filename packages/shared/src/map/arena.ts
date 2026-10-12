@@ -858,6 +858,10 @@ export function getArena(): ArenaMap {
 /**
  * Puntos de aparición repartidos en un anillo cerca del muro.
  * `index` va de 0 a `total-1` para que nadie spawnee encima de otro.
+ *
+ * El anillo entero gira con la semilla de la partida. Antes el ángulo salía
+ * sólo del índice, y la semilla apenas lo movía ±13°: el primero aparecía
+ * siempre al este, el segundo siempre enfrente, y así partida tras partida.
  */
 export function spawnPoint(
   index: number,
@@ -866,7 +870,8 @@ export function spawnPoint(
   arena?: ArenaMap,
 ): { x: number; y: number } {
   const rnd = makeRng(seed + index * 7919);
-  const baseAngle = (index / Math.max(total, 1)) * Math.PI * 2;
+  const rotation = makeRng(seed ^ 0x2c1b3c6d)() * Math.PI * 2;
+  const baseAngle = rotation + (index / Math.max(total, 1)) * Math.PI * 2;
 
   const clear = (x: number, y: number): boolean => {
     if (!arena) return true;

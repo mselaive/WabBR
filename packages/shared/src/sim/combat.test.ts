@@ -13,9 +13,10 @@ import {
   WORLD_CENTER_X,
   WORLD_CENTER_Y,
 } from "../constants.js";
+import { WEAPON_IDS, weaponStats } from "../items.js";
 import { generateArena, type ArenaMap, type ObstacleKind } from "../map/arena.js";
 import { ObstacleGrid } from "./collision.js";
-import { createGameState, createPlayer, step, stepPlayerMovement } from "./step.js";
+import { createGameState, createPlayer, startMatch, step, stepPlayerMovement } from "./step.js";
 import {
   ACT_THROW,
   CAUSE_EXPLOSION,
@@ -307,5 +308,115 @@ describe("eventos de combate", () => {
     const causes = new Set(kills.map((k) => (k.t === "kill" ? k.cause : 0)));
     expect(causes.has(CAUSE_EXPLOSION), "faltó la muerte por granada").toBe(true);
     expect(causes.has(CAUSE_ZONE), "faltó la muerte por zona").toBe(true);
+  });
+});
+
+describe("puestos", () => {
+  /** Una partida con `n` jugadores recién arrancada. */
+  function match(n: number): GameState {
+    const state = createGameState(1);
+    for (let id = 1; id <= n; id++) state.players.push(createPlayer(id));
+    startMatch(state, 7);
+    return state;
+  }
+
+  /** Un tick sin que nadie haga nada. */
+  const tick = (state: GameState): void => {
+    step(state, new Map(state.players.map((p) => [p.id, [] as PlayerInput[]])), []);
+  };
+
+  const places = (state: GameState): number[] => state.players.map((p) => p.place);
+
+  it("el que cae queda detrás de los que siguen en pie, y el último gana", () => {
+    const state = match(4);
+    expect(places(state)).toEqual([0, 0, 0, 0]);
+
+    // Da igual cómo cae: muerto o desconectado, el puesto sale igual.
+    state.players[2]!.alive = false;
+    tick(state);
+    expect(places(state)).toEqual([0, 0, 4, 0]);
+
+    state.players[0]!.alive = false;
+    tick(state);
+    state.players[3]!.alive = false;
+    tick(state);
+
+    expect(places(state)).toEqual([3, 1, 4, 2]);
+    expect(state.phase).toBe("ended");
+  });
+
+  it("los que caen en el mismo tick empatan", () => {
+    // Una granada o la zona pueden llevarse a dos a la vez: ninguno de los dos
+    // aguantó más que el otro.
+    const state = match(4);
+    state.players[0]!.alive = false;
+    state.players[1]!.alive = false;
+    tick(state);
+    expect(places(state)).toEqual([3, 3, 0, 0]);
+  });
+
+  it("si no queda nadie, los últimos en caer comparten el primer puesto", () => {
+    const state = match(3);
+    state.players[0]!.alive = false;
+    tick(state);
+    state.players[1]!.alive = false;
+    state.players[2]!.alive = false;
+    tick(state);
+    expect(places(state)).toEqual([3, 1, 1]);
+    expect(state.winnerId).toBe(-1);
+  });
+
+  it("el que entró a mirar con la partida empezada no tiene puesto", () => {
+    const state = match(3);
+    state.players.push(createPlayer(9));
+    tick(state);
+    expect(state.players[3]!.place).toBe(-1);
+  });
+});
+
+describe("escopeta", () => {
+  const SHOTGUN = WEAPON_IDS.indexOf("shotgun");
+
+  /**
+   * Cuánto daño hace la escopeta común contra alguien quieto a `distance` px,
+   * apuntándole al centro, con `shots` disparos.
+   */
+  function blast(distance: number, shots: number): { damage: number; dead: boolean } {
+    const state = createGameState(3);
+    state.phase = "playing";
+    const shooter = createPlayer(1, WORLD_CENTER_X, WORLD_CENTER_Y);
+    const target = createPlayer(2, WORLD_CENTER_X + distance, WORLD_CENTER_Y);
+    // Un tercero lejos, para que la partida no termine al morir el blanco.
+    const other = createPlayer(3, WORLD_CENTER_X, WORLD_CENTER_Y + 900);
+    for (const p of [shooter, target, other]) p.alive = true;
+    shooter.slots[0] = SHOTGUN;
+    shooter.slotAmmo[0] = weaponStats(SHOTGUN, 0).magSize;
+    state.players.push(shooter, target, other);
+
+    let fired = 0;
+    for (let t = 1; t <= 60; t++) {
+      const shoot = fired < shots;
+      const events: SimEvent[] = [];
+      step(state, new Map([[1, { ...emptyInput(t), aim: 0, shoot }]]), events, EMPTY);
+      if (events.some((e) => e.t === "shot")) fired++;
+    }
+    return { damage: PLAYER_MAX_HP - Math.max(0, target.hp), dead: !target.alive };
+  }
+
+  it("de cerca mata en dos tiros", () => {
+    // Es lo que la hace valer la pena: antes, a 90 px entraban la mitad de los
+    // perdigones y hacían falta tres o cuatro.
+    expect(blast(90, 1).dead).toBe(false);
+    expect(blast(90, 2).dead).toBe(true);
+  });
+
+  it("el cono es cerrado: a 150 px todavía entra la mitad", () => {
+    // Antes abría tanto que a esta distancia pegaban dos perdigones de ocho.
+    expect(blast(150, 1).damage).toBeGreaterThanOrEqual(weaponStats(SHOTGUN, 0).damage * 4);
+  });
+
+  it("de lejos no compite con el rifle", () => {
+    // A 300 px un rifle común pega 18 por bala, cuatro veces por segundo.
+    expect(blast(300, 1).damage).toBeLessThan(30);
   });
 });

@@ -17,11 +17,13 @@ import {
   SP_AMMO_OTHER,
   SP_BOOST,
   SP_CONSUMABLES,
+  SP_FIRE_CD,
   SP_FLAGS,
   SP_HP,
   SP_ID,
   SP_KILLS,
   SP_LAST_SEQ,
+  SP_RELOAD_CD,
   SP_SHIELD,
   SP_SLOT_0,
   SP_SLOT_0_TIER,
@@ -99,13 +101,18 @@ function unpackConsumables(v: number): number[] {
   return [v % 100, Math.floor(v / 100) % 100, Math.floor(v / 10000) % 100];
 }
 
-export function packPlayer(p: PlayerState): SnapPlayer {
+/**
+ * `own` agrega al final los relojes del arma (cadencia y recarga). Sólo le
+ * sirven al dueño, que los necesita para predecir sus propios disparos, así que
+ * no se le mandan a nadie más.
+ */
+export function packPlayer(p: PlayerState, own = false): SnapPlayer {
   let flags = 0;
   if (p.alive) flags |= FLAG_ALIVE;
   if (p.reloadCd > 0) flags |= FLAG_RELOADING;
   if (p.connected) flags |= FLAG_CONNECTED;
   const other = p.activeSlot === 0 ? 1 : 0;
-  return [
+  const packed = [
     p.id,
     q(p.x, P),
     q(p.y, P),
@@ -130,6 +137,8 @@ export function packPlayer(p: PlayerState): SnapPlayer {
     p.staminaDelay,
     p.grenades,
   ];
+  if (own) packed.push(p.fireCd, p.reloadCd);
+  return packed;
 }
 
 export function packItem(i: GroundItem): SnapItem {
@@ -210,6 +219,9 @@ export interface UnpackedPlayer {
   stamina: number;
   staminaDelay: number;
   grenades: number;
+  /** Ticks de cadencia y de recarga que faltan. Sólo vienen en el propio; en los demás, 0. */
+  fireCd: number;
+  reloadCd: number;
 }
 
 export interface UnpackedBullet {
@@ -258,6 +270,8 @@ export function unpackPlayer(s: SnapPlayer): UnpackedPlayer {
     stamina: s[SP_STAMINA] ?? 0,
     staminaDelay: s[SP_STAMINA_DELAY] ?? 0,
     grenades: s[SP_GRENADES] ?? 0,
+    fireCd: s[SP_FIRE_CD] ?? 0,
+    reloadCd: s[SP_RELOAD_CD] ?? 0,
   };
 }
 

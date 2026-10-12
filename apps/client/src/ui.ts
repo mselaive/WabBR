@@ -1,4 +1,5 @@
 import { MIN_PLAYERS, playerColor, type PlayerMeta } from "@wabbr/shared";
+import { playerPortraitUrl } from "./render/textures.js";
 
 export type ScreenName = "menu" | "lobby" | "result" | "connecting" | null;
 
@@ -12,6 +13,25 @@ export interface UICallbacks {
 }
 
 const NAME_KEY = "wabbr:name";
+
+/** Una fila del resultado final. */
+export interface ResultRow {
+  name: string;
+  kills: number;
+  colorIndex: number;
+  /** Puesto final: 1 el ganador. Los que cayeron en el mismo tick comparten número. */
+  place: number;
+  isLocal: boolean;
+  /** Se desconectó antes de que terminara. */
+  left: boolean;
+}
+
+/** Clase del puesto para pintarlo de oro, plata o bronce. */
+const MEDAL = ["", "gold", "silver", "bronze"];
+
+function killsText(kills: number): string {
+  return kills === 1 ? "1 kill" : `${kills} kills`;
+}
 
 function el<T extends HTMLElement>(id: string): T {
   const node = document.getElementById(id);
@@ -65,12 +85,16 @@ export class UI {
   private readonly zoneBanner = el("zoneBanner");
   private readonly zoneLabel = el("zoneLabel");
   private readonly zoneTime = el("zoneTime");
+  private readonly zoneAlert = el("zoneAlert");
+  private readonly zoneAlertInfo = el("zoneAlertInfo");
+  private readonly zoneVignette = el("zoneVignette");
   private readonly spectating = el("spectating");
   private readonly scoreboard = el("scoreboard");
   private readonly scoreboardList = el("scoreboardList");
 
   private readonly resultTitle = el("resultTitle");
   private readonly resultSubtitle = el("resultSubtitle");
+  private readonly podium = el("podium");
   private readonly standings = el("standings");
 
   private ready = false;
@@ -347,6 +371,20 @@ export class UI {
     this.zoneBanner.classList.toggle("danger", danger);
   }
 
+  /**
+   * Aviso de que estás afuera de la zona: cuánto te saca por segundo y cuánto
+   * aguantás así. null lo esconde.
+   */
+  setZoneAlert(alert: { dps: number; seconds: number } | null): void {
+    this.zoneAlert.hidden = alert === null;
+    // El viñeteado se apaga con una transición, así que se prende con una
+    // clase y no con `hidden`, que lo cortaría de golpe.
+    this.zoneVignette.classList.toggle("on", alert !== null);
+    if (alert === null) return;
+    this.zoneAlertInfo.textContent = `-${alert.dps} HP/s · aguantás ${alert.seconds} s`;
+    this.zoneAlert.classList.toggle("critical", alert.seconds <= 5);
+  }
+
   setSpectating(text: string | null): void {
     this.spectating.hidden = text === null;
     if (text !== null) this.spectating.textContent = text;
@@ -422,17 +460,29 @@ export class UI {
     );
   }
 
-  showResult(
-    title: string,
-    subtitle: string,
-    rows: { name: string; kills: number; colorIndex: number }[],
-  ): void {
+  /**
+   * Pantalla final: un podio con los tres primeros y abajo la tabla completa.
+   * `rows` viene ordenada por puesto y, dentro del mismo puesto, por kills.
+   */
+  showResult(title: string, subtitle: string, rows: ResultRow[]): void {
     this.resultTitle.textContent = title;
     this.resultSubtitle.textContent = subtitle;
+
+    // Segundo, primero, tercero: el ganador en el medio y más alto.
+    const top = rows.slice(0, 3);
+    const order = [1, 0, 2].filter((slot) => top[slot] !== undefined);
+    this.podium.hidden = top.length === 0;
+    this.podium.replaceChildren(...order.map((slot) => this.podiumSpot(top[slot]!, slot)));
+
     this.standings.replaceChildren(
-      ...rows.map((r, i) => {
+      ...rows.map((r) => {
         const li = document.createElement("li");
-        li.className = "player-row";
+        li.className = r.isLocal ? "player-row standing me" : "player-row standing";
+
+        const place = document.createElement("span");
+        place.className = `place ${MEDAL[r.place] ?? ""}`;
+        // "#1" y no "1°": la fuente pixelada dibuja el ° como un brillito.
+        place.textContent = `#${r.place}`;
 
         const swatch = document.createElement("span");
         swatch.className = "swatch";
@@ -440,16 +490,53 @@ export class UI {
 
         const who = document.createElement("span");
         who.className = "who";
-        who.textContent = `${i + 1}. ${r.name}`;
+        who.textContent = r.isLocal ? `${r.name} (vos)` : r.name;
+
+        li.append(place, swatch, who);
+
+        if (r.left) {
+          const left = document.createElement("span");
+          left.className = "tag";
+          left.textContent = "se fue";
+          li.append(left);
+        }
 
         const kills = document.createElement("span");
         kills.className = "tag";
-        kills.textContent = `${r.kills} kills`;
-
-        li.append(swatch, who, kills);
+        kills.textContent = killsText(r.kills);
+        li.append(kills);
         return li;
       }),
     );
     this.showScreen("result");
+  }
+
+  /** Un escalón del podio. `slot` es 0, 1 o 2: la altura del escalón, no el puesto. */
+  private podiumSpot(r: ResultRow, slot: number): HTMLElement {
+    const spot = document.createElement("div");
+    spot.className = `podium-spot slot-${slot + 1}${r.isLocal ? " me" : ""}`;
+
+    const avatar = document.createElement("img");
+    avatar.className = "podium-avatar";
+    avatar.src = playerPortraitUrl(playerColor(r.colorIndex));
+    avatar.alt = "";
+
+    const name = document.createElement("span");
+    name.className = "podium-name";
+    name.textContent = r.name;
+    name.title = r.name;
+
+    const kills = document.createElement("span");
+    kills.className = "podium-kills";
+    kills.textContent = killsText(r.kills);
+
+    // El número es el puesto de verdad: si dos empataron en el segundo, los
+    // dos escalones dicen 2.
+    const block = document.createElement("div");
+    block.className = `podium-block ${MEDAL[r.place] ?? ""}`;
+    block.textContent = String(r.place);
+
+    spot.append(avatar, name, kills, block);
+    return spot;
   }
 }

@@ -101,6 +101,12 @@ try {
   });
   check(!!aviso && /sac/i.test(aviso), `le explica por qué: "${aviso ?? "(nada)"}"`);
 
+  // El echado y el host reciben sus mensajes por conexiones distintas, y nada
+  // garantiza el orden entre ellas: la lista del host se actualiza un instante
+  // después de que el otro vuelve al menú. Se espera, en vez de leer de una.
+  await anfitrion
+    .waitForFunction(() => document.querySelectorAll("#playerList .player-row").length === 1, { timeout: 3000 })
+    .catch(() => {});
   const quedan = await anfitrion.locator("#playerList .player-row").count();
   check(quedan === 1, `el host queda solo en la lista (hay ${quedan})`);
 

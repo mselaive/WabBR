@@ -47,8 +47,8 @@ Ninguno está en `main`: un push a `main` despliega solo a wabbo.org.
 
 ## Ideas que quedaron, en el orden en que las haría
 
-La zona según cuántos juegan, la mira, el humo y los controles táctiles ya están
-(arriba). De la lista anterior quedaron:
+La zona según cuántos juegan, la mira, el humo, los dúos con sus marcas y los
+controles táctiles ya están (arriba). De la lista anterior quedaron:
 
 1. **Elegir pareja.** Hoy en dúos las parejas se sortean. Que cada uno pueda
    elegir con quién (o el host armarlas) es lo siguiente que pediría un grupo.

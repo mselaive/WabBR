@@ -12,8 +12,8 @@ import {
 import { generateArena, type ArenaMap } from "../map/arena.js";
 import { botInput, createBotMemory } from "./bot.js";
 import { ObstacleGrid } from "./collision.js";
-import { applyExplosion, createGameState, createPlayer, startMatch, step } from "./step.js";
-import { ACT_PICKUP, emptyInput, type GameState, type PlayerInput, type SimEvent } from "./types.js";
+import { applyExplosion, canThrow, createGameState, createPlayer, startMatch, step } from "./step.js";
+import { ACT_PICKUP, ACT_USE_BASE, emptyInput, type GameState, type PlayerInput, type SimEvent } from "./types.js";
 
 const EMPTY: ArenaMap = {
   obstacles: [],
@@ -275,6 +275,57 @@ describe("dúos", () => {
       expect(state.phase).toBe("ended");
       expect(state.players[2]!.place).toBe(1);
       expect(state.players[0]!.place).toBe(2);
+    });
+
+    it("levantar es sólo eso: curarse, recargar o la zona lo cortan; apretar E otra vez no reinicia", () => {
+      const state = line();
+      knock(state);
+      const [mate, victim] = state.players;
+      mate!.x = victim!.x - 30;
+      mate!.consumables[1] = 1;
+      mate!.hp = 50;
+      idle(state, new Map([[1, [{ ...emptyInput(1), act: ACT_PICKUP }]]]));
+      for (let t = 0; t < 20; t++) idle(state);
+      const left = mate!.reviveTicks;
+      idle(state, new Map([[1, [{ ...emptyInput(2), act: ACT_PICKUP }]]]));
+      expect(mate!.reviveTicks).toBe(left - 1);
+
+      idle(state, new Map([[1, [{ ...emptyInput(3), act: ACT_USE_BASE + 1 }]]]));
+      expect(mate!.reviving).toBe(-1);
+
+      idle(state, new Map([[1, [{ ...emptyInput(4), act: ACT_PICKUP }]]]));
+      expect(mate!.reviving).toBe(2);
+      expect(mate!.useCd).toBe(0);
+      idle(state, new Map([[1, [{ ...emptyInput(5), reload: true }]]]));
+      expect(mate!.reviving).toBe(-1);
+    });
+
+    it("caído no puede tirar granadas (tampoco en la predicción)", () => {
+      const state = line();
+      knock(state);
+      const victim = state.players[1]!;
+      victim.grenades = 2;
+      victim.smokes = 1;
+      expect(canThrow(victim)).toBe(false);
+      expect(canThrow(victim, 1)).toBe(false);
+    });
+
+    it("el bot caído se queda quieto mientras lo levantan", () => {
+      const state = line();
+      knock(state);
+      const [mate, victim] = state.players;
+      mate!.x = victim!.x - 30;
+      mate!.reviving = victim!.id;
+      mate!.reviveTicks = 50;
+      // Con un rival a la vista, igual no se arrastra.
+      const input = botInput(state, victim!, createBotMemory(2), EMPTY);
+      expect(input.moveX).toBe(0);
+      expect(input.moveY).toBe(0);
+
+      // Control: sin nadie levantándolo, se aleja del rival.
+      mate!.reviving = -1;
+      const away = botInput(state, victim!, createBotMemory(2), EMPTY);
+      expect(away.moveX !== 0 || away.moveY !== 0).toBe(true);
     });
   });
 });

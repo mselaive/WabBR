@@ -17,6 +17,7 @@ import {
   WORLD_RADIUS,
   WEAPON_IDS,
   ZONE_PHASES,
+  DOWNED_BLEED_TICKS,
   DOWNED_HP,
   REVIVE_RANGE,
   REVIVE_TICKS,
@@ -1085,7 +1086,8 @@ export class Game {
       alive: this.aliveCount,
       kills: this.standings.get(this.localId)?.kills ?? 0,
       ping: this.net && this.net.rtt > 0 ? Math.round(this.net.rtt) : null,
-      hp: shown?.alive ? shown.hp : 0,
+      // Caído no tiene vida: lo que le queda antes de desangrarse va en la barra de abajo.
+      hp: shown?.alive && !shown.downed ? shown.hp : 0,
       shield: shown?.alive ? shown.shield : 0,
       stamina: shown?.alive ? shown.stamina : 0,
       ammo: gear?.ammo ?? 0,
@@ -1247,7 +1249,9 @@ export class Game {
     // El mismo daño que aplica stepZone: pasada la última fase, el de la última.
     const dps = (ZONE_PHASES[z.phase] ?? ZONE_PHASES[ZONE_PHASES.length - 1]!).dps;
     // La zona no mira el chaleco, así que lo que aguantás sale sólo de la vida.
-    this.ui.setZoneAlert({ dps, seconds: Math.floor(me.hp / dps) });
+    // Caído, además de la zona corre el desangrado.
+    const drain = me.downed ? dps + (DOWNED_HP * TICK_RATE) / DOWNED_BLEED_TICKS : dps;
+    this.ui.setZoneAlert({ dps, seconds: Math.floor(me.hp / drain) });
     this.world.setZoneArrow(
       { x: localPredicted.x, y: localPredicted.y, dir: Math.atan2(z.y - localPredicted.y, z.x - localPredicted.x) },
       performance.now(),

@@ -642,8 +642,13 @@ function handleAction(
     // Si hay un compañero caído al lado, E lo levanta antes que recoger.
     const mate = downedMateNear(state, p);
     if (mate) {
+      // Apretar E de nuevo mientras lo levanta no reinicia la cuenta.
+      if (p.reviving === mate.id) return;
       p.reviving = mate.id;
       p.reviveTicks = REVIVE_TICKS;
+      // Una cosa a la vez: levantar corta la curación en curso.
+      p.useCd = 0;
+      p.useIndex = -1;
       return;
     }
     tryPickup(state, p, arena, events);
@@ -1145,7 +1150,8 @@ function grenadeBlocked(x: number, y: number, arena: ArenaMap): boolean {
 
 /** ¿Puede tirar una granada (o una de humo)? Curándose no: tiene las manos ocupadas. */
 export function canThrow(p: PlayerState, kind: number = GRENADE_FRAG): boolean {
-  return (kind === GRENADE_SMOKE ? p.smokes : p.grenades) > 0 && p.useCd === 0;
+  // Caído tampoco: el servidor ni llega acá, pero la predicción del cliente sí.
+  return (kind === GRENADE_SMOKE ? p.smokes : p.grenades) > 0 && p.useCd === 0 && !p.downed;
 }
 
 /** Dónde aparece y con qué velocidad sale una granada tirada ahora. */
@@ -1454,6 +1460,7 @@ function stepZone(state: GameState, arena: ArenaMap, events: SimEvent[]): void {
       p.useCd = 0;
       p.useIndex = -1;
     }
+    p.reviving = -1;
     if (p.hp <= 0) downOrKill(state, p, -1, CAUSE_ZONE, events);
   }
 }
@@ -1515,8 +1522,14 @@ export function step(
         }
         stepConsumable(p, one, events);
         stepWeapon(state, p, one, events);
-        // Levantar a alguien es quedarse quieto a su lado: moverse o tirar lo corta.
-        if (p.reviving >= 0 && (one.moveX !== 0 || one.moveY !== 0 || one.shoot)) p.reviving = -1;
+        // Levantar a alguien es quedarse quieto a su lado sin hacer otra cosa:
+        // moverse, tirar, recargar o cualquier otra acción lo corta.
+        if (
+          p.reviving >= 0 &&
+          (one.moveX !== 0 || one.moveY !== 0 || one.shoot || one.reload || (one.act !== 0 && one.act !== ACT_PICKUP))
+        ) {
+          p.reviving = -1;
+        }
       }
     } else {
       p.vx = 0;

@@ -167,7 +167,9 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
   const target = nearestEnemy(state, me, arena);
 
   // Caído: arrastrarse lejos del que tiene a la vista, o hacia el compañero.
+  // Si lo están levantando, quieto: alejarse cortaría la levantada.
   if (me.downed) {
+    if (state.players.some((p) => p.reviving === me.id)) return input;
     const mate = state.players.find((p) => p !== me && p.team === me.team && p.alive && !p.downed);
     const away = target ? { x: me.x * 2 - target.x, y: me.y * 2 - target.y } : mate ? { x: mate.x, y: mate.y } : null;
     steer(me, mem, away, input, target ? null : arena, state);
@@ -175,14 +177,17 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
     return input;
   }
 
+  // La zona y una granada al lado mandan por sobre levantar al compañero.
+  const busy = !target && (zonePull(state, me) !== null || grenadeEscape(state, me) !== null);
+
   // Levantando al compañero: quieto hasta terminar, salvo que aparezca alguien.
-  if (me.reviving >= 0 && !target) return input;
+  if (me.reviving >= 0 && !target && !busy) return input;
 
   // Curándose no se mueve ni dispara: moverse cancela la curación.
   if (me.useCd > 0 && !target) return input;
 
   // Sin nadie a la vista y con el compañero caído: ir a levantarlo.
-  if (!target) {
+  if (!target && !busy) {
     const fallen = state.players.find((p) => p !== me && p.team === me.team && p.alive && p.downed);
     if (fallen) {
       if (Math.hypot(fallen.x - me.x, fallen.y - me.y) < REVIVE_RANGE - 12) {

@@ -144,7 +144,7 @@ uno (`PlayerState.team` es el propio id), así que no hay dos caminos para cada 
 muere: **cae**. Queda acostado, con "(caído)" en el nombre, se arrastra a un tercio de la
 velocidad, no puede disparar ni usar nada y se desangra en 30 segundos (la barra roja
 sobre él y "TE DESANGRÁS" en su HUD). El compañero lo levanta con `E` quedándose quieto a
-su lado 4 segundos —moverse, disparar o recibir un tiro lo corta— y vuelve con 30 de
+su lado 4 segundos —moverse, disparar, curarse, recibir un tiro o cualquier otra cosa lo corta— y vuelve con 30 de
 vida. Rematar a un caído es la kill del que remata; si se desangra o lo termina la zona,
 del que lo tiró. Si cae el último en pie de la pareja, el caído también se termina. En el
 registro se ve "(caído)", y el compañero recibe el aviso de ir a levantarlo. Los bots se

@@ -353,6 +353,15 @@ export class GameRoom extends Server<Env> {
         return;
       }
 
+      case "mode": {
+        if (seat.playerId !== this.hostId) return;
+        if (this.state.phase !== "lobby") return;
+        if (msg.teamSize !== 1 && msg.teamSize !== 2) return;
+        this.state.teamSize = msg.teamSize;
+        this.broadcastRoster();
+        return;
+      }
+
       case "bot": {
         // Sólo el host, sólo en el lobby y si hay lugar.
         if (seat.playerId !== this.hostId) return;
@@ -529,6 +538,8 @@ export class GameRoom extends Server<Env> {
     // mirar la partida sigue teniendo sentido.
     if (!viewer || !viewer.alive) return true;
     if (viewer.id === target.id) return true;
+    // Al compañero se lo ve siempre, detrás de una pared o en un arbusto.
+    if (viewer.team === target.team) return true;
     // Los muertos no se dibujan igual, y mandarlos no filtra nada.
     if (!target.alive) return true;
 
@@ -560,7 +571,7 @@ export class GameRoom extends Server<Env> {
     const s = this.state;
     const packed = packSnapshotArrays(s);
     // El marcador es público y va igual para todos.
-    const standings: SnapStanding[] = s.players.map((p) => [p.id, p.kills, p.alive ? 1 : 0, p.place]);
+    const standings: SnapStanding[] = s.players.map((p) => [p.id, p.kills, p.alive ? 1 : 0, p.place, p.team]);
 
     const base = {
       t: "s" as const,
@@ -663,7 +674,9 @@ export class GameRoom extends Server<Env> {
       const m = seat.meta;
       m.played = (m.played ?? 0) + 1;
       m.totalKills = (m.totalKills ?? 0) + p.kills;
-      if (s.winnerId === p.id) m.wins = (m.wins ?? 0) + 1;
+      // En dúos ganan los dos de la pareja. Si no quedó nadie en pie, nadie
+      // ganó aunque los últimos compartan el primer puesto.
+      if (s.winnerId >= 0 && p.place === 1) m.wins = (m.wins ?? 0) + 1;
     }
     this.broadcastRoster();
   }
@@ -767,7 +780,9 @@ export class GameRoom extends Server<Env> {
   }
 
   private broadcastRoster(): void {
-    this.broadcast(encodeServer({ t: "roster", roster: this.roster(), hostId: this.hostId }));
+    this.broadcast(
+      encodeServer({ t: "roster", roster: this.roster(), hostId: this.hostId, teamSize: this.state.teamSize }),
+    );
   }
 
   private sendTo(conn: Connection<ConnState>, msg: ServerMsg): void {

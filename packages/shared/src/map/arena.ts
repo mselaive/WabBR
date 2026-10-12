@@ -898,6 +898,31 @@ export function getArena(): ArenaMap {
  * sólo del índice, y la semilla apenas lo movía ±13°: el primero aparecía
  * siempre al este, el segundo siempre enfrente, y así partida tras partida.
  */
+/** ¿Se puede aparecer acá? Adentro de la arena y sin nada encima. */
+function spawnClear(x: number, y: number, arena: ArenaMap): boolean {
+  if (Math.hypot(x - WORLD_CENTER_X, y - WORLD_CENTER_Y) > WORLD_RADIUS - 60) return false;
+  // Margen extra sobre el radio del jugador: aparecer rozando una pared es
+  // casi tan molesto como aparecer adentro.
+  for (const o of arena.obstacles) {
+    if (x + 22 > o.x && x - 22 < o.x + o.w && y + 22 > o.y && y - 22 < o.y + o.h) return false;
+  }
+  return true;
+}
+
+/**
+ * Un lugar libre al lado de `at`, para el compañero en dúos: aparecen juntos.
+ * Si alrededor no hay lugar, el mismo punto (los jugadores no chocan entre sí).
+ */
+export function spawnBeside(at: { x: number; y: number }, arena: ArenaMap): { x: number; y: number } {
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2;
+    const x = at.x + Math.cos(angle) * 44;
+    const y = at.y + Math.sin(angle) * 44;
+    if (spawnClear(x, y, arena)) return { x, y };
+  }
+  return { ...at };
+}
+
 export function spawnPoint(
   index: number,
   total: number,
@@ -908,16 +933,7 @@ export function spawnPoint(
   const rotation = makeRng(seed ^ 0x2c1b3c6d)() * Math.PI * 2;
   const baseAngle = rotation + (index / Math.max(total, 1)) * Math.PI * 2;
 
-  const clear = (x: number, y: number): boolean => {
-    if (!arena) return true;
-    if (Math.hypot(x - WORLD_CENTER_X, y - WORLD_CENTER_Y) > WORLD_RADIUS - 60) return false;
-    // Margen extra sobre el radio del jugador: aparecer rozando una pared es
-    // casi tan molesto como aparecer adentro.
-    for (const o of arena.obstacles) {
-      if (x + 22 > o.x && x - 22 < o.x + o.w && y + 22 > o.y && y - 22 < o.y + o.h) return false;
-    }
-    return true;
-  };
+  const clear = (x: number, y: number): boolean => !arena || spawnClear(x, y, arena);
 
   let fallback = { x: WORLD_CENTER_X, y: WORLD_CENTER_Y };
   for (let attempt = 0; attempt < 30; attempt++) {

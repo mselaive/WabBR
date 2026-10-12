@@ -49,7 +49,7 @@ import {
   weaponStats,
   type GroundItem,
 } from "../items.js";
-import { bushAt, getArena, lootCrates, spawnPoint, type ArenaMap } from "../map/arena.js";
+import { bushAt, getArena, lootCrates, spawnBeside, spawnPoint, type ArenaMap } from "../map/arena.js";
 import { hasLineOfSight } from "./sight.js";
 import { rollCrateContents, spawnLoot } from "../map/loot.js";
 import {
@@ -130,6 +130,7 @@ export function createPlayer(id: number, x = 0, y = 0): PlayerState {
     shotsFired: 0,
     shotsHit: 0,
     place: -1,
+    team: id,
     trail: new Array<number>(TRAIL_LENGTH * 2).fill(0).map((_, i) => (i % 2 === 0 ? x : y)),
   };
 }
@@ -169,6 +170,7 @@ export function createGameState(seed = 1): GameState {
     grenades: [],
     nextGrenadeId: 1,
     smokes: [],
+    teamSize: 1,
     airdrops: [],
     nextAirdropId: 1,
     barrelHp: new Map(),
@@ -216,8 +218,18 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
     [slots[i], slots[j]] = [slots[j]!, slots[i]!];
   }
 
+  // En dúos, el lugar sorteado también arma las parejas: 0 y 1 juntos, 2 y 3...
+  // Cada pareja aparece junta, en un punto del anillo para ella sola.
+  const duos = state.teamSize === 2;
+  const teams = duos ? Math.ceil(active.length / 2) : active.length;
+  const firstOfTeam = new Map<number, { x: number; y: number }>();
   active.forEach((p, i) => {
-    const sp = spawnPoint(slots[i]!, active.length, seed, arena);
+    const slot = slots[i]!;
+    const team = duos ? Math.floor(slot / 2) : slot;
+    p.team = duos ? -1 - team : p.id;
+    const mate = firstOfTeam.get(team);
+    const sp = mate ? spawnBeside(mate, arena) : spawnPoint(team, teams, seed, arena);
+    if (!mate) firstOfTeam.set(team, sp);
     p.x = sp.x;
     p.y = sp.y;
     p.vx = 0;
@@ -786,6 +798,7 @@ function stepWeapon(
       vy: pellet.vy,
       life: def.lifeTicks,
       rewind: shotRewind(state.tick, input.view),
+      team: p.team,
     });
   }
 
@@ -903,9 +916,12 @@ export function applyExplosion(
   grenade = -1,
 ): void {
   events.push({ t: "explosion", x, y, byId, grenade });
+  // A los compañeros no los lastima; al que la tiró, sí.
+  const team = findPlayer(state, byId)?.team;
 
   for (const p of state.players) {
     if (!p.alive) continue;
+    if (p.id !== byId && p.team === team) continue;
     const dist = Math.hypot(p.x - x, p.y - y);
     if (dist > EXPLOSION_RADIUS) continue;
     // Una pared frena la esquirla igual que frena una bala: si no, se podrían
@@ -1083,7 +1099,8 @@ function stepBullets(state: GameState, arena: ArenaMap, events: SimEvent[]): voi
     // Impacto contra jugadores (test de segmento: la bala no puede atravesarlos),
     // cada uno donde lo veía el que disparó.
     for (const target of state.players) {
-      if (!target.alive || target.id === b.ownerId) continue;
+      // Ni al que disparó ni a sus compañeros: la bala los atraviesa.
+      if (!target.alive || target.team === b.team) continue;
       pastPosition(target, state.tick, b.rewind, scratch);
       const t = segmentCircleT(b.x, b.y, dx, dy, scratch.x, scratch.y, PLAYER_RADIUS + BULLET_RADIUS);
       if (t >= 0 && t < bestT) {
@@ -1395,22 +1412,26 @@ export function step(
   stepAirdrops(state, events);
 
   const alive = state.players.filter((p) => p.alive);
+  const aliveTeams = new Set(alive.map((p) => p.team));
 
   // Puestos: el que cae queda detrás de todos los que siguen en pie. Se mira
   // acá y no al morir para cubrir también al que se desconecta, y para que dos
-  // que caen en el mismo tick (una granada, la zona) empaten.
+  // que caen en el mismo tick (una granada, la zona) empaten. En dúos el
+  // puesto es de la pareja: se decide cuando cae el último de los dos.
   for (const p of state.players) {
-    if (p.place === 0 && !p.alive) {
-      p.place = alive.length + 1;
-      // El que se desconecta no pasa por killPlayer: su tiempo vivo termina acá.
-      if (p.diedAtTick < 0) p.diedAtTick = state.tick;
-    }
+    if (p.place !== 0 || p.alive) continue;
+    // El que se desconecta no pasa por killPlayer: su tiempo vivo termina acá.
+    if (p.diedAtTick < 0) p.diedAtTick = state.tick;
+    if (!aliveTeams.has(p.team)) p.place = aliveTeams.size + 1;
   }
 
-  if (alive.length <= 1) {
+  if (aliveTeams.size <= 1) {
     state.phase = "ended";
     state.phaseTicksLeft = ENDED_TICKS;
-    state.winnerId = alive.length === 1 ? alive[0]!.id : -1;
-    if (alive.length === 1) alive[0]!.place = 1;
+    state.winnerId = alive.length > 0 ? alive[0]!.id : -1;
+    // Gana la pareja entera, también el que cayó antes.
+    for (const p of state.players) {
+      if (alive.length > 0 && p.team === alive[0]!.team && p.place >= 0) p.place = 1;
+    }
   }
 }

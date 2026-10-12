@@ -280,6 +280,8 @@ function grenadeAim(me: PlayerState, target: PlayerState, arena: ArenaMap): numb
 function grenadeEscape(state: GameState, me: PlayerState): { x: number; y: number } | null {
   for (const g of state.grenades) {
     if (g.kind !== GRENADE_FRAG || g.fuse > 30) continue;
+    // La del compañero no lastima; la propia, sí.
+    if (g.ownerId !== me.id && state.players.some((p) => p.id === g.ownerId && p.team === me.team)) continue;
     // Más o menos dónde se frena: lo que le queda de rodar con el rozamiento.
     const roll = DT / (1 - GRENADE_FRICTION);
     const gx = g.x + g.vx * roll;
@@ -322,7 +324,8 @@ function nearestEnemy(state: GameState, me: PlayerState, arena: ArenaMap): Playe
   let best: PlayerState | null = null;
   let bestDist = SIGHT * SIGHT;
   for (const p of state.players) {
-    if (!p.alive || p.id === me.id) continue;
+    // En dúos, al compañero no se le tira.
+    if (!p.alive || p.team === me.team) continue;
     const d2 = (p.x - me.x) ** 2 + (p.y - me.y) ** 2;
     if (d2 >= bestDist) continue;
     // Lo mismo que vería un jugador: ni a través de paredes ni adentro de un arbusto.

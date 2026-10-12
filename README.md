@@ -125,6 +125,17 @@ bloqueo blando y a propósito: sin cuentas no hay identidad estable, así que ca
 igual. Cubre lo que molesta —el que reentra de un clic— y no pretende ser más que eso. Sólo funciona
 en el lobby: en partida, echar sería un arma más.
 
+**Dúos.** Arriba de la lista, el host elige *Todos contra todos* o *Dúos*. En dúos las
+parejas se sortean al empezar (con número impar, uno juega solo) y cada pareja aparece
+junta en su lugar del anillo. Los compañeros no se lastiman —las balas los atraviesan y
+las granadas no les hacen nada, aunque al que la tiró sí—, se ven siempre, aunque haya
+una pared o un arbusto en el medio, y el compañero tiene el nombre en verde y un anillo
+verde en el minimapa. El puesto es de la pareja: se decide cuando cae el último de los
+dos, y si gana, gana entera, también el que cayó antes. Muerto, la cámara sigue a tu
+compañero. Los bots juegan en pareja igual (no se tiran entre ellos ni huyen de la
+granada del compañero). En la simulación, todos contra todos es lo mismo con equipos de
+uno (`PlayerState.team` es el propio id), así que no hay dos caminos para cada regla.
+
 **Marcador de la sala.** Al lado de cada nombre, cuántas ganó de las que jugó en esa sala y cuántas
 kills lleva sumadas ("2/5 ganadas · 11 kills"). Para la noche en que se juegan varias rondas entre
 amigos. Vive en la sala, en el asiento de cada uno: sobrevive a un corte de conexión pero no a salir

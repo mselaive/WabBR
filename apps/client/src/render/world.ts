@@ -772,6 +772,8 @@ export class WorldView {
     localId: number,
     localOverride: { x: number; y: number; aim: number; hidden: boolean } | null,
     dt: number,
+    /** Compañeros en dúos: su nombre va en verde. */
+    mates: ReadonlySet<number> = new Set(),
   ): void {
     const seen = new Set<number>();
 
@@ -807,6 +809,8 @@ export class WorldView {
         view.shirt.tint = playerColor(meta.colorIndex);
       }
       view.label.visible = !isLocal;
+      // El compañero se distingue de lejos: nombre en verde.
+      view.label.style.fill = mates.has(p.id) ? 0x7dff9a : 0xffffff;
 
       // Barra de vida sobre los demás; la propia ya está en el HUD.
       view.hpBar.clear();

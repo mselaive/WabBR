@@ -60,7 +60,13 @@ export interface AddBotMsg {
   t: "bot";
 }
 
-export type ClientMsg = JoinMsg | ReadyMsg | InputMsg | PingMsg | StartMsg | KickMsg | AddBotMsg;
+/** El host elige el modo (sólo en el lobby): 1 todos contra todos, 2 dúos. */
+export interface ModeMsg {
+  t: "mode";
+  teamSize: number;
+}
+
+export type ClientMsg = JoinMsg | ReadyMsg | InputMsg | PingMsg | StartMsg | KickMsg | AddBotMsg | ModeMsg;
 
 export const BTN_SHOOT = 1;
 export const BTN_RELOAD = 2;
@@ -80,15 +86,17 @@ export const BTN_SPRINT = 4;
 export type SnapPlayer = number[];
 
 /**
- * [id, kills, vivo(0|1), puesto] para TODOS los jugadores, se vean o no. El
- * puesto es el de `PlayerState.place`: 0 mientras sigue en pie, -1 si no jugó.
+ * [id, kills, vivo(0|1), puesto, equipo] para TODOS los jugadores, se vean o
+ * no. El puesto es el de `PlayerState.place`: 0 mientras sigue en pie, -1 si no
+ * jugó. El equipo, el de `PlayerState.team`: con él cada uno sabe quién es su
+ * compañero en dúos.
  *
  * Va aparte de `players` porque desde que el servidor oculta lo que no ves, la
  * lista de posiciones ya no sirve para el marcador: alguien detrás de una pared
  * aparecería como muerto y con cero kills. Esto no filtra nada que no sea ya
  * público (el contador de vivos está en el HUD desde el primer día).
  */
-export type SnapStanding = [number, number, number, number];
+export type SnapStanding = [number, number, number, number, number];
 
 /**
  * [id, dañoHecho, dañoRecibido, disparos, aciertos, ticksVivo] de cada uno que
@@ -168,6 +176,8 @@ export interface RosterMsg {
   t: "roster";
   roster: PlayerMeta[];
   hostId: number;
+  /** Modo elegido para la próxima partida: 1 todos contra todos, 2 dúos. */
+  teamSize?: number;
 }
 
 export interface SnapshotMsg {

@@ -11,6 +11,7 @@ export interface UICallbacks {
   onLeave: () => void;
   onKick: (id: number) => void;
   onAddBot: () => void;
+  onMode: (teamSize: number) => void;
 }
 
 const NAME_KEY = "wabbr:name";
@@ -104,6 +105,8 @@ export class UI {
   private readonly ammoEl = el("ammo");
   private readonly weaponName = el("weaponName");
   private readonly slotsEl = el("slots");
+  private readonly modeSolo = el("modeSolo") as HTMLButtonElement;
+  private readonly modeDuos = el("modeDuos") as HTMLButtonElement;
   private readonly shieldBar = el("shieldBar");
   private readonly shieldFill = el("shieldFill");
   private readonly staminaFill = el("staminaFill");
@@ -167,6 +170,8 @@ export class UI {
 
     this.btnStart.addEventListener("click", () => this.cb.onStart());
     this.btnAddBot.addEventListener("click", () => this.cb.onAddBot());
+    this.modeSolo.addEventListener("click", () => this.cb.onMode(1));
+    this.modeDuos.addEventListener("click", () => this.cb.onMode(2));
     el("btnLeave").addEventListener("click", () => this.cb.onLeave());
 
     this.roomCode.addEventListener("click", () => this.copyInvite());
@@ -318,6 +323,23 @@ export class UI {
         : isHost
           ? "Cuando estén todos listos arranca sola, o podés forzarla."
           : "La partida arranca cuando estén todos listos.";
+  }
+
+  /**
+   * El modo de la próxima partida. Lo cambia sólo el host; los demás lo ven
+   * marcado pero no lo pueden tocar (y el servidor igual lo vuelve a comprobar).
+   */
+  setMode(teamSize: number, isHost: boolean): void {
+    for (const [button, size] of [
+      [this.modeSolo, 1],
+      [this.modeDuos, 2],
+    ] as const) {
+      const on = teamSize === size;
+      button.classList.toggle("on", on);
+      button.setAttribute("aria-checked", String(on));
+      button.disabled = !isHost;
+    }
+    this.modeDuos.title = "Las parejas se sortean al empezar";
   }
 
   // ----------------------------------------------------------------- HUD

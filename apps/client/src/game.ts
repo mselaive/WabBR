@@ -111,7 +111,9 @@ export class Game {
    * servidor oculta lo que no ves, `frame.players` ya no sirve para el marcador:
    * alguien detrás de una pared se vería como muerto y con cero kills.
    */
-  private standings = new Map<number, { kills: number; alive: boolean; place: number }>();
+  private standings = new Map<number, { kills: number; alive: boolean; place: number; team: number }>();
+  /** Modo de la sala: 1 todos contra todos, 2 dúos. */
+  private teamSize = 1;
   /**
    * Todos los que pasaron por la sala, aunque ya se hayan ido. El roster sólo
    * tiene a los conectados, y en el resultado final tiene que figurar también
@@ -250,6 +252,8 @@ export class Game {
               .find((b) => clear(b.index, b.x, b.y)) ?? null
           );
         },
+        // Los compañeros en dúos, para probar que se ven y que no se lastiman.
+        equipo: () => [...this.mates()],
         apuntar: (x: number, y: number) => {
           const s = this.world.worldToScreen(x, y);
           this.input.mouseX = s.x;
@@ -394,6 +398,8 @@ export class Game {
       case "roster":
         this.hostId = msg.hostId;
         this.setRoster(msg.roster);
+        this.teamSize = msg.teamSize ?? 1;
+        this.ui.setMode(this.teamSize, this.hostId === this.localId);
         return;
 
       case "start":
@@ -455,7 +461,7 @@ export class Game {
       this.sound.airdrop();
     }
     this.standings = new Map(
-      msg.st.map((r) => [r[0], { kills: r[1], alive: r[2] === 1, place: r[3] ?? 0 }]),
+      msg.st.map((r) => [r[0], { kills: r[1], alive: r[2] === 1, place: r[3] ?? 0, team: r[4] ?? r[0] }]),
     );
 
     const previousPhase = this.phase;
@@ -546,15 +552,29 @@ export class Game {
     rows.sort((a, b) => a.place - b.place || b.kills - a.kills);
 
     const mine = rows.find((r) => r.isLocal);
+    const duos = this.teamSize === 2;
     const title = !mine
       ? "Fin de la partida"
       : mine.place === 1
-        ? "¡Ganaste!"
-        : `Quedaste en el puesto ${mine.place}`;
-    const winner = msg.winner >= 0 ? this.everyone.get(msg.winner) : undefined;
-    const subtitle = winner
-      ? `${winner.name} quedó último en pie.`
-      : "Nadie sobrevivió a la zona.";
+        ? duos && this.mates().size > 0
+          ? "¡Ganaron!"
+          : "¡Ganaste!"
+        : `${duos ? "Quedaron" : "Quedaste"} en el puesto ${mine.place}`;
+    // En dúos gana la pareja: los dos nombres, también el que cayó antes.
+    const winnerTeam = this.standings.get(msg.winner)?.team;
+    const winners =
+      msg.winner < 0
+        ? []
+        : [...this.standings]
+            .filter(([id, s]) => id === msg.winner || (duos && s.team === winnerTeam))
+            .map(([id]) => this.everyone.get(id)?.name ?? "")
+            .filter(Boolean);
+    const subtitle =
+      winners.length === 0
+        ? "Nadie sobrevivió a la zona."
+        : winners.length === 1
+          ? `${winners[0]} quedó último en pie.`
+          : `Ganaron ${winners.join(" y ")}.`;
     this.ui.showResult(title, subtitle, rows, awardsFor(rows));
   }
 
@@ -672,7 +692,9 @@ export class Game {
             involvesMe: ev.targetId === this.localId || ev.byId === this.localId,
           });
           if (ev.targetId === this.localId) {
-            this.spectateId = ev.byId;
+            // En dúos se sigue mirando al compañero, que sigue jugando por los dos.
+            const mate = [...this.mates()].find((id) => this.standings.get(id)?.alive);
+            this.spectateId = mate ?? ev.byId;
             this.sound.death();
           } else if (ev.byId === this.localId) {
             this.sound.kill();
@@ -706,8 +728,10 @@ export class Game {
     if (!frame) return;
     this.viewTick = frame.tick;
 
-    // Tus balas chocan contra los demás tal como los ves, que es contra lo que apuntaste.
-    const targets = frame.players.filter((p) => p.alive && p.id !== this.localId);
+    // Tus balas chocan contra los demás tal como los ves, que es contra lo que
+    // apuntaste. A tu compañero lo atraviesan, igual que en el servidor.
+    const mates = this.mates();
+    const targets = frame.players.filter((p) => p.alive && p.id !== this.localId && !mates.has(p.id));
     this.shots.update(now, this.arena, targets, (x, y) => this.world.spawnImpact(x, y));
     // Las del servidor que ya dibujamos nosotros no se dibujan dos veces.
     const bullets = frame.bullets.filter((b) => !this.shots.covers(b.id));
@@ -742,6 +766,7 @@ export class Game {
       this.localId,
       localPredicted ? { ...localPredicted, aim, hidden } : null,
       dt,
+      mates,
     );
 
     this.world.updateItems(this.items.values(), performance.now());
@@ -752,7 +777,7 @@ export class Game {
     );
     this.updateCamera(frame, localPredicted, intents, dt);
     // Al espectear, el punto destacado del minimapa es el que estás mirando.
-    this.minimap.draw(frame, this.roster, this.watched?.id ?? this.localId);
+    this.minimap.draw(frame, this.roster, this.watched?.id ?? this.localId, mates);
     this.updateHud(frame, localPredicted);
 
     this.world.setCrosshair(this.input.mouseX, this.input.mouseY, this.phase === "playing");
@@ -889,9 +914,11 @@ export class Game {
     const alive = (frame?.players.filter((p) => p.alive) ?? []).sort((a, b) => a.id - b.id);
     let index = alive.findIndex((p) => p.id === this.spectateId);
     if (index < 0 && alive.length > 0) {
-      // El que mirabas murió (o te mató la zona): se pasa al primero que quede.
-      index = 0;
-      this.spectateId = alive[0]!.id;
+      // El que mirabas murió (o te mató la zona): se pasa al compañero si
+      // sigue en pie, y si no al primero que quede.
+      const mates = this.mates();
+      index = Math.max(0, alive.findIndex((p) => mates.has(p.id)));
+      this.spectateId = alive[index]!.id;
     }
 
     for (const intent of intents) {
@@ -1171,6 +1198,20 @@ export class Game {
   /** Agregar un bot a la sala. El servidor comprueba que seas el host. */
   addBot(): void {
     this.net?.send({ t: "bot" });
+  }
+
+  /** Tus compañeros de equipo (en dúos, uno; en todos contra todos, nadie). */
+  private mates(): Set<number> {
+    const mine = this.standings.get(this.localId)?.team;
+    const mates = new Set<number>();
+    if (mine === undefined) return mates;
+    for (const [id, s] of this.standings) if (id !== this.localId && s.team === mine) mates.add(id);
+    return mates;
+  }
+
+  /** Todos contra todos (1) o dúos (2). El servidor comprueba que seas el host. */
+  setMode(teamSize: number): void {
+    this.net?.send({ t: "mode", teamSize });
   }
 
   /** Echar a alguien del lobby. El servidor comprueba que seas el host. */

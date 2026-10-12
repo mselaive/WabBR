@@ -46,7 +46,12 @@ export class Minimap {
     return (y - (WORLD_CENTER_Y - WORLD_RADIUS)) * this.scale + 4;
   }
 
-  draw(frame: InterpolatedFrame, roster: Map<number, PlayerMeta>, localId: number): void {
+  draw(
+    frame: InterpolatedFrame,
+    roster: Map<number, PlayerMeta>,
+    localId: number,
+    mates: ReadonlySet<number> = new Set(),
+  ): void {
     const ctx = this.ctx;
     const cx = this.tx(WORLD_CENTER_X);
     const cy = this.ty(WORLD_CENTER_Y);
@@ -191,6 +196,14 @@ export class Minimap {
       if (isLocal) {
         ctx.strokeStyle = "#000000aa";
         ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      // El compañero, con un anillo verde: es al que querés encontrar.
+      if (mates.has(p.id)) {
+        ctx.strokeStyle = "#7dff9a";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(this.tx(p.x), this.ty(p.y), 5, 0, Math.PI * 2);
         ctx.stroke();
       }
     }

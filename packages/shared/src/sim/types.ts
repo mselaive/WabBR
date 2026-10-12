@@ -126,6 +126,11 @@ export interface PlayerState {
    */
   place: number;
   /**
+   * Equipo. En solitario es el propio id; en dúos, el mismo para los dos
+   * compañeros. Los compañeros no se lastiman y siempre se ven.
+   */
+  team: number;
+  /**
    * Dónde estuvo en los últimos ticks, como pares x,y en un anillo indexado por
    * tick. Es lo que permite rebobinarlo para la compensación de lag. Sólo lo
    * usa el servidor y no viaja en el snapshot.
@@ -171,6 +176,8 @@ export interface BulletState {
    * con que el que disparó los veía. Ver `pastPosition`.
    */
   rewind: number;
+  /** Equipo del que disparó: la bala atraviesa a sus compañeros. */
+  team: number;
 }
 
 /** Paquete aéreo cayendo. Al tocar el piso suelta su botín y desaparece. */
@@ -241,6 +248,8 @@ export interface GameState {
   nextGrenadeId: number;
   /** Nubes de humo que tapan la vista. */
   smokes: SmokeState[];
+  /** 1 todos contra todos, 2 dúos. Lo elige el host en el lobby. */
+  teamSize: number;
   airdrops: AirdropState[];
   nextAirdropId: number;
   /** Vida que les queda a los barriles tocados, por índice de obstáculo. */

@@ -142,12 +142,15 @@ body {
   color: var(--gold);
 }
 
+/* En dúos, clickear el minimapa marca un lugar para el compañero. */
+body.paired .hud-tr {
+  pointer-events: auto;
+  cursor: crosshair;
+}
+
 .hud-tr {
   top: 14px;
   right: 14px;
-  /* Clickearlo marca un lugar para el compañero. */
-  pointer-events: auto;
-  cursor: crosshair;
   width: 200px;
   height: 200px;
   border: 2px solid var(--line);

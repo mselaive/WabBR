@@ -180,6 +180,7 @@ export class Game {
     minimapCanvas.addEventListener(
       "pointerdown",
       (e) => {
+        if (e.button !== 0) return;
         e.preventDefault();
         this.markAt(this.minimap.toWorld(e.clientX, e.clientY));
       },
@@ -802,9 +803,12 @@ export class Game {
       localPredicted ? localPredicted.y : 0,
     );
     this.updateCamera(frame, localPredicted, intents, dt);
-    // Al espectear, el punto destacado del minimapa es el que estás mirando.
+    // El minimapa sólo recibe clicks si hay a quién marcarle: si no, la esquina
+    // de la pantalla se tragaba los tiros.
+    document.body.classList.toggle("paired", mates.size > 0 && this.phase === "playing");
     this.marks = this.marks.filter((m) => m.until > now);
     this.world.drawMarks(this.marks);
+    // Al espectear, el punto destacado del minimapa es el que estás mirando.
     this.minimap.draw(frame, this.roster, this.watched?.id ?? this.localId, mates, this.marks);
     this.updateHud(frame, localPredicted);
 

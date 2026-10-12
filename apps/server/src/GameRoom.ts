@@ -579,6 +579,17 @@ export class GameRoom extends Server<Env> {
    * hace menos de `SIGHT_GRACE_TICKS`, se lo sigue mandando. Sin eso, caminar
    * al lado de una columna hace que el otro parpadee.
    */
+  /**
+   * Con los ojos de quién mira cada uno. Muerto se ve todo, salvo en dúos con
+   * el compañero todavía en pie: ahí se ve lo que ve él. Si no, el muerto
+   * podría marcarle a su compañero dónde están los que ni la pared, ni el
+   * arbusto ni el humo dejan ver.
+   */
+  private eyesOf(viewer: PlayerState | undefined): PlayerState | undefined {
+    if (!viewer || viewer.alive) return viewer;
+    return this.state.players.find((p) => p.alive && p.team === viewer.team && p.id !== viewer.id) ?? viewer;
+  }
+
   private canSee(viewer: PlayerState | undefined, target: PlayerState): boolean {
     // Sin observador vivo (espectador, lobby) se ve todo: ya está muerto y así
     // mirar la partida sigue teniendo sentido.
@@ -652,7 +663,7 @@ export class GameRoom extends Server<Env> {
 
     for (const conn of this.getConnections<ConnState>()) {
       const viewerId = conn.state?.playerId;
-      const viewer = viewerId === undefined ? undefined : findPlayer(s, viewerId);
+      const viewer = this.eyesOf(viewerId === undefined ? undefined : findPlayer(s, viewerId));
 
       const players: SnapPlayer[] = [];
       for (const p of s.players) {

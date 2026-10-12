@@ -1,0 +1,27 @@
+# Corre lo mismo que se corre a mano antes de subir algo. No despliega nada:
+# eso lo hacen Vercel (cliente) y wrangler (servidor).
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+      # El humo compila el cliente y comprueba que el bundle de producción
+      # arranque: hay fallas que sólo existen empaquetado (ver el README).
+      - run: npx playwright install --with-deps chromium
+      - run: npm run smoke

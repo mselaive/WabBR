@@ -12,6 +12,7 @@ export interface UICallbacks {
   onKick: (id: number) => void;
   onAddBot: () => void;
   onMode: (teamSize: number) => void;
+  onPartner: (id: number) => void;
 }
 
 const NAME_KEY = "wabbr:name";
@@ -248,7 +249,14 @@ export class UI {
     this.roomCode.textContent = code;
   }
 
-  setRoster(roster: PlayerMeta[], hostId: number, localId: number): void {
+  setRoster(roster: PlayerMeta[], hostId: number, localId: number, teamSize = 1): void {
+    const byId = new Map(roster.map((p) => [p.id, p]));
+    const me = byId.get(localId);
+    /** Con quién está emparejado (los dos se eligieron), o undefined. */
+    const pairedWith = (p: PlayerMeta): PlayerMeta | undefined => {
+      const other = p.partner === undefined ? undefined : byId.get(p.partner);
+      return other?.partner === p.id ? other : undefined;
+    };
     this.playerList.replaceChildren(
       ...roster.map((p) => {
         const li = document.createElement("li");
@@ -272,6 +280,8 @@ export class UI {
           tally.title = `En esta sala: ganó ${p.wins ?? 0} de ${p.played} partidas e hizo ${p.totalKills ?? 0} kills`;
           li.append(tally);
         }
+
+        if (teamSize === 2) li.append(...this.partnerControls(p, me, pairedWith));
 
         if (p.id === hostId) {
           const tag = document.createElement("span");
@@ -323,6 +333,53 @@ export class UI {
         : isHost
           ? "Cuando estén todos listos arranca sola, o podés forzarla."
           : "La partida arranca cuando estén todos listos.";
+  }
+
+  /**
+   * En dúos, lo de la pareja en cada fila. Para los demás, un botón para
+   * elegirlos (o aceptar si te eligieron); para los que ya están emparejados,
+   * con quién. La pareja es mutua: hace falta que los dos se elijan.
+   */
+  private partnerControls(
+    p: PlayerMeta,
+    me: PlayerMeta | undefined,
+    pairedWith: (p: PlayerMeta) => PlayerMeta | undefined,
+  ): HTMLElement[] {
+    const mate = pairedWith(p);
+    if (!me || p.id === me.id) {
+      if (!mate) return [];
+      const tag = document.createElement("span");
+      tag.className = "tag pair";
+      tag.textContent = `con ${mate.name}`;
+      return [tag];
+    }
+    if (mate && mate.id !== me.id) {
+      const tag = document.createElement("span");
+      tag.className = "tag pair";
+      tag.textContent = `con ${mate.name}`;
+      return [tag];
+    }
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "pair-btn";
+    const mine = me.partner === p.id;
+    const theirs = p.partner === me.id;
+    if (mine && theirs) {
+      button.textContent = "Tu pareja";
+      button.classList.add("on");
+      button.title = "Tocá para separarse";
+    } else if (mine) {
+      button.textContent = "Esperando…";
+      button.title = `Esperando que ${p.name} te elija. Tocá para cancelar.`;
+    } else if (theirs) {
+      button.textContent = "Aceptar pareja";
+      button.classList.add("invite");
+    } else {
+      button.textContent = "Pareja";
+      button.title = `Jugar con ${p.name}`;
+    }
+    button.addEventListener("click", () => this.cb.onPartner(mine ? -1 : p.id));
+    return [button];
   }
 
   /**

@@ -156,6 +156,8 @@ export interface PlayerMeta {
   played?: number;
   wins?: number;
   totalKills?: number;
+  /** Con quién quiere jugar en dúos (id), si eligió. La pareja es mutua. */
+  partner?: number;
 }
 
 export interface BulletState {
@@ -250,6 +252,8 @@ export interface GameState {
   smokes: SmokeState[];
   /** 1 todos contra todos, 2 dúos. Lo elige el host en el lobby. */
   teamSize: number;
+  /** Parejas elegidas en el lobby (ids). Los demás se emparejan por sorteo. */
+  pairs: [number, number][];
   airdrops: AirdropState[];
   nextAirdropId: number;
   /** Vida que les queda a los barriles tocados, por índice de obstáculo. */

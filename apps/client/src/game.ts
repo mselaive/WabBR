@@ -409,8 +409,8 @@ export class Game {
 
       case "roster":
         this.hostId = msg.hostId;
-        this.setRoster(msg.roster);
         this.teamSize = msg.teamSize ?? 1;
+        this.setRoster(msg.roster);
         this.ui.setMode(this.teamSize, this.hostId === this.localId);
         return;
 
@@ -468,7 +468,7 @@ export class Game {
   private setRoster(roster: PlayerMeta[]): void {
     this.roster = new Map(roster.map((p) => [p.id, p]));
     for (const p of roster) this.everyone.set(p.id, p);
-    this.ui.setRoster(roster, this.hostId, this.localId);
+    this.ui.setRoster(roster, this.hostId, this.localId, this.teamSize);
   }
 
   // ------------------------------------------------------------ snapshots
@@ -1248,6 +1248,11 @@ export class Game {
     if (mine === undefined) return mates;
     for (const [id, s] of this.standings) if (id !== this.localId && s.team === mine) mates.add(id);
     return mates;
+  }
+
+  /** Elegir pareja para dúos (-1 para no elegir). */
+  setPartner(id: number): void {
+    this.net?.send({ t: "partner", id });
   }
 
   /** Todos contra todos (1) o dúos (2). El servidor comprueba que seas el host. */

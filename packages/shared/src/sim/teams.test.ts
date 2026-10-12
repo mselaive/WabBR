@@ -68,6 +68,21 @@ describe("dúos", () => {
     }
   });
 
+  it("las parejas elegidas en el lobby se respetan; las inválidas se ignoran", () => {
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const state = createGameState(3);
+      state.teamSize = 2;
+      for (let i = 1; i <= 6; i++) state.players.push(createPlayer(i));
+      // 1 con 4 vale; 2 consigo mismo, 9 que no está y 4 repetido, no.
+      state.pairs = [[1, 4], [2, 2], [3, 9], [4, 5]];
+      startMatch(state, seed);
+      const team = (id: number) => state.players.find((p) => p.id === id)!.team;
+      expect(team(1)).toBe(team(4));
+      expect(team(5)).not.toBe(team(4));
+      expect(new Set(state.players.map((p) => p.team)).size).toBe(3);
+    }
+  });
+
   it("con número impar, el que sobra juega solo", () => {
     const state = createGameState(3);
     state.teamSize = 2;

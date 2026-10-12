@@ -369,6 +369,22 @@ export class GameRoom extends Server<Env> {
         return;
       }
 
+      case "partner": {
+        if (this.state.phase !== "lobby") return;
+        if (typeof msg.id !== "number") return;
+        if (msg.id === -1) {
+          delete seat.meta.partner;
+        } else {
+          const other = this.seats.get(msg.id);
+          if (!other || other === seat) return;
+          seat.meta.partner = msg.id;
+          // Un bot dice que sí a cualquiera: no tiene con quién preferir jugar.
+          if (other.bot) other.meta.partner = seat.playerId;
+        }
+        this.broadcastRoster();
+        return;
+      }
+
       case "bot": {
         // Sólo el host, sólo en el lobby y si hay lugar.
         if (seat.playerId !== this.hostId) return;
@@ -547,6 +563,7 @@ export class GameRoom extends Server<Env> {
 
     // Transiciones que dependen del contador que acaba de decrementar step().
     if (s.phase === "countdown" && s.phaseTicksLeft <= 0) {
+      s.pairs = this.chosenPairs();
       startMatch(s, (Date.now() ^ (this.seats.size << 16)) | 1, this.arena);
       this.broadcast(encodeServer({ t: "start", seed: s.rng }));
       this.broadcastItems();
@@ -689,6 +706,18 @@ export class GameRoom extends Server<Env> {
   }
 
   // ------------------------------------------------------------ sala
+
+  /** Las parejas que se eligieron mutuamente en el lobby. */
+  private chosenPairs(): [number, number][] {
+    const pairs: [number, number][] = [];
+    for (const seat of this.seats.values()) {
+      const other = seat.meta.partner === undefined ? undefined : this.seats.get(seat.meta.partner);
+      if (other && other.meta.partner === seat.playerId && seat.playerId < other.playerId) {
+        pairs.push([seat.playerId, other.playerId]);
+      }
+    }
+    return pairs;
+  }
 
   /**
    * Suma la partida que acaba de terminar al marcador de la sala de cada uno

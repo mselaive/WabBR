@@ -510,6 +510,32 @@ input:focus {
   white-space: nowrap;
 }
 
+.tag.pair {
+  color: #7dff9a;
+}
+
+.pair-btn {
+  font: inherit;
+  font-size: 11px;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pair-btn.on {
+  border-color: #7dff9a;
+  color: #7dff9a;
+}
+
+.pair-btn.invite {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .tag {
   font-size: 10px;
   padding: 3px 6px;

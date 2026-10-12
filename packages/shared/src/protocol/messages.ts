@@ -66,6 +66,15 @@ export interface ModeMsg {
   teamSize: number;
 }
 
+/**
+ * Elegir con quién jugar en dúos (o -1 para no elegir). La pareja es mutua:
+ * hace falta que el otro también te elija. Los bots aceptan solos.
+ */
+export interface PartnerMsg {
+  t: "partner";
+  id: number;
+}
+
 /** Marcar un lugar del mapa para el compañero ("acá hay alguien", "vamos para allá"). */
 export interface MarkMsg {
   t: "mark";
@@ -82,6 +91,7 @@ export type ClientMsg =
   | KickMsg
   | AddBotMsg
   | ModeMsg
+  | PartnerMsg
   | MarkMsg;
 
 export const BTN_SHOOT = 1;

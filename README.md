@@ -126,9 +126,11 @@ bloqueo blando y a propósito: sin cuentas no hay identidad estable, así que ca
 igual. Cubre lo que molesta —el que reentra de un clic— y no pretende ser más que eso. Sólo funciona
 en el lobby: en partida, echar sería un arma más.
 
-**Dúos.** Arriba de la lista, el host elige *Todos contra todos* o *Dúos*. En dúos las
-parejas se sortean al empezar (con número impar, uno juega solo) y cada pareja aparece
-junta en su lugar del anillo. Los compañeros no se lastiman —las balas los atraviesan y
+**Dúos.** Arriba de la lista, el host elige *Todos contra todos* o *Dúos*. En dúos cada
+fila tiene un botón **Pareja**: si dos se eligen entre sí juegan juntos (al otro le
+aparece "Aceptar pareja"; un bot acepta solo). Los que no eligieron se emparejan por
+sorteo al empezar (con número impar, uno juega solo; con dos jugadores no hay dúos,
+porque serían compañeros). Cada pareja aparece junta en su lugar del anillo. Los compañeros no se lastiman —las balas los atraviesan y
 las granadas no les hacen nada, aunque al que la tiró sí—, se ven siempre, aunque haya
 una pared o un arbusto en el medio, y el compañero tiene el nombre en verde y un anillo
 verde en el minimapa. El puesto es de la pareja: se decide cuando cae el último de los

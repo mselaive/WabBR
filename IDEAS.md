@@ -32,6 +32,7 @@ Ninguno está en `main`: un push a `main` despliega solo a wabbo.org.
 | Marcador de la sala | "2/5 ganadas · 11 kills" al lado de cada nombre en el lobby, sumando las partidas de la noche | `scripts/server-bots.mjs` + captura |
 | Bots con granadas | Tiran granadas (simulando el tiro), se escapan de las ajenas y no le disparan a un barril que tienen al lado: el daño que se hacían solos bajó de 1536 a 109 en 8 partidas | Tests (con control) + medición en 8 partidas |
 | Dúos | El host elige "Dúos" en el lobby: parejas al azar que aparecen juntas, no se lastiman, se ven siempre y ganan juntas | 7 tests (con control) + una partida de dúos en el navegador hasta el podio |
+| Elegir pareja | En dúos, "Pareja" en cada fila del lobby; si dos se eligen, juegan juntos (un bot acepta solo) | Test de la simulación con 5 sorteos + `scripts/marks.mjs` |
 | Marcas para la pareja | `F` o click en el minimapa: rombo, flecha en el borde y anillo en el minimapa, sólo para tu compañero | `scripts/marks.mjs` (compañero sí, rival no) + captura |
 | Controles táctiles | Dos sticks flotantes, HUD tocable, Recargar/Tabla, aviso de girar el teléfono | Chrome emulando un teléfono con toques de dos dedos; **no probado en un teléfono real** |
 
@@ -50,14 +51,12 @@ Ninguno está en `main`: un push a `main` despliega solo a wabbo.org.
 La zona según cuántos juegan, la mira, el humo, los dúos con sus marcas y los
 controles táctiles ya están (arriba). De la lista anterior quedaron:
 
-1. **Elegir pareja.** Hoy en dúos las parejas se sortean. Que cada uno pueda
-   elegir con quién (o el host armarlas) es lo siguiente que pediría un grupo.
-2. **Cascos y mochilas.** Más capas de equipo para lootear. Más contenido que
+1. **Cascos y mochilas.** Más capas de equipo para lootear. Más contenido que
    sistema: vale la pena si las partidas se sienten cortas de cosas para encontrar.
-3. **Killcam.** Ver los últimos segundos desde los ojos del que te mató. Ya al
+2. **Killcam.** Ver los últimos segundos desde los ojos del que te mató. Ya al
    morir la cámara sigue al que te mató, que da casi lo mismo; la repetición de
    verdad pide guardar historia de snapshots por jugador.
-4. **Que los bots usen el humo.** Las granadas ya las tiran; el humo ni lo juntan.
+3. **Que los bots usen el humo.** Las granadas ya las tiran; el humo ni lo juntan.
    Tirarlo entre ellos y el que les dispara para irse a curar sería lo natural.
 
 Y uno que descarté: **cuerpo a cuerpo**. Lo había anotado para "el que se queda sin

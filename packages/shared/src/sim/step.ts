@@ -171,6 +171,7 @@ export function createGameState(seed = 1): GameState {
     nextGrenadeId: 1,
     smokes: [],
     teamSize: 1,
+    pairs: [],
     airdrops: [],
     nextAirdropId: 1,
     barrelHp: new Map(),
@@ -225,9 +226,32 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
   // El que no juega esta partida no arrastra el equipo de la anterior.
   for (const p of state.players) p.team = p.id;
   const teams = duos ? Math.ceil(active.length / 2) : active.length;
+
+  // Las parejas que se eligieron en el lobby van primero, juntas; el resto se
+  // empareja por sorteo. El lugar en el anillo igual sale al azar: la rotación
+  // del anillo cambia en cada partida (ver spawnPoint).
+  const order: PlayerState[] = [];
+  if (duos) {
+    const byId = new Map(active.map((p) => [p.id, p]));
+    const used = new Set<number>();
+    for (const [a, b] of state.pairs) {
+      const pa = byId.get(a);
+      const pb = byId.get(b);
+      if (!pa || !pb || a === b || used.has(a) || used.has(b)) continue;
+      used.add(a);
+      used.add(b);
+      order.push(pa, pb);
+    }
+  }
+  const placed = new Set(order);
+  const rest = active.map((p, i) => ({ p, slot: slots[i]! })).filter((x) => !placed.has(x.p));
+  rest.sort((a, b) => a.slot - b.slot);
+  for (const x of rest) order.push(x.p);
+  const rank = new Map(order.map((p, i) => [p, i]));
+
   const firstOfTeam = new Map<number, { x: number; y: number }>();
-  active.forEach((p, i) => {
-    const slot = slots[i]!;
+  active.forEach((p) => {
+    const slot = rank.get(p)!;
     const team = duos ? Math.floor(slot / 2) : slot;
     p.team = duos ? -1 - team : p.id;
     const mate = firstOfTeam.get(team);

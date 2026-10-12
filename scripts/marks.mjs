@@ -77,6 +77,37 @@ const vistos = new Set();
 for (let i = 0; i < 8 && vistos.size < 2; i++) vistos.add(await ronda());
 check(vistos.size === 2, "se vieron los dos casos (compañero y rival)");
 
+// Parejas elegidas: si los dos se eligen, juegan juntos siempre; un bot acepta solo.
+{
+  const room = `P${Math.random().toString(36).slice(2, 7).toUpperCase()}`.replace(/[AEIOU01]/g, "Z");
+  const host = cliente(room, "Host");
+  await hasta(() => host.id > 0, 5000);
+  const guest = cliente(room, "Guest");
+  await hasta(() => guest.id > 0, 5000);
+  let roster = [];
+  guest.ws.on("message", (raw) => {
+    const m = JSON.parse(raw.toString());
+    if (m.t === "roster") roster = m.roster;
+  });
+  host.send({ t: "mode", teamSize: 2 });
+  host.send({ t: "bot" });
+  host.send({ t: "bot" });
+  await hasta(() => roster.length === 4, 5000);
+  const [bot1] = roster.filter((p) => p.bot);
+  guest.send({ t: "partner", id: bot1.id });
+  await hasta(() => roster.find((p) => p.id === bot1.id)?.partner === guest.id, 3000);
+  check(roster.find((p) => p.id === bot1.id)?.partner === guest.id, "el bot acepta al que lo elige");
+  host.send({ t: "partner", id: guest.id });
+  guest.send({ t: "partner", id: host.id });
+  await hasta(() => roster.find((p) => p.id === guest.id)?.partner === host.id, 3000);
+  host.send({ t: "ready", ready: true });
+  guest.send({ t: "ready", ready: true });
+  await hasta(() => host.phase === "playing" && host.teams.size === 4, 15000);
+  check(host.teams.get(host.id) === host.teams.get(guest.id), "los que se eligieron juegan juntos");
+  host.ws.close();
+  guest.ws.close();
+}
+
 if (fallos.length) {
   console.log(`\nFALLA: ${fallos.length} comprobaciones.`);
   process.exit(1);

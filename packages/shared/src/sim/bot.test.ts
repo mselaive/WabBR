@@ -5,7 +5,7 @@ import { generateArena, type ArenaMap, type ObstacleKind } from "../map/arena.js
 import { botInput, createBotMemory, wants, type BotMemory } from "./bot.js";
 import { ObstacleGrid } from "./collision.js";
 import { createGameState, createPlayer, startMatch, step } from "./step.js";
-import type { GameState, PlayerInput, SimEvent } from "./types.js";
+import { ACT_THROW, type GameState, type PlayerInput, type SimEvent } from "./types.js";
 
 const arena = generateArena();
 
@@ -83,6 +83,82 @@ describe("bots", () => {
     for (let t = 0; t < 40; t++) {
       expect(botInput(state, state.players[0]!, mem, wall).shoot).toBe(false);
     }
+  });
+
+  describe("granadas", () => {
+    /** Corre el duelo con el bot sin arma (así lo único que lastima es la granada). */
+    function play(state: GameState, map: ArenaMap, ticks: number): { throws: number; blasts: SimEvent[] } {
+      const bot = state.players[0]!;
+      bot.slots = [-1, -1];
+      bot.grenades = 2;
+      const mem = createBotMemory(3);
+      let throws = 0;
+      const blasts: SimEvent[] = [];
+      for (let t = 0; t < ticks; t++) {
+        const input = botInput(state, bot, mem, map);
+        if (input.act === ACT_THROW) throws++;
+        const events: SimEvent[] = [];
+        step(state, new Map([[1, [input]], [2, []]]), events, map);
+        blasts.push(...events.filter((e) => e.t === "explosion"));
+      }
+      return { throws, blasts };
+    }
+
+    it("le tira una al que está a tiro y le pega", () => {
+      const state = duel(310, 0);
+      const { throws, blasts } = play(state, EMPTY, 70);
+      expect(throws).toBe(1);
+      expect(blasts).toHaveLength(1);
+      expect(state.players[1]!.hp).toBeLessThan(PLAYER_MAX_HP);
+      expect(state.players[0]!.hp).toBe(PLAYER_MAX_HP);
+    });
+
+    it("se escapa de una granada a punto de estallar", () => {
+      // El otro lejos y del otro lado: lo único que lo mueve es la granada.
+      const state = duel(-900, 0);
+      state.grenades.push({ id: 1, ownerId: 2, kind: 0, x: WORLD_CENTER_X + 40, y: WORLD_CENTER_Y, vx: 0, vy: 0, fuse: 20 });
+      const input = botInput(state, state.players[0]!, createBotMemory(1), EMPTY);
+      expect(input.moveX).toBe(-1);
+      expect(input.sprint).toBe(true);
+
+      // Control: con mecha larga todavía no corre por ella.
+      state.grenades[0]!.fuse = 39;
+      expect(botInput(state, state.players[0]!, createBotMemory(1), EMPTY).sprint).toBe(false);
+    });
+
+    it("no le tira a un barril que tiene al lado", () => {
+      const state = duel(250, 0);
+      const barrel = arenaWith("barrel", WORLD_CENTER_X + 50, WORLD_CENTER_Y - 12, 24, 24);
+      const mem = createBotMemory(1);
+      for (let t = 0; t < 40; t++) expect(botInput(state, state.players[0]!, mem, barrel).shoot).toBe(false);
+      // Control: si el barril ya estalló, sí tira.
+      state.explodedBarrels.push(0);
+      const shots: boolean[] = [];
+      for (let t = 0; t < 10; t++) shots.push(botInput(state, state.players[0]!, mem, barrel).shoot);
+      expect(shots.some(Boolean)).toBe(true);
+    });
+
+    it("de cerca no: la granada rodaría de largo", () => {
+      const state = duel(140, 0);
+      expect(play(state, EMPTY, 70).throws).toBe(0);
+    });
+
+    it("no la tira contra una caja que se la devolvería", () => {
+      // Una caja baja: deja ver al otro pero frena la granada. Sin correr la
+      // simulación, para que el bot no se corra de costado hasta pasarla (y
+      // ahí el tiro sí sería bueno).
+      const throwsWith = (map: ArenaMap): number => {
+        const state = duel(310, 0);
+        state.players[0]!.grenades = 2;
+        const mem = createBotMemory(3);
+        let throws = 0;
+        for (let t = 0; t < 70; t++) if (botInput(state, state.players[0]!, mem, map).act === ACT_THROW) throws++;
+        return throws;
+      };
+      expect(throwsWith(arenaWith("crate", WORLD_CENTER_X + 50, WORLD_CENTER_Y - 60, 30, 120))).toBe(0);
+      // Control: la misma escena sin la caja, sí.
+      expect(throwsWith(EMPTY)).toBe(1);
+    });
   });
 
   it("afuera de la zona corre para adentro", () => {

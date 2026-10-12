@@ -80,6 +80,15 @@ costado a la distancia que le gusta a su arma y respetan la zona. Para que se le
 pueda ganar, tardan un instante en reaccionar al verte y apuntan con un error que
 va cambiando despacio.
 
+**Tiran granadas** y **se escapan de las que les caen cerca**. Como una granada no
+se tira "a" un punto —sale siempre igual y rueda unos 320 px—, el bot simula el
+tiro con la misma física del servidor desde tres direcciones y sólo la tira si va a
+estallar al lado del otro y lejos suyo; así tampoco la tira contra una caja que se
+la devolvería. Después de tirarla no se acerca por dos segundos (antes caminaba
+derecho hacia la explosión), y ya no le dispara a un barril que tiene al lado. En
+ocho partidas de seis bots, el daño que se hacían solos bajó de 1536 a 109. El humo
+no lo usan ni lo juntan.
+
 Encuentran el camino con A* sobre una grilla de 10 px (`sim/nav.ts`). Yendo en
 línea recta se trababan contra la primera pared, y como casi todas las cajas están
 adentro de casas, se quedaban encerrados cuando cerraba la zona: un tercio moría

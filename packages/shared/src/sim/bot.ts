@@ -1,4 +1,11 @@
-import { DT, GRENADE_MAX_STACK, PLAYER_RADIUS } from "../constants.js";
+import {
+  DT,
+  EXPLOSION_RADIUS,
+  GRENADE_FRICTION,
+  GRENADE_FUSE_TICKS,
+  GRENADE_MAX_STACK,
+  PLAYER_RADIUS,
+} from "../constants.js";
 import {
   ARMORS,
   CRATE_REACH,
@@ -13,14 +20,18 @@ import {
 } from "../items.js";
 import { lootCrates, type ArenaMap, type Obstacle } from "../map/arena.js";
 import { makeRng } from "../math.js";
+import { segmentBoxT } from "./collision.js";
 import { findPath, navGridFor, walkableLine } from "./nav.js";
 import { concealedFrom, hasLineOfSight } from "./sight.js";
+import { advanceGrenade, canThrow, grenadeLaunch } from "./step.js";
 import {
   ACT_NONE,
   ACT_PICKUP,
   ACT_SLOT_0,
   ACT_SLOT_1,
+  ACT_THROW,
   ACT_USE_BASE,
+  GRENADE_FRAG,
   type GameState,
   type PlayerInput,
   type PlayerState,
@@ -66,6 +77,10 @@ export interface BotMemory {
   replanIn: number;
   /** Cajas a las que no encontró cómo llegar: no las vuelve a elegir. */
   unreachable: Set<number>;
+  /** Ticks hasta volver a pensar en tirar una granada. */
+  throwCd: number;
+  /** Ticks en que no se acerca al blanco: acaba de tirarle una granada. */
+  grenadeHold: number;
 }
 
 /** A qué distancia ve y pelea. Más que la pantalla no tiene sentido. */
@@ -101,6 +116,8 @@ export function createBotMemory(seed: number): BotMemory {
     pathGoalY: 0,
     replanIn: 0,
     unreachable: new Set(),
+    throwCd: 0,
+    grenadeHold: 0,
   };
 }
 
@@ -164,7 +181,23 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
     if (weapon >= 0) {
       const def = weaponStats(weapon, me.slotTier[me.activeSlot] ?? 0);
       const range = def.bulletSpeed * def.lifeTicks * DT * 0.9;
-      input.shoot = mem.reaction === 0 && dist < range;
+      // Un barril al lado en la línea de tiro estallaría encima suyo.
+      input.shoot = mem.reaction === 0 && dist < range && !barrelInTheWay(state, me, target, arena);
+    }
+
+    if (mem.throwCd > 0) mem.throwCd--;
+    if (mem.reaction === 0 && mem.throwCd === 0 && canThrow(me)) {
+      const aim = grenadeAim(me, target, arena);
+      if (aim !== null) {
+        input.act = ACT_THROW;
+        input.aim = aim;
+        // Una cada varios segundos: tirar todas juntas es regalarlas.
+        mem.throwCd = 100 + Math.floor(mem.random() * 80);
+        mem.grenadeHold = GRENADE_FUSE_TICKS + 5;
+      } else {
+        // Probar de nuevo en un rato, no en cada tick: simular la granada cuesta.
+        mem.throwCd = 8;
+      }
     }
 
     // Pelear moviéndose: de costado, y acercándose o alejándose hasta la
@@ -174,7 +207,12 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
       mem.strafeTicks = 15 + Math.floor(mem.random() * 25);
     }
     const preferred = PREFERRED_RANGE[weapon] ?? 260;
-    const toward = dist > preferred + 60 ? 1 : dist < preferred - 60 ? -1 : 0;
+    let toward = dist > preferred + 60 ? 1 : dist < preferred - 60 ? -1 : 0;
+    // Recién tiró una granada: acercarse sería caminar hacia donde va a estallar.
+    if (mem.grenadeHold > 0) {
+      mem.grenadeHold--;
+      toward = Math.min(0, toward);
+    }
     const ux = dx / (dist || 1);
     const uy = dy / (dist || 1);
     goal = {
@@ -200,10 +238,84 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
     input.sprint = me.stamina > 10;
   }
 
+  // Una granada a punto de estallar al lado: correr, aunque sea afuera de la
+  // zona. Dos segundos de zona duelen menos que una granada.
+  const flee = grenadeEscape(state, me);
+  if (flee) {
+    goal = flee;
+    input.sprint = me.stamina > 0;
+  }
+
   // Peleando se mueve de costado a pocos pasos: eso va directo. Para todo lo
   // demás —una caja, la zona, pasear— se busca el camino.
   steer(me, mem, goal, input, target !== null && zoneGoal === null ? null : arena, state);
   return input;
+}
+
+/**
+ * Hacia dónde tirar una granada para que estalle al lado del objetivo, o null
+ * si no hay tiro bueno. La granada no se tira "a" un punto: sale siempre igual
+ * y rueda unos 320 px, así que en vez de calcular se simula, con la misma
+ * física que el servidor, desde unas pocas direcciones alrededor de la buena.
+ * Así también se ve si rebota contra algo y vuelve: un bot que se granadea
+ * solo no parece una persona.
+ */
+function grenadeAim(me: PlayerState, target: PlayerState, arena: ArenaMap): number | null {
+  const base = Math.atan2(target.y - me.y, target.x - me.x);
+  for (const offset of [0, -0.12, 0.12]) {
+    const aim = base + offset;
+    const g = grenadeLaunch({ ...me, aim });
+    while (advanceGrenade(g, arena));
+    const nearTarget = Math.hypot(g.x - target.x, g.y - target.y) < EXPLOSION_RADIUS * 0.55;
+    const farFromMe = Math.hypot(g.x - me.x, g.y - me.y) > EXPLOSION_RADIUS + 30;
+    if (nearTarget && farFromMe) return aim;
+  }
+  return null;
+}
+
+/**
+ * A dónde correr si hay una granada cerca que va a estallar pronto, o null.
+ * Se mira dónde va a quedar (rueda), no dónde está ahora.
+ */
+function grenadeEscape(state: GameState, me: PlayerState): { x: number; y: number } | null {
+  for (const g of state.grenades) {
+    if (g.kind !== GRENADE_FRAG || g.fuse > 30) continue;
+    // Más o menos dónde se frena: lo que le queda de rodar con el rozamiento.
+    const roll = DT / (1 - GRENADE_FRICTION);
+    const gx = g.x + g.vx * roll;
+    const gy = g.y + g.vy * roll;
+    const dx = me.x - gx;
+    const dy = me.y - gy;
+    const d = Math.hypot(dx, dy);
+    if (d > EXPLOSION_RADIUS + 20) continue;
+    const ux = d > 1 ? dx / d : 1;
+    const uy = d > 1 ? dy / d : 0;
+    return { x: me.x + ux * 160, y: me.y + uy * 160 };
+  }
+  return null;
+}
+
+const segmentScratch: number[] = [];
+
+/**
+ * ¿Hay un barril sin estallar en la línea de tiro, tan cerca que la explosión
+ * lo alcanzaría? Sin esto los bots se volaban solos: en ocho partidas de seis,
+ * 27 veces se lastimaron con un barril que tenían al lado, y 4 se murieron.
+ */
+function barrelInTheWay(state: GameState, me: PlayerState, target: PlayerState, arena: ArenaMap): boolean {
+  const dx = target.x - me.x;
+  const dy = target.y - me.y;
+  arena.grid.querySegment(me.x, me.y, target.x, target.y, segmentScratch);
+  for (const i of segmentScratch) {
+    const o = arena.obstacles[i];
+    if (!o || o.kind !== "barrel" || state.explodedBarrels.includes(i)) continue;
+    const cx = o.x + o.w / 2;
+    const cy = o.y + o.h / 2;
+    if (Math.hypot(cx - me.x, cy - me.y) > EXPLOSION_RADIUS + 35) continue;
+    // Con margen: la puntería del bot tiene error y la bala se abre un poco.
+    if (segmentBoxT(me.x, me.y, dx, dy, 14, o) >= 0) return true;
+  }
+  return false;
 }
 
 function nearestEnemy(state: GameState, me: PlayerState, arena: ArenaMap): PlayerState | null {

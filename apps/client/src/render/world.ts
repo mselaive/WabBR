@@ -1,4 +1,5 @@
 import {
+  AlphaFilter,
   Application,
   Container,
   Graphics,
@@ -159,6 +160,9 @@ export class WorldView {
     this.tex = getTextures();
 
     this.entityLayer.sortableChildren = true;
+    // La capa de sombras se dibuja opaca en una textura aparte y recién ahí se
+    // vuelve transparente: así las sombras que se superponen no se suman.
+    this.shadowLayer.filters = [new AlphaFilter({ alpha: 0.62 })];
 
     this.camera.addChild(
       this.groundLayer,
@@ -680,7 +684,11 @@ export class WorldView {
       }
     }
 
-    g.fill({ color: 0x08121c, alpha: 0.62 });
+    // Opaca acá y transparente toda la capa junta (ver el AlphaFilter en el
+    // constructor). Con la transparencia en el relleno, cada pared pintaba su
+    // sombra encima de la de al lado y donde se cruzaban quedaba el doble de
+    // oscuro: la "doble sombra" entre las paredes de una misma casa.
+    g.fill({ color: 0x08121c, alpha: 1 });
   }
 
   // -------------------------------------------------------------- jugador

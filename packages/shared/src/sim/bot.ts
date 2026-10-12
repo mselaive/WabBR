@@ -5,6 +5,8 @@ import {
   GRENADE_FUSE_TICKS,
   GRENADE_MAX_STACK,
   PLAYER_RADIUS,
+  SMOKE_MAX_STACK,
+  SMOKE_RADIUS,
 } from "../constants.js";
 import {
   ARMORS,
@@ -29,9 +31,11 @@ import {
   ACT_PICKUP,
   ACT_SLOT_0,
   ACT_SLOT_1,
+  ACT_SMOKE,
   ACT_THROW,
   ACT_USE_BASE,
   GRENADE_FRAG,
+  GRENADE_SMOKE,
   type GameState,
   type PlayerInput,
   type PlayerState,
@@ -81,6 +85,8 @@ export interface BotMemory {
   throwCd: number;
   /** Ticks en que no se acerca al blanco: acaba de tirarle una granada. */
   grenadeHold: number;
+  /** Ticks en que se aleja del blanco: tiró humo para irse a curar. */
+  retreat: number;
 }
 
 /** A qué distancia ve y pelea. Más que la pantalla no tiene sentido. */
@@ -118,6 +124,7 @@ export function createBotMemory(seed: number): BotMemory {
     unreachable: new Set(),
     throwCd: 0,
     grenadeHold: 0,
+    retreat: 0,
   };
 }
 
@@ -186,7 +193,16 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
     }
 
     if (mem.throwCd > 0) mem.throwCd--;
-    if (mem.reaction === 0 && mem.throwCd === 0 && canThrow(me)) {
+    // Con poca vida, humo entre él y el otro: corta la vista para irse a curar.
+    const smoke = mem.reaction === 0 && mem.throwCd === 0 && me.hp < 45 && canThrow(me, GRENADE_SMOKE)
+      ? smokeAim(me, target, arena)
+      : null;
+    if (smoke !== null) {
+      input.act = ACT_SMOKE;
+      input.aim = smoke;
+      mem.throwCd = 60;
+      mem.retreat = 80;
+    } else if (mem.reaction === 0 && mem.throwCd === 0 && canThrow(me)) {
       const aim = grenadeAim(me, target, arena);
       if (aim !== null) {
         input.act = ACT_THROW;
@@ -212,6 +228,11 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
     if (mem.grenadeHold > 0) {
       mem.grenadeHold--;
       toward = Math.min(0, toward);
+    }
+    // Tiró humo para escapar: se aleja.
+    if (mem.retreat > 0) {
+      mem.retreat--;
+      toward = -1;
     }
     const ux = dx / (dist || 1);
     const uy = dy / (dist || 1);
@@ -297,6 +318,29 @@ function grenadeEscape(state: GameState, me: PlayerState): { x: number; y: numbe
   return null;
 }
 
+/**
+ * Hacia dónde tirar el humo para que la nube quede entre él y el otro, o null.
+ * Como con la granada, se simula: la nube cae donde se frena la lata.
+ */
+function smokeAim(me: PlayerState, target: PlayerState, arena: ArenaMap): number | null {
+  const dx = target.x - me.x;
+  const dy = target.y - me.y;
+  const len2 = dx * dx + dy * dy;
+  // Muy cerca no da tiempo: la nube tarda dos segundos en salir.
+  if (len2 < 200 * 200) return null;
+  const base = Math.atan2(dy, dx);
+  for (const offset of [0, -0.15, 0.15]) {
+    const aim = base + offset;
+    const g = grenadeLaunch({ ...me, aim });
+    while (advanceGrenade(g, arena));
+    // Qué tan cerca de la línea entre los dos queda la nube.
+    const t = Math.max(0, Math.min(1, ((g.x - me.x) * dx + (g.y - me.y) * dy) / len2));
+    const off = Math.hypot(me.x + dx * t - g.x, me.y + dy * t - g.y);
+    if (off < SMOKE_RADIUS * 0.6) return aim;
+  }
+  return null;
+}
+
 const segmentScratch: number[] = [];
 
 /**
@@ -375,8 +419,8 @@ export function wants(me: PlayerState, item: GroundItem): boolean {
     const def = consumableAt(item.ref);
     return def !== undefined && (me.consumables[item.ref] ?? 0) < def.maxStack;
   }
-  // El humo no lo usan: juntarlo sería sólo sacárselo a otro.
-  if (item.kind === ITEM_GRENADE) return item.ref === 0 && me.grenades < GRENADE_MAX_STACK;
+  if (item.kind === ITEM_GRENADE && item.ref === GRENADE_SMOKE) return me.smokes < SMOKE_MAX_STACK;
+  if (item.kind === ITEM_GRENADE) return me.grenades < GRENADE_MAX_STACK;
   if (item.kind === ITEM_ARMOR) return (ARMORS[item.ref]?.shield ?? 0) > me.shield;
   return false;
 }

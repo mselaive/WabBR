@@ -5,7 +5,7 @@ import { generateArena, type ArenaMap, type ObstacleKind } from "../map/arena.js
 import { botInput, createBotMemory, wants, type BotMemory } from "./bot.js";
 import { ObstacleGrid } from "./collision.js";
 import { createGameState, createPlayer, startMatch, step } from "./step.js";
-import { ACT_THROW, type GameState, type PlayerInput, type SimEvent } from "./types.js";
+import { ACT_SMOKE, ACT_THROW, type GameState, type PlayerInput, type SimEvent } from "./types.js";
 
 const arena = generateArena();
 
@@ -136,6 +136,21 @@ describe("bots", () => {
       const shots: boolean[] = [];
       for (let t = 0; t < 10; t++) shots.push(botInput(state, state.players[0]!, mem, barrel).shoot);
       expect(shots.some(Boolean)).toBe(true);
+    });
+
+    it("con poca vida tira humo entre él y el otro; sano, no", () => {
+      const smokesWith = (hp: number): number => {
+        const state = duel(420, 0);
+        const bot = state.players[0]!;
+        bot.hp = hp;
+        bot.smokes = 1;
+        const mem = createBotMemory(5);
+        let n = 0;
+        for (let t = 0; t < 40; t++) if (botInput(state, bot, mem, EMPTY).act === ACT_SMOKE) n++;
+        return n;
+      };
+      expect(smokesWith(30)).toBe(1);
+      expect(smokesWith(100)).toBe(0);
     });
 
     it("de cerca no: la granada rodaría de largo", () => {

@@ -87,8 +87,9 @@ tiro con la misma física del servidor desde tres direcciones y sólo la tira si
 estallar al lado del otro y lejos suyo; así tampoco la tira contra una caja que se
 la devolvería. Después de tirarla no se acerca por dos segundos (antes caminaba
 derecho hacia la explosión), y ya no le dispara a un barril que tiene al lado. En
-ocho partidas de seis bots, el daño que se hacían solos bajó de 1536 a 109. El humo
-no lo usan ni lo juntan.
+ocho partidas de seis bots, el daño que se hacían solos bajó de 1536 a 109. Con poca
+vida tiran **humo** entre ellos y el que les dispara (simulado igual, para que la nube
+quede en la línea entre los dos), se alejan y, sin nadie a la vista, se curan.
 
 Encuentran el camino con A* sobre una grilla de 10 px (`sim/nav.ts`). Yendo en
 línea recta se trababan contra la primera pared, y como casi todas las cajas están
@@ -326,7 +327,7 @@ servidor no te manda a los que el humo tapa y los bots tampoco los ven. La nube
 crece en medio segundo y se achica en los últimos dos, y lo que tapa sigue ese
 radio (`smokeRadius`) tal como se dibuja. Las nubes viajan en el snapshot a
 todos, porque se ven de lejos y son lo que explica que de golpe no veas a nadie.
-Sale de las cajas y del piso; los bots no la juntan porque no la usan. Con esto
+Sale de las cajas y del piso; los bots la usan para escapar (ver Bots). Con esto
 el protocolo pasó a la versión 2: un cliente viejo ve "recargá la página".
 
 **Los barriles explotan.** Tres tiros de pistola (`BARREL_HP`) y estallan igual que

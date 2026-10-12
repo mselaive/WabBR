@@ -170,6 +170,8 @@ export class Predictor {
     s.useIndex = server.useIndex;
     s.grenades = server.grenades;
     s.smokes = server.smokes;
+    // Caído se arrastra y no dispara: la predicción tiene que saberlo.
+    s.downed = server.downed;
     s.fireCd = server.fireCd;
     s.reloadCd = server.reloadCd;
 

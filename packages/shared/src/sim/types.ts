@@ -97,6 +97,18 @@ export interface PlayerState {
   grenades: number;
   /** Granadas de humo. */
   smokes: number;
+  /**
+   * Caído en dúos: sigue en el mapa (`alive`) pero se arrastra y se desangra;
+   * su `hp` es lo que le queda antes de morir. Ver DOWNED_*.
+   */
+  downed: boolean;
+  /** Quién lo tiró y con qué: si se desangra, la kill es de ése. */
+  downedBy: number;
+  downedCause: number;
+  /** A quién está levantando (id), o -1. */
+  reviving: number;
+  /** Ticks que le faltan para terminar de levantarlo. */
+  reviveTicks: number;
   /** Ticks restantes de cooldown de disparo. */
   fireCd: number;
   /** Ticks restantes de recarga. 0 = no está recargando. */
@@ -335,5 +347,9 @@ export type SimEvent =
   | { t: "throw"; byId: number; seq: number; grenade: number; kind: number }
   /** Una granada de humo soltó su nube. */
   | { t: "smoke"; x: number; y: number }
+  /** Cayó (dúos): no murió, lo puede levantar el compañero. */
+  | { t: "down"; targetId: number; byId: number; cause: number }
+  /** Lo levantó el compañero. */
+  | { t: "revive"; targetId: number; byId: number }
   /** Aterrizó un paquete aéreo: su botín llega con eventos "drop". */
   | { t: "airdrop"; x: number; y: number };

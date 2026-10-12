@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { PLAYER_MAX_HP, WORLD_CENTER_X, WORLD_CENTER_Y } from "../constants.js";
+import {
+  DOWNED_BLEED_TICKS,
+  DOWNED_HP,
+  PLAYER_MAX_HP,
+  PLAYER_SPEED,
+  REVIVE_HP,
+  REVIVE_TICKS,
+  WORLD_CENTER_X,
+  WORLD_CENTER_Y,
+} from "../constants.js";
 import { generateArena, type ArenaMap } from "../map/arena.js";
 import { botInput, createBotMemory } from "./bot.js";
 import { ObstacleGrid } from "./collision.js";
 import { applyExplosion, createGameState, createPlayer, startMatch, step } from "./step.js";
-import { emptyInput, type GameState, type PlayerInput, type SimEvent } from "./types.js";
+import { ACT_PICKUP, emptyInput, type GameState, type PlayerInput, type SimEvent } from "./types.js";
 
 const EMPTY: ArenaMap = {
   obstacles: [],
@@ -167,5 +176,105 @@ describe("dúos", () => {
     const shots: boolean[] = [];
     for (let t = 0; t < 30; t++) shots.push(botInput(state, state.players[0]!, mem, EMPTY).shoot);
     expect(shots.some(Boolean)).toBe(true);
+  });
+
+  describe("caído", () => {
+    /** El 3 (rival) le pega al 2 hasta tirarlo; el 1 es su compañero, en pie. */
+    function knock(state: GameState, events: SimEvent[] = []): void {
+      const victim = state.players[1]!;
+      victim.hp = 1;
+      applyExplosion(state, victim.x, victim.y + 20, 3, EMPTY, events);
+    }
+
+    it("con el compañero en pie, a cero no muere: cae", () => {
+      const state = line();
+      const events: SimEvent[] = [];
+      knock(state, events);
+      const victim = state.players[1]!;
+      expect(victim.alive).toBe(true);
+      expect(victim.downed).toBe(true);
+      expect(victim.hp).toBe(DOWNED_HP);
+      expect(events.some((e) => e.t === "down" && e.targetId === 2 && e.byId === 3)).toBe(true);
+      expect(events.some((e) => e.t === "kill")).toBe(false);
+      expect(state.players[2]!.kills).toBe(0);
+    });
+
+    it("solo, o con el compañero ya caído, muere como siempre", () => {
+      const state = line();
+      state.players[0]!.alive = false;
+      const events: SimEvent[] = [];
+      knock(state, events);
+      expect(state.players[1]!.alive).toBe(false);
+      expect(events.some((e) => e.t === "kill")).toBe(true);
+    });
+
+    it("caído se arrastra despacio y no dispara", () => {
+      const state = line();
+      knock(state);
+      const victim = state.players[1]!;
+      const x0 = victim.y;
+      const events: SimEvent[] = [];
+      idle(state, new Map([[2, [{ ...emptyInput(1), moveY: 1, sprint: true, shoot: true, aim: Math.PI / 2 }]]]), events);
+      expect(victim.y - x0).toBeLessThan(PLAYER_SPEED * 0.05 * 0.5);
+      expect(events.some((e) => e.t === "shot")).toBe(false);
+    });
+
+    it("se desangra y la kill es del que lo tiró", () => {
+      const state = line();
+      knock(state);
+      const events: SimEvent[] = [];
+      for (let t = 0; t < DOWNED_BLEED_TICKS + 2; t++) idle(state, new Map(), events);
+      expect(state.players[1]!.alive).toBe(false);
+      expect(state.players[2]!.kills).toBe(1);
+    });
+
+    it("el compañero lo levanta quedándose quieto al lado; moverse lo corta", () => {
+      const state = line();
+      knock(state);
+      const [mate, victim] = state.players;
+      mate!.x = victim!.x - 30;
+      const press = (seq: number) => new Map([[1, [{ ...emptyInput(seq), act: ACT_PICKUP }]]]);
+
+      // Empieza y se mueve a la mitad: no lo levanta.
+      idle(state, press(1));
+      expect(mate!.reviving).toBe(2);
+      for (let t = 0; t < 10; t++) idle(state);
+      idle(state, new Map([[1, [{ ...emptyInput(2), moveX: 1 }]]]));
+      expect(mate!.reviving).toBe(-1);
+      for (let t = 0; t < REVIVE_TICKS; t++) idle(state);
+      expect(victim!.downed).toBe(true);
+
+      // Quieto todo el tiempo: sí.
+      mate!.x = victim!.x - 30;
+      const events: SimEvent[] = [];
+      idle(state, press(3), events);
+      for (let t = 0; t < REVIVE_TICKS + 1; t++) idle(state, new Map(), events);
+      expect(victim!.downed).toBe(false);
+      expect(victim!.hp).toBe(REVIVE_HP);
+      expect(events.some((e) => e.t === "revive" && e.targetId === 2 && e.byId === 1)).toBe(true);
+    });
+
+    it("rematarlo es la kill del que remata", () => {
+      const state = line();
+      knock(state);
+      applyExplosion(state, state.players[1]!.x, state.players[1]!.y + 20, 4, EMPTY, []);
+      applyExplosion(state, state.players[1]!.x, state.players[1]!.y + 20, 4, EMPTY, []);
+      expect(state.players[1]!.alive).toBe(false);
+      expect(state.players[3]!.kills).toBe(1);
+      expect(state.players[2]!.kills).toBe(0);
+    });
+
+    it("si cae el último en pie de la pareja, el caído también se termina", () => {
+      const state = line();
+      knock(state);
+      state.players[0]!.hp = 1;
+      applyExplosion(state, state.players[0]!.x, state.players[0]!.y + 20, 3, EMPTY, []);
+      idle(state);
+      expect(state.players[0]!.alive).toBe(false);
+      expect(state.players[1]!.alive).toBe(false);
+      expect(state.phase).toBe("ended");
+      expect(state.players[2]!.place).toBe(1);
+      expect(state.players[0]!.place).toBe(2);
+    });
   });
 });

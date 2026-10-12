@@ -142,6 +142,25 @@ export const ZONE_PHASES: readonly ZonePhaseConfig[] = [
 export const ZONE_MIN_PACE = 0.5;
 export const ZONE_FULL_PACE_PLAYERS = 8;
 
+// ------------------------------------------------------------ caído (dúos)
+
+/**
+ * En dúos, el que llega a cero con el compañero en pie no muere: cae. Se
+ * arrastra despacio, no puede disparar ni usar nada y se desangra; el
+ * compañero lo levanta quedándose a su lado con E.
+ */
+export const DOWNED_HP = 100;
+/** Lo que tarda en desangrarse si nadie lo levanta ni lo remata: 30 segundos. */
+export const DOWNED_BLEED_TICKS = 30 * 20;
+/** Velocidad arrastrándose, como fracción de la normal. */
+export const DOWNED_SPEED_MULT = 0.3;
+/** Lo que tarda en levantarlo: cuatro segundos quieto a su lado. */
+export const REVIVE_TICKS = 4 * 20;
+/** A qué distancia hay que estar para levantarlo. */
+export const REVIVE_RANGE = 56;
+/** Con cuánta vida se levanta. */
+export const REVIVE_HP = 30;
+
 // ---------------------------------------------------------------- partida
 
 export const MIN_PLAYERS = 2;

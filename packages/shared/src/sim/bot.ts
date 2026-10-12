@@ -5,6 +5,7 @@ import {
   GRENADE_FUSE_TICKS,
   GRENADE_MAX_STACK,
   PLAYER_RADIUS,
+  REVIVE_RANGE,
   SMOKE_MAX_STACK,
   SMOKE_RADIUS,
 } from "../constants.js";
@@ -164,8 +165,34 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
   if (!me.alive || state.phase !== "playing") return input;
 
   const target = nearestEnemy(state, me, arena);
+
+  // Caído: arrastrarse lejos del que tiene a la vista, o hacia el compañero.
+  if (me.downed) {
+    const mate = state.players.find((p) => p !== me && p.team === me.team && p.alive && !p.downed);
+    const away = target ? { x: me.x * 2 - target.x, y: me.y * 2 - target.y } : mate ? { x: mate.x, y: mate.y } : null;
+    steer(me, mem, away, input, target ? null : arena, state);
+    input.sprint = false;
+    return input;
+  }
+
+  // Levantando al compañero: quieto hasta terminar, salvo que aparezca alguien.
+  if (me.reviving >= 0 && !target) return input;
+
   // Curándose no se mueve ni dispara: moverse cancela la curación.
   if (me.useCd > 0 && !target) return input;
+
+  // Sin nadie a la vista y con el compañero caído: ir a levantarlo.
+  if (!target) {
+    const fallen = state.players.find((p) => p !== me && p.team === me.team && p.alive && p.downed);
+    if (fallen) {
+      if (Math.hypot(fallen.x - me.x, fallen.y - me.y) < REVIVE_RANGE - 12) {
+        input.act = ACT_PICKUP;
+        return input;
+      }
+      steer(me, mem, { x: fallen.x, y: fallen.y }, input, arena, state);
+      return input;
+    }
+  }
 
   let goal: { x: number; y: number } | null = null;
 
@@ -366,17 +393,20 @@ function barrelInTheWay(state: GameState, me: PlayerState, target: PlayerState, 
 
 function nearestEnemy(state: GameState, me: PlayerState, arena: ArenaMap): PlayerState | null {
   let best: PlayerState | null = null;
-  let bestDist = SIGHT * SIGHT;
+  let bestScore = Infinity;
   for (const p of state.players) {
     // En dúos, al compañero no se le tira.
     if (!p.alive || p.team === me.team) continue;
     const d2 = (p.x - me.x) ** 2 + (p.y - me.y) ** 2;
-    if (d2 >= bestDist) continue;
+    if (d2 >= SIGHT * SIGHT) continue;
+    // Uno caído pesa menos: primero el que todavía le puede tirar.
+    const score = p.downed ? d2 * 4 : d2;
+    if (score >= bestScore) continue;
     // Lo mismo que vería un jugador: ni a través de paredes ni adentro de un arbusto.
     if (concealedFrom(state, p, me.x, me.y)) continue;
     if (!hasLineOfSight(me.x, me.y, p.x, p.y, arena)) continue;
     best = p;
-    bestDist = d2;
+    bestScore = score;
   }
   return best;
 }

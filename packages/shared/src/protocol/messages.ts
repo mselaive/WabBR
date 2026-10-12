@@ -180,13 +180,18 @@ export const SP_STAMINA = 20;
 export const SP_STAMINA_DELAY = 21;
 export const SP_GRENADES = 22;
 export const SP_SMOKES = 23;
+/** A quién está levantando (id, o -1) y cuánto le falta. */
+export const SP_REVIVING = 24;
+export const SP_REVIVE_TICKS = 25;
 /** Sólo en la tupla del propio jugador: ver `packPlayer(p, own)`. */
-export const SP_FIRE_CD = 24;
-export const SP_RELOAD_CD = 25;
+export const SP_FIRE_CD = 26;
+export const SP_RELOAD_CD = 27;
 
 export const FLAG_ALIVE = 1;
 export const FLAG_RELOADING = 2;
 export const FLAG_CONNECTED = 4;
+/** Caído en dúos (ver PlayerState.downed). */
+export const FLAG_DOWNED = 8;
 
 export interface WelcomeMsg {
   t: "welcome";

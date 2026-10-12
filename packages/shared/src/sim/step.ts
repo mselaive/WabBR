@@ -10,6 +10,12 @@ import {
   GRENADE_MAX_STACK,
   GRENADE_RADIUS,
   GRENADE_SPEED,
+  DOWNED_BLEED_TICKS,
+  DOWNED_HP,
+  DOWNED_SPEED_MULT,
+  REVIVE_HP,
+  REVIVE_RANGE,
+  REVIVE_TICKS,
   SMOKE_MAX_STACK,
   SMOKE_TICKS,
   SPRINT_MULT,
@@ -118,6 +124,11 @@ export function createPlayer(id: number, x = 0, y = 0): PlayerState {
     staminaDelay: 0,
     grenades: 0,
     smokes: 0,
+    downed: false,
+    downedBy: -1,
+    downedCause: 0,
+    reviving: -1,
+    reviveTicks: 0,
     fireCd: 0,
     reloadCd: 0,
     lastSeq: 0,
@@ -277,6 +288,11 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
     p.staminaDelay = 0;
     p.grenades = 0;
     p.smokes = 0;
+    p.downed = false;
+    p.downedBy = -1;
+    p.downedCause = 0;
+    p.reviving = -1;
+    p.reviveTicks = 0;
     p.fireCd = 0;
     p.reloadCd = 0;
     p.diedAtTick = -1;
@@ -377,10 +393,12 @@ export function stepPlayerMovement(p: PlayerState, input: PlayerInput, arena: Ar
   // `boostTicks` y `stamina` viajan en el snapshot: si el cliente no los
   // supiera, predeciría de más en cuanto se le acabara la estamina.
   let speed = p.boostTicks > 0 ? PLAYER_SPEED * 1.2 : PLAYER_SPEED;
+  // Caído se arrastra. Como `downed` viaja en el snapshot, la predicción frena igual.
+  if (p.downed) speed = PLAYER_SPEED * DOWNED_SPEED_MULT;
 
   // La estamina se resuelve acá adentro, junto con el movimiento, para que el
   // cliente llegue exactamente al mismo número que el servidor al reaplicar.
-  const canSprint = input.sprint && len2 > 0 && p.useCd === 0 && p.stamina > 0;
+  const canSprint = input.sprint && len2 > 0 && p.useCd === 0 && p.stamina > 0 && !p.downed;
   if (canSprint) {
     speed *= SPRINT_MULT;
     p.stamina = Math.max(0, p.stamina - STAMINA_DRAIN * DT);
@@ -617,7 +635,17 @@ function handleAction(
   arena: ArenaMap,
   events: SimEvent[],
 ): void {
+  // Caído no hace nada más que arrastrarse.
+  if (p.downed) return;
+
   if (act === ACT_PICKUP) {
+    // Si hay un compañero caído al lado, E lo levanta antes que recoger.
+    const mate = downedMateNear(state, p);
+    if (mate) {
+      p.reviving = mate.id;
+      p.reviveTicks = REVIVE_TICKS;
+      return;
+    }
     tryPickup(state, p, arena, events);
     return;
   }
@@ -641,6 +669,7 @@ function handleAction(
  * como recoger o tirar una granada.
  */
 export function applySelfAction(p: PlayerState, act: number): void {
+  if (p.downed) return;
   if (act === ACT_SLOT_0 || act === ACT_SLOT_1) {
     const slot = act === ACT_SLOT_0 ? 0 : 1;
     if (slot === p.activeSlot || p.slots[slot] === -1) return;
@@ -713,6 +742,7 @@ export function stepConsumable(
  */
 export function stepWeaponState(p: PlayerState, input: PlayerInput, events: SimEvent[]): number {
   if (p.fireCd > 0) p.fireCd--;
+  if (p.downed) return -1;
 
   const weaponIndex = activeWeapon(p);
   if (weaponIndex < 0) return -1;
@@ -870,13 +900,90 @@ function applyDamage(
   }
   if (left > 0) target.hp -= left;
 
-  // Cualquier golpe corta la curación en curso.
+  // Cualquier golpe corta la curación en curso, y también levantar a alguien.
   if (target.useCd > 0) {
     target.useCd = 0;
     target.useIndex = -1;
   }
+  target.reviving = -1;
 
-  if (target.hp <= 0) killPlayer(state, target, byId, cause, events);
+  if (target.hp <= 0) downOrKill(state, target, byId, cause, events);
+}
+
+/** ¿Hay alguien de su equipo en pie (y no caído)? Entonces puede caer en vez de morir. */
+function hasStandingMate(state: GameState, p: PlayerState): boolean {
+  return state.players.some((q) => q !== p && q.team === p.team && q.alive && !q.downed);
+}
+
+/**
+ * Llegó a cero. En dúos, con el compañero en pie, cae; si ya estaba caído (o
+ * está solo), muere. Rematar a un caído es la kill del que remata; si lo
+ * termina la zona, del que lo tiró.
+ */
+function downOrKill(state: GameState, target: PlayerState, byId: number, cause: number, events: SimEvent[]): void {
+  if (!target.downed && hasStandingMate(state, target)) {
+    target.downed = true;
+    target.hp = DOWNED_HP;
+    target.shield = 0;
+    target.useCd = 0;
+    target.useIndex = -1;
+    target.reloadCd = 0;
+    target.boostTicks = 0;
+    target.reviving = -1;
+    target.downedBy = byId;
+    target.downedCause = cause;
+    events.push({ t: "down", targetId: target.id, byId, cause });
+    return;
+  }
+  const credit = target.downed && (byId < 0 || byId === target.id) ? target.downedBy : byId;
+  killPlayer(state, target, credit, target.downed && byId < 0 ? target.downedCause : cause, events);
+}
+
+/** El compañero caído más cercano al alcance de `p`, o undefined. */
+function downedMateNear(state: GameState, p: PlayerState): PlayerState | undefined {
+  let best: PlayerState | undefined;
+  let bestD = REVIVE_RANGE;
+  for (const q of state.players) {
+    if (q === p || !q.alive || !q.downed || q.team !== p.team) continue;
+    const d = Math.hypot(q.x - p.x, q.y - p.y);
+    if (d <= bestD) {
+      best = q;
+      bestD = d;
+    }
+  }
+  return best;
+}
+
+/**
+ * Lo que pasa con los caídos y los que los levantan en cada tick: se
+ * desangran, y el que levanta avanza si sigue al lado (moverse, disparar o
+ * recibir un tiro lo corta, ver step()).
+ */
+function stepDowned(state: GameState, events: SimEvent[]): void {
+  for (const p of state.players) {
+    if (!p.alive) continue;
+    if (p.reviving >= 0) {
+      const target = findPlayer(state, p.reviving);
+      if (
+        p.downed ||
+        !target ||
+        !target.alive ||
+        !target.downed ||
+        Math.hypot(target.x - p.x, target.y - p.y) > REVIVE_RANGE + 12
+      ) {
+        p.reviving = -1;
+      } else if (--p.reviveTicks <= 0) {
+        target.downed = false;
+        target.hp = REVIVE_HP;
+        p.reviving = -1;
+        events.push({ t: "revive", targetId: target.id, byId: p.id });
+      }
+    }
+    if (p.downed) {
+      p.hp -= DOWNED_HP / DOWNED_BLEED_TICKS;
+      if (p.hp <= 0) killPlayer(state, p, p.downedBy, p.downedCause, events);
+    }
+  }
 }
 
 function killPlayer(
@@ -1347,7 +1454,7 @@ function stepZone(state: GameState, arena: ArenaMap, events: SimEvent[]): void {
       p.useCd = 0;
       p.useIndex = -1;
     }
-    if (p.hp <= 0) killPlayer(state, p, -1, CAUSE_ZONE, events);
+    if (p.hp <= 0) downOrKill(state, p, -1, CAUSE_ZONE, events);
   }
 }
 
@@ -1408,6 +1515,8 @@ export function step(
         }
         stepConsumable(p, one, events);
         stepWeapon(state, p, one, events);
+        // Levantar a alguien es quedarse quieto a su lado: moverse o tirar lo corta.
+        if (p.reviving >= 0 && (one.moveX !== 0 || one.moveY !== 0 || one.shoot)) p.reviving = -1;
       }
     } else {
       p.vx = 0;
@@ -1432,11 +1541,18 @@ export function step(
     p.inBush = bushAt(arena, p.x, p.y);
   }
 
+  stepDowned(state, events);
   stepSmokes(state);
   stepGrenades(state, arena, events);
   stepBullets(state, arena, events);
   stepZone(state, arena, events);
   stepAirdrops(state, events);
+
+  // Una pareja con los dos caídos ya no tiene quién la levante: se terminan.
+  const standing = new Set(state.players.filter((p) => p.alive && !p.downed).map((p) => p.team));
+  for (const p of state.players) {
+    if (p.alive && p.downed && !standing.has(p.team)) killPlayer(state, p, p.downedBy, p.downedCause, events);
+  }
 
   const alive = state.players.filter((p) => p.alive);
   const aliveTeams = new Set(alive.map((p) => p.team));

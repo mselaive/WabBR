@@ -17,6 +17,9 @@ import {
   WORLD_RADIUS,
   WEAPON_IDS,
   ZONE_PHASES,
+  DOWNED_HP,
+  REVIVE_RANGE,
+  REVIVE_TICKS,
   bushAt,
   segmentBoxT,
   smokeRadius,
@@ -278,7 +281,7 @@ export class Game {
         enFrame: () => {
           const frame = this.snapshots.sample(performance.now() - INTERP_DELAY_MS);
           const mine = frame?.players.find((p) => p.id === this.localId);
-          return mine ? { alive: mine.alive, x: Math.round(mine.x), y: Math.round(mine.y) } : null;
+          return mine ? { alive: mine.alive, downed: mine.downed, x: Math.round(mine.x), y: Math.round(mine.y) } : null;
         },
       };
     }
@@ -704,6 +707,34 @@ export class Game {
           this.world.setCrateOpen(ev.crateId);
           this.world.spawnImpact(ev.x, ev.y);
           break;
+        case "down": {
+          // Cayó, no murió: en el registro, con el arma, y "(caído)".
+          const victim = this.roster.get(ev.targetId);
+          const by = ev.byId >= 0 ? this.roster.get(ev.byId) : undefined;
+          this.ui.addKill({
+            killerName: by?.name ?? null,
+            killerColor: cssColor(playerColor(by?.colorIndex ?? 0)),
+            victimName: `${victim?.name ?? "Alguien"} (caído)`,
+            victimColor: cssColor(playerColor(victim?.colorIndex ?? 0)),
+            iconUrl: causeIconUrl(ev.cause),
+            involvesMe: ev.targetId === this.localId || ev.byId === this.localId,
+          });
+          if (ev.targetId === this.localId) {
+            this.sound.death();
+            this.ui.addNotice("Caíste: tu compañero te puede levantar con E");
+          } else if (this.mates().has(ev.targetId)) {
+            this.ui.addNotice(`${victim?.name ?? "Tu compañero"} cayó: andá a levantarlo con E`);
+          }
+          break;
+        }
+        case "revive": {
+          if (ev.targetId === this.localId || ev.byId === this.localId) {
+            this.sound.pickup();
+            const other = this.roster.get(ev.targetId === this.localId ? ev.byId : ev.targetId)?.name ?? "";
+            this.ui.addNotice(ev.targetId === this.localId ? `${other} te levantó` : `Levantaste a ${other}`);
+          }
+          break;
+        }
         case "kill": {
           const victim = this.roster.get(ev.targetId);
           const killer = ev.byId >= 0 ? this.roster.get(ev.byId) : undefined;
@@ -1085,8 +1116,8 @@ export class Game {
       { key: "H", name: "Humo", count: shown?.smokes ?? 0 },
     ]);
 
-    this.updatePickupPrompt(me, localPredicted);
-    this.updateChannel(me);
+    this.updatePickupPrompt(me, localPredicted, frame.players);
+    this.updateChannel(me, frame.players);
     this.updateZoneAlert(frame, me, localPredicted);
 
     if (this.phase === "countdown") {
@@ -1130,9 +1161,24 @@ export class Game {
   private updatePickupPrompt(
     me: UnpackedPlayer | null,
     localPredicted: { x: number; y: number } | null,
+    players: readonly UnpackedPlayer[],
   ): void {
-    if (!me?.alive || !localPredicted || this.phase !== "playing") {
+    if (!me?.alive || me.downed || !localPredicted || this.phase !== "playing") {
       this.ui.setPickup(null);
+      return;
+    }
+
+    // Lo mismo que el servidor: un compañero caído al lado va antes que todo.
+    const mates = this.mates();
+    const fallen = players.find(
+      (p) =>
+        p.alive &&
+        p.downed &&
+        mates.has(p.id) &&
+        Math.hypot(p.x - localPredicted.x, p.y - localPredicted.y) <= REVIVE_RANGE,
+    );
+    if (fallen) {
+      this.ui.setPickup(me.reviving === fallen.id ? null : `Levantar a ${this.everyone.get(fallen.id)?.name ?? ""}`);
       return;
     }
 
@@ -1208,7 +1254,18 @@ export class Game {
     );
   }
 
-  private updateChannel(me: UnpackedPlayer | null): void {
+  private updateChannel(me: UnpackedPlayer | null, players: readonly UnpackedPlayer[]): void {
+    // Caído: o te están levantando, o te desangrás.
+    if (me?.alive && me.downed) {
+      const helper = players.find((p) => p.reviving === me.id);
+      if (helper) this.ui.setChannel(1 - helper.reviveTicks / REVIVE_TICKS, "TE ESTÁN LEVANTANDO");
+      else this.ui.setChannel(me.hp / DOWNED_HP, "TE DESANGRÁS");
+      return;
+    }
+    if (me?.alive && me.reviving >= 0) {
+      this.ui.setChannel(1 - me.reviveTicks / REVIVE_TICKS, "LEVANTANDO");
+      return;
+    }
     if (!me?.alive || me.useCd <= 0) {
       this.ui.setChannel(null, "");
       return;

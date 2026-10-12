@@ -140,6 +140,19 @@ compañero. Los bots juegan en pareja igual (no se tiran entre ellos ni huyen de
 granada del compañero). En la simulación, todos contra todos es lo mismo con equipos de
 uno (`PlayerState.team` es el propio id), así que no hay dos caminos para cada regla.
 
+**Caer y levantar.** En dúos, el que llega a cero con el compañero todavía en pie no
+muere: **cae**. Queda acostado, con "(caído)" en el nombre, se arrastra a un tercio de la
+velocidad, no puede disparar ni usar nada y se desangra en 30 segundos (la barra roja
+sobre él y "TE DESANGRÁS" en su HUD). El compañero lo levanta con `E` quedándose quieto a
+su lado 4 segundos —moverse, disparar o recibir un tiro lo corta— y vuelve con 30 de
+vida. Rematar a un caído es la kill del que remata; si se desangra o lo termina la zona,
+del que lo tiró. Si cae el último en pie de la pareja, el caído también se termina. En el
+registro se ve "(caído)", y el compañero recibe el aviso de ir a levantarlo. Los bots se
+arrastran lejos del que les tira, prefieren tirarle al que todavía les puede devolver los
+tiros y, sin nadie a la vista, van a levantar al suyo. Todo vive en la simulación
+compartida (`downed`, `stepDowned`, `downOrKill`): `downed` viaja en el snapshot, así la
+predicción del cliente también se arrastra y no dispara.
+
 **Marcas.** En dúos, `F` marca donde apunta el cursor y un click (o un toque) en el
 minimapa marca ese lugar: a tu compañero le aparece un rombo del color tuyo encima del
 lugar —o una flecha en el borde si está fuera de pantalla—, un anillo en el minimapa y

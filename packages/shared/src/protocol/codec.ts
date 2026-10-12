@@ -13,6 +13,7 @@ import type {
 import {
   FLAG_ALIVE,
   FLAG_CONNECTED,
+  FLAG_DOWNED,
   FLAG_RELOADING,
   SP_ACTIVE_SLOT,
   SP_AIM,
@@ -34,6 +35,8 @@ import {
   SP_SLOT_1_TIER,
   SP_GRENADES,
   SP_SMOKES,
+  SP_REVIVE_TICKS,
+  SP_REVIVING,
   SP_STAMINA,
   SP_STAMINA_DELAY,
   SP_USE_CD,
@@ -116,6 +119,7 @@ export function packPlayer(p: PlayerState, own = false): SnapPlayer {
   if (p.alive) flags |= FLAG_ALIVE;
   if (p.reloadCd > 0) flags |= FLAG_RELOADING;
   if (p.connected) flags |= FLAG_CONNECTED;
+  if (p.downed) flags |= FLAG_DOWNED;
   const other = p.activeSlot === 0 ? 1 : 0;
   const packed = [
     p.id,
@@ -142,6 +146,8 @@ export function packPlayer(p: PlayerState, own = false): SnapPlayer {
     p.staminaDelay,
     p.grenades,
     p.smokes,
+    p.reviving,
+    p.reviveTicks,
   ];
   if (own) packed.push(p.fireCd, p.reloadCd);
   return packed;
@@ -236,6 +242,11 @@ export interface UnpackedPlayer {
   staminaDelay: number;
   grenades: number;
   smokes: number;
+  /** Caído en dúos. */
+  downed: boolean;
+  /** A quién está levantando (-1 si a nadie) y cuánto le falta. */
+  reviving: number;
+  reviveTicks: number;
   /** Ticks de cadencia y de recarga que faltan. Sólo vienen en el propio; en los demás, 0. */
   fireCd: number;
   reloadCd: number;
@@ -288,6 +299,9 @@ export function unpackPlayer(s: SnapPlayer): UnpackedPlayer {
     staminaDelay: s[SP_STAMINA_DELAY] ?? 0,
     grenades: s[SP_GRENADES] ?? 0,
     smokes: s[SP_SMOKES] ?? 0,
+    downed: (flags & FLAG_DOWNED) !== 0,
+    reviving: s[SP_REVIVING] ?? -1,
+    reviveTicks: s[SP_REVIVE_TICKS] ?? 0,
     fireCd: s[SP_FIRE_CD] ?? 0,
     reloadCd: s[SP_RELOAD_CD] ?? 0,
   };

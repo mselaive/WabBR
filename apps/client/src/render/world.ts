@@ -86,6 +86,7 @@ function project(x: number, y: number, lx: number, ly: number): { x: number; y: 
 
 interface PlayerView {
   root: Container;
+  body: Sprite;
   shirt: Sprite;
   gun: Sprite;
   flash: Sprite;
@@ -757,7 +758,7 @@ export class WorldView {
     root.addChild(shadow, gun, flash, body, shirt, hpBar, label);
     this.entityLayer.addChild(root);
 
-    const view: PlayerView = { root, shirt, gun, flash, label, hpBar, lastAmmo: -1 };
+    const view: PlayerView = { root, body, shirt, gun, flash, label, hpBar, lastAmmo: -1 };
     this.players.set(id, view);
     return view;
   }
@@ -806,23 +807,35 @@ export class WorldView {
       view.flash.rotation = aim;
       view.flash.position.set(Math.cos(aim) * 24, Math.sin(aim) * 24 + 2);
 
-      if (meta) {
+      if (meta && !p.downed) {
         if (view.label.text !== meta.name) view.label.text = meta.name;
         view.shirt.tint = playerColor(meta.colorIndex);
       }
-      view.label.visible = !isLocal;
+      view.label.visible = !isLocal || p.downed;
       // El compañero se distingue de lejos: nombre en verde.
       view.label.style.fill = mates.has(p.id) ? 0x7dff9a : 0xffffff;
 
+      // Caído: acostado, sin arma y con el nombre avisándolo. Es lo que le dice
+      // al compañero "vení a levantarme" y al rival "rematalo".
+      const lying = p.downed ? Math.PI / 2 : 0;
+      view.body.rotation = lying;
+      view.shirt.rotation = lying;
+      view.gun.visible = !p.downed;
+      if (p.downed) {
+        const name = isLocal ? "Caíste" : `${meta?.name ?? ""} (caído)`;
+        if (view.label.text !== name) view.label.text = name;
+      }
+
       // Barra de vida sobre los demás; la propia ya está en el HUD.
       view.hpBar.clear();
-      if (!isLocal && p.hp > 0) {
+      if ((!isLocal || p.downed) && p.hp > 0) {
         const w = 30;
         view.hpBar
           .rect(-w / 2 - 1, -4, w + 2, 6)
           .fill({ color: 0x000000, alpha: 0.55 })
           .rect(-w / 2, -3, (w * p.hp) / 100, 4)
-          .fill(p.hp > 50 ? 0x5cd97a : p.hp > 25 ? 0xffc94a : 0xff5c5c);
+          // Caído, la barra es lo que le queda antes de desangrarse: roja siempre.
+          .fill(p.downed ? 0xff3b3b : p.hp > 50 ? 0x5cd97a : p.hp > 25 ? 0xffc94a : 0xff5c5c);
       }
     }
 

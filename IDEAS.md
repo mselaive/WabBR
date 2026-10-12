@@ -33,6 +33,7 @@ Ninguno está en `main`: un push a `main` despliega solo a wabbo.org.
 | Bots con granadas | Tiran granadas (simulando el tiro), se escapan de las ajenas, no le disparan a un barril que tienen al lado y con poca vida tiran humo para irse a curar: el daño que se hacían solos bajó de 1536 a 109 en 8 partidas | Tests (con control) + medición en 8 partidas |
 | Dúos | El host elige "Dúos" en el lobby: parejas al azar que aparecen juntas, no se lastiman, se ven siempre y ganan juntas | 7 tests (con control) + una partida de dúos en el navegador hasta el podio |
 | Elegir pareja | En dúos, "Pareja" en cada fila del lobby; si dos se eligen, juegan juntos (un bot acepta solo) | Test de la simulación con 5 sorteos + `scripts/marks.mjs` |
+| Caer y levantar | En dúos, a cero con el compañero en pie caés: te arrastrás, te desangrás en 30 s y él te levanta con E en 4 s. Los bots también | 7 tests + 8 partidas de dúos de bots (31 caídas, 3 levantadas) + captura del caído |
 | Marcas para la pareja | `F` o click en el minimapa: rombo, flecha en el borde y anillo en el minimapa, sólo para tu compañero | `scripts/marks.mjs` (compañero sí, rival no) + captura |
 | Controles táctiles | Dos sticks flotantes, HUD tocable, Recargar/Tabla, aviso de girar el teléfono | Chrome emulando un teléfono con toques de dos dedos; **no probado en un teléfono real** |
 

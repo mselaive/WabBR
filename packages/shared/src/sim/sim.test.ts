@@ -7,6 +7,8 @@ import {
   WORLD_CENTER_X,
   WORLD_CENTER_Y,
   WORLD_RADIUS,
+  ZONE_FULL_PACE_PLAYERS,
+  ZONE_MIN_PACE,
   ZONE_PHASES,
   AIRDROP_FALL_TICKS,
 } from "../constants.js";
@@ -237,6 +239,31 @@ describe("zona", () => {
 
     expect(inside.hp).toBe(PLAYER_MAX_HP);
     expect(outside.alive).toBe(false);
+  });
+
+  it("con pocos jugadores las esperas son más cortas; con muchos, las normales", () => {
+    const firstWait = (players: number): number => {
+      const state = createGameState(4);
+      for (let i = 1; i <= players; i++) state.players.push(createPlayer(i));
+      startMatch(state, 77);
+      return state.zone.ticksLeft;
+    };
+    const full = ZONE_PHASES[0]!.waitTicks;
+    expect(firstWait(2)).toBe(Math.round(full * ZONE_MIN_PACE));
+    expect(firstWait(4)).toBeGreaterThan(firstWait(2));
+    expect(firstWait(4)).toBeLessThan(full);
+    expect(firstWait(ZONE_FULL_PACE_PLAYERS)).toBe(full);
+    expect(firstWait(16)).toBe(full);
+
+    // También la espera de las fases siguientes, no sólo la primera.
+    const state = createGameState(4);
+    state.players.push(createPlayer(1), createPlayer(2));
+    startMatch(state, 77);
+    state.zone.shrinking = true;
+    state.zone.ticksLeft = 1;
+    step(state, new Map(), [], EMPTY_ARENA);
+    expect(state.zone.phase).toBe(1);
+    expect(state.zone.ticksLeft).toBe(Math.round(ZONE_PHASES[1]!.waitTicks * ZONE_MIN_PACE));
   });
 });
 

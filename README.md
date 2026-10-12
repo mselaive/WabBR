@@ -298,6 +298,16 @@ Los segundos salen sólo de la vida, porque la zona no mira el chaleco. Y se mid
 tu posición predicha contra la zona tal como se dibuja: el aviso salta justo cuando
 ves que cruzás la línea, no un ping después.
 
+### Ritmo según cuántos juegan
+
+El mapa está pensado para 16. Con 2 o 3 personas se caminaba mucho antes de
+cruzarse con alguien, así que las **esperas** de la zona se acortan según cuántos
+arrancaron la partida (bots incluidos): con 2 duran la mitad, y crecen parejo
+hasta lo normal con 8 o más. Las contracciones no cambian: la zona no corre más
+rápido, sólo empieza a cerrar antes. Una partida de dos dura unos 3 minutos y
+medio en vez de 5. Los números están en `ZONE_MIN_PACE` y
+`ZONE_FULL_PACE_PLAYERS`.
+
 ## Fin de la partida
 
 El resultado se ordena por **puesto**, que es lo que decide un battle royale: el

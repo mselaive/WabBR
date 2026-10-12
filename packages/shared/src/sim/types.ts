@@ -200,6 +200,8 @@ export interface ZoneState {
   fromRadius: number;
   fromX: number;
   fromY: number;
+  /** Multiplica las esperas de cada fase: menos de 1 con pocos jugadores. */
+  pace: number;
 }
 
 export interface GameState {

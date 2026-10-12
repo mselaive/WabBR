@@ -118,6 +118,15 @@ export const ZONE_PHASES: readonly ZonePhaseConfig[] = [
   { radiusFactor: 0.0, waitTicks: 20 * TICK_RATE, shrinkTicks: 20 * TICK_RATE, dps: 16 },
 ];
 
+/**
+ * Con pocos jugadores en un mapa pensado para 16 se camina mucho antes de
+ * cruzarse con alguien. Las esperas de la zona (no las contracciones) se
+ * acortan: con 2 duran ZONE_MIN_PACE de lo normal, y desde
+ * ZONE_FULL_PACE_PLAYERS en adelante, lo normal.
+ */
+export const ZONE_MIN_PACE = 0.5;
+export const ZONE_FULL_PACE_PLAYERS = 8;
+
 // ---------------------------------------------------------------- partida
 
 export const MIN_PLAYERS = 2;

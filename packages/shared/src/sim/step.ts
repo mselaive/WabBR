@@ -20,12 +20,15 @@ import {
   BARREL_HP,
   ENDED_TICKS,
   LAG_COMP_MAX_TICKS,
+  MIN_PLAYERS,
   PLAYER_MAX_HP,
   PLAYER_RADIUS,
   PLAYER_SPEED,
   WORLD_CENTER_X,
   WORLD_CENTER_Y,
   WORLD_RADIUS,
+  ZONE_FULL_PACE_PLAYERS,
+  ZONE_MIN_PACE,
   ZONE_PHASES,
 } from "../constants.js";
 import { lerp, makeRng, nextRandom } from "../math.js";
@@ -125,7 +128,13 @@ export function createPlayer(id: number, x = 0, y = 0): PlayerState {
   };
 }
 
-export function createZone(): ZoneState {
+/** Cuánto duran las esperas de la zona con `players` en la partida (1 = lo normal). */
+export function zonePace(players: number): number {
+  const t = (players - MIN_PLAYERS) / (ZONE_FULL_PACE_PLAYERS - MIN_PLAYERS);
+  return ZONE_MIN_PACE + (1 - ZONE_MIN_PACE) * Math.max(0, Math.min(1, t));
+}
+
+export function createZone(pace = 1): ZoneState {
   const first = ZONE_PHASES[0]!;
   return {
     x: WORLD_CENTER_X,
@@ -133,13 +142,14 @@ export function createZone(): ZoneState {
     radius: WORLD_RADIUS,
     phase: 0,
     shrinking: false,
-    ticksLeft: first.waitTicks,
+    ticksLeft: Math.round(first.waitTicks * pace),
     targetX: WORLD_CENTER_X,
     targetY: WORLD_CENTER_Y,
     targetRadius: WORLD_RADIUS,
     fromRadius: WORLD_RADIUS,
     fromX: WORLD_CENTER_X,
     fromY: WORLD_CENTER_Y,
+    pace,
   };
 }
 
@@ -180,7 +190,7 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
   state.nextAirdropId = 1;
   state.barrelHp = new Map();
   state.explodedBarrels = [];
-  state.zone = createZone();
+  state.zone = createZone(zonePace(active.length));
   state.rng = seed | 0;
   state.winnerId = -1;
   state.tick = 0;
@@ -1241,7 +1251,7 @@ function stepZone(state: GameState, arena: ArenaMap, events: SimEvent[]): void {
         z.shrinking = false;
         z.phase++;
         const next = ZONE_PHASES[z.phase];
-        z.ticksLeft = next ? next.waitTicks : 0;
+        z.ticksLeft = next ? Math.round(next.waitTicks * z.pace) : 0;
       }
     }
   }

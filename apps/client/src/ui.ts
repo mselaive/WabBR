@@ -1,4 +1,4 @@
-import { MIN_PLAYERS, playerColor, type PlayerMeta } from "@wabbr/shared";
+import { MAX_PLAYERS, MIN_PLAYERS, playerColor, type PlayerMeta } from "@wabbr/shared";
 import { playerPortraitUrl } from "./render/textures.js";
 
 export type ScreenName = "menu" | "lobby" | "result" | "connecting" | null;
@@ -10,6 +10,7 @@ export interface UICallbacks {
   onStart: () => void;
   onLeave: () => void;
   onKick: (id: number) => void;
+  onAddBot: () => void;
 }
 
 const NAME_KEY = "wabbr:name";
@@ -92,6 +93,7 @@ export class UI {
   private readonly playerList = el("playerList");
   private readonly btnReady = el<HTMLButtonElement>("btnReady");
   private readonly btnStart = el<HTMLButtonElement>("btnStart");
+  private readonly btnAddBot = el<HTMLButtonElement>("btnAddBot");
   private readonly lobbyHint = el("lobbyHint");
 
   private readonly aliveEl = el("alive");
@@ -163,6 +165,7 @@ export class UI {
     });
 
     this.btnStart.addEventListener("click", () => this.cb.onStart());
+    this.btnAddBot.addEventListener("click", () => this.cb.onAddBot());
     el("btnLeave").addEventListener("click", () => this.cb.onLeave());
 
     this.roomCode.addEventListener("click", () => this.copyInvite());
@@ -261,6 +264,12 @@ export class UI {
           tag.textContent = "HOST";
           li.append(tag);
         }
+        if (p.bot) {
+          const tag = document.createElement("span");
+          tag.className = "tag bot";
+          tag.textContent = "BOT";
+          li.append(tag);
+        }
         const state = document.createElement("span");
         state.className = p.ready ? "tag ready" : "tag";
         state.textContent = p.away ? "sin conexión" : p.ready ? "LISTO" : "esperando";
@@ -286,10 +295,16 @@ export class UI {
     const isHost = hostId === localId;
     this.btnStart.hidden = !isHost;
     this.btnStart.disabled = roster.length < MIN_PLAYERS;
+    // Bots para completar la sala o practicar solo. El servidor vuelve a
+    // comprobar que seas el host y que haya lugar.
+    this.btnAddBot.hidden = !isHost;
+    this.btnAddBot.disabled = roster.length >= MAX_PLAYERS;
 
     this.lobbyHint.textContent =
       roster.length < MIN_PLAYERS
-        ? `Hacen falta al menos ${MIN_PLAYERS} jugadores.`
+        ? isHost
+          ? `Hacen falta al menos ${MIN_PLAYERS} jugadores: invitá a alguien o agregá un bot.`
+          : `Hacen falta al menos ${MIN_PLAYERS} jugadores.`
         : isHost
           ? "Cuando estén todos listos arranca sola, o podés forzarla."
           : "La partida arranca cuando estén todos listos.";

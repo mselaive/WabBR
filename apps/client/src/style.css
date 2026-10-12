@@ -517,6 +517,10 @@ input:focus {
   color: var(--gold);
 }
 
+.tag.bot {
+  color: var(--accent);
+}
+
 /* Echar a alguien: discreto hasta que lo apuntás, para no invitar al clic. */
 .kick {
   flex: none;

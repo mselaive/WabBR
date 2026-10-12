@@ -7,6 +7,9 @@ import {
   EMPTY_ROOM_SHUTDOWN_TICKS,
   InputQueue,
   MAX_PLAYERS,
+  botInput,
+  createBotMemory,
+  navGridFor,
   MIN_PLAYERS,
   PROTOCOL_VERSION,
   RECONNECT_GRACE_MS,
@@ -31,6 +34,7 @@ import {
   findPlayer,
   step,
   unpackAim,
+  type BotMemory,
   type ClientMsg,
   type GameState,
   type PlayerInput,
@@ -66,6 +70,8 @@ interface Seat {
   meta: PlayerMeta;
   /** Inputs pendientes. Cada uno se procesa exactamente una vez: ver InputQueue. */
   inputs: InputQueue;
+  /** Si es un bot, lo que recuerda entre ticks. Los bots no tienen conexión. */
+  bot: BotMemory | null;
 }
 
 /** Cada cuánto se le da una oportunidad de correr al loop (no es el ritmo del tick). */
@@ -78,6 +84,13 @@ const MAX_TICKS_PER_PUMP = 5;
  * margen, caminar al lado de una columna hace parpadear al otro jugador.
  */
 const SIGHT_GRACE_TICKS = 6;
+
+/** Nombres para los bots: cortos, para que entren en la tabla. */
+const BOT_NAMES = [
+  "Bot Pancho", "Bot Lola", "Bot Toto", "Bot Chela", "Bot Nacho", "Bot Pepa",
+  "Bot Lucho", "Bot Cata", "Bot Tito", "Bot Maru", "Bot Rulo", "Bot Coca",
+  "Bot Beto", "Bot Juana", "Bot Fito", "Bot Nina",
+];
 
 /**
  * Una partida = un Durable Object. Mantiene el estado autoritativo y corre el
@@ -171,6 +184,7 @@ export class GameRoom extends Server<Env> {
       goneAt: 0,
       meta: { id: playerId, name, colorIndex: this.freeColorIndex(), ready: false },
       inputs: new InputQueue(),
+      bot: null,
     };
     this.seats.set(playerId, seat);
     if (token !== null) this.byToken.set(token, playerId);
@@ -327,6 +341,15 @@ export class GameRoom extends Server<Env> {
         return;
       }
 
+      case "bot": {
+        // Sólo el host, sólo en el lobby y si hay lugar.
+        if (seat.playerId !== this.hostId) return;
+        if (this.state.phase !== "lobby") return;
+        if (this.seats.size >= MAX_PLAYERS) return;
+        this.addBot();
+        return;
+      }
+
       case "kick": {
         // Sólo el host, sólo en el lobby y no contra sí mismo. En partida echar
         // a alguien sería un arma más: se decide antes de empezar.
@@ -340,7 +363,8 @@ export class GameRoom extends Server<Env> {
         // Bloqueo blando por nombre, para que no vuelva a entrar de un clic.
         // Cambiando el nombre entra igual: sin cuentas no hay identidad real, y
         // esto alcanza para el caso que molesta.
-        this.kicked.add(target.meta.name.trim().toLowerCase());
+        // A un bot no hace falta bloquearlo: no vuelve solo.
+        if (!target.bot) this.kicked.add(target.meta.name.trim().toLowerCase());
 
         for (const c of this.getConnections<ConnState>()) {
           if (c.state?.playerId !== msg.id) continue;
@@ -430,9 +454,11 @@ export class GameRoom extends Server<Env> {
   private tick(): boolean {
     const s = this.state;
 
-    if (this.seats.size === 0) {
-      // Sala vacía: apagar el loop para no seguir gastando duration en Cloudflare.
+    if (!this.hasHumans()) {
+      // Sala vacía —o con bots solos, que no miran nadie—: apagar el loop para
+      // no seguir gastando duration en Cloudflare.
       if (++this.emptyTicks > EMPTY_ROOM_SHUTDOWN_TICKS) {
+        for (const seat of [...this.seats.values()]) if (seat.bot) this.removeSeat(seat.playerId);
         this.stopLoop();
         this.resetToLobby();
         return false;
@@ -454,7 +480,16 @@ export class GameRoom extends Server<Env> {
     // Normalmente un input por jugador, pero pueden ser cero o dos: cada uno
     // se procesa una sola vez y en orden, igual que en la predicción.
     const inputs = new Map<number, PlayerInput[]>();
-    for (const seat of this.seats.values()) inputs.set(seat.playerId, seat.inputs.take());
+    for (const seat of this.seats.values()) {
+      if (seat.bot) {
+        // Los bots deciden con el estado de este mismo tick, como si su input
+        // acabara de llegar.
+        const me = findPlayer(s, seat.playerId);
+        inputs.set(seat.playerId, me?.alive && s.phase === "playing" ? [botInput(s, me, seat.bot, this.arena)] : []);
+        continue;
+      }
+      inputs.set(seat.playerId, seat.inputs.take());
+    }
 
     step(s, inputs, this.events, this.arena);
 
@@ -607,7 +642,8 @@ export class GameRoom extends Server<Env> {
       p.killerId = -1;
     }
     for (const seat of this.seats.values()) {
-      seat.meta.ready = false;
+      // Los bots siguen listos: si no, la próxima partida los esperaría para siempre.
+      seat.meta.ready = seat.bot !== null;
       seat.inputs.clear();
     }
     this.broadcastRoster();
@@ -630,10 +666,38 @@ export class GameRoom extends Server<Env> {
     }
 
     if (this.hostId === playerId) {
-      const next = this.seats.values().next();
-      this.hostId = next.done ? -1 : next.value.playerId;
+      // El puesto pasa a otra persona, nunca a un bot.
+      const next = [...this.seats.values()].find((s) => !s.bot);
+      this.hostId = next ? next.playerId : -1;
     }
     this.broadcastRoster();
+  }
+
+  private hasHumans(): boolean {
+    for (const seat of this.seats.values()) if (!seat.bot) return true;
+    return false;
+  }
+
+  /** Un bot más en la sala, ya listo: espera a que estén listos los demás. */
+  private addBot(): void {
+    // La grilla de caminos tarda unos 20 ms en armarse: mejor ahora, en el
+    // lobby, que en el primer tick de la partida.
+    navGridFor(this.arena);
+    const used = new Set([...this.seats.values()].map((s) => s.meta.name));
+    const name = BOT_NAMES.find((n) => !used.has(n)) ?? `Bot ${this.nextPlayerId}`;
+    const playerId = this.nextPlayerId++;
+    this.seats.set(playerId, {
+      playerId,
+      connId: null,
+      token: null,
+      goneAt: 0,
+      meta: { id: playerId, name, colorIndex: this.freeColorIndex(), ready: true, bot: true },
+      inputs: new InputQueue(),
+      bot: createBotMemory((Date.now() ^ (playerId * 7919)) | 0),
+    });
+    this.state.players.push(createPlayer(playerId));
+    this.broadcastRoster();
+    this.ensureLoop();
   }
 
   private freeColorIndex(): number {

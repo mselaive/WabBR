@@ -45,6 +45,33 @@ Con dos jugadores listos arranca la partida.
 
 No ves a través de las paredes: mirá la sección de línea de vista.
 
+### Bots
+
+El host puede **agregar bots** desde el lobby, para completar la sala o practicar
+solo. Los corre el servidor dentro de la misma sala (`sim/bot.ts`): no se conectan
+desde ningún lado, así que no cuestan mensajes de Cloudflare, y mandan inputs como
+cualquier jugador, sin hacer nada que un jugador no pueda.
+
+Juegan razonable sin ser perfectos: abren cajas y recogen armas mejores (nunca
+cambian una buena por una peor), se curan cuando no hay nadie, pelean moviéndose de
+costado a la distancia que le gusta a su arma y respetan la zona. Para que se les
+pueda ganar, tardan un instante en reaccionar al verte y apuntan con un error que
+va cambiando despacio.
+
+Encuentran el camino con A* sobre una grilla de 10 px (`sim/nav.ts`). Yendo en
+línea recta se trababan contra la primera pared, y como casi todas las cajas están
+adentro de casas, se quedaban encerrados cuando cerraba la zona: un tercio moría
+así. Con caminos, de 48 bots en 12 partidas mueren por la zona uno o dos. La grilla
+tiene que ser fina porque hay puertas con un tabique justo detrás que dejan pasillos
+de 26 y 34 px; con celdas de 20 px casas enteras quedaban como cerradas.
+
+Cuestan poco: unos 0,1 ms por tick con 12 bots. Las búsquedas de camino tienen un
+cupo de dos por tick entre todos —al arrancar la partida todos quieren la suya a la
+vez— y una sala con bots solos cuenta como vacía y se apaga.
+
+`node scripts/server-bots.mjs` prueba contra el servidor local que una partida con
+bots se juegue entera.
+
 ### Si se corta la conexión
 
 En partida, un corte no te saca del juego: el servidor te guarda el lugar 15 segundos

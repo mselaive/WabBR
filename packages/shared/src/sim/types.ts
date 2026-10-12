@@ -134,6 +134,8 @@ export interface PlayerMeta {
   ready: boolean;
   /** Se le cortó la conexión y el servidor le está guardando el lugar. */
   away?: boolean;
+  /** Lo maneja el servidor. */
+  bot?: boolean;
 }
 
 export interface BulletState {

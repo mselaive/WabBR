@@ -55,7 +55,12 @@ export interface KickMsg {
   id: number;
 }
 
-export type ClientMsg = JoinMsg | ReadyMsg | InputMsg | PingMsg | StartMsg | KickMsg;
+/** El host agrega un bot a la sala (sólo en el lobby). */
+export interface AddBotMsg {
+  t: "bot";
+}
+
+export type ClientMsg = JoinMsg | ReadyMsg | InputMsg | PingMsg | StartMsg | KickMsg | AddBotMsg;
 
 export const BTN_SHOOT = 1;
 export const BTN_RELOAD = 2;

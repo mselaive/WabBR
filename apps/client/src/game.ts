@@ -957,6 +957,11 @@ export class Game {
     this.net?.send({ t: "start" });
   }
 
+  /** Agregar un bot a la sala. El servidor comprueba que seas el host. */
+  addBot(): void {
+    this.net?.send({ t: "bot" });
+  }
+
   /** Echar a alguien del lobby. El servidor comprueba que seas el host. */
   kick(id: number): void {
     this.net?.send({ t: "kick", id });

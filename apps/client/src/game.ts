@@ -764,8 +764,21 @@ export class Game {
     // Espectando, la vida, el arma y la mochila son las del que estás mirando.
     const shown = this.watched ?? me;
     this.ui.setLoadoutVisible(this.phase !== "playing" || (shown?.alive ?? false));
-    const held = shown && shown.slots[shown.activeSlot] !== undefined ? shown.slots[shown.activeSlot]! : -1;
-    const heldTier = shown?.slotTiers[shown.activeSlot] ?? 0;
+    // El arma propia sale de la predicción, no del snapshot: así la munición
+    // baja con el click, y el cambio de arma y la recarga se ven al toque, no
+    // un ping después. Espectando, del que estás mirando.
+    const predicted = !this.watched && me?.alive && this.predictor ? this.predictor.state : null;
+    const gear = predicted
+      ? {
+          slots: predicted.slots,
+          slotTiers: predicted.slotTier,
+          activeSlot: predicted.activeSlot,
+          ammo: predicted.slotAmmo[predicted.activeSlot] ?? 0,
+          reloading: predicted.reloadCd > 0,
+        }
+      : shown;
+    const held = gear && gear.slots[gear.activeSlot] !== undefined ? gear.slots[gear.activeSlot]! : -1;
+    const heldTier = gear?.slotTiers[gear.activeSlot] ?? 0;
     // Las estadísticas ya vienen escaladas por rareza: el cargador de un rifle
     // legendario es más grande, y el HUD tiene que mostrar ese número.
     const weapon = held >= 0 ? weaponStats(held, heldTier) : null;
@@ -774,22 +787,23 @@ export class Game {
     this.ui.setHud({
       alive: this.aliveCount,
       kills: this.standings.get(this.localId)?.kills ?? 0,
+      ping: this.net && this.net.rtt > 0 ? Math.round(this.net.rtt) : null,
       hp: shown?.alive ? shown.hp : 0,
       shield: shown?.alive ? shown.shield : 0,
       stamina: shown?.alive ? shown.stamina : 0,
-      ammo: shown?.ammo ?? 0,
+      ammo: gear?.ammo ?? 0,
       magSize: weapon?.magSize ?? 0,
-      reloading: shown?.reloading ?? false,
+      reloading: gear?.reloading ?? false,
       weaponName: weapon ? `${weapon.name} · ${rarity.name}` : "Con las manos",
       weaponColor: weapon ? cssColor(rarity.color) : "#e8eef5",
       slots: [0, 1].map((slot) => {
-        const index = shown?.slots[slot] ?? -1;
-        const tier = shown?.slotTiers[slot] ?? 0;
+        const index = gear?.slots[slot] ?? -1;
+        const tier = gear?.slotTiers[slot] ?? 0;
         return {
           key: String(slot + 1),
           name: index >= 0 ? weaponStats(index, tier).name : "vacía",
           color: index >= 0 ? cssColor(rarityAt(tier).color) : "",
-          active: (shown?.activeSlot ?? 0) === slot,
+          active: (gear?.activeSlot ?? 0) === slot,
         };
       }),
     });

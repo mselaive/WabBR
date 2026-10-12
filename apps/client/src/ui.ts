@@ -96,6 +96,7 @@ export class UI {
 
   private readonly aliveEl = el("alive");
   private readonly killsEl = el("kills");
+  private readonly pingEl = el("ping");
   private readonly hpFill = el("hpFill");
   private readonly hpText = el("hpText");
   private readonly ammoEl = el("ammo");
@@ -299,6 +300,8 @@ export class UI {
   setHud(v: {
     alive: number;
     kills: number;
+    /** Ida y vuelta al servidor en ms, o null si todavía no se midió. */
+    ping: number | null;
     hp: number;
     shield: number;
     stamina: number;
@@ -312,6 +315,9 @@ export class UI {
   }): void {
     this.aliveEl.textContent = String(v.alive);
     this.killsEl.textContent = String(v.kills);
+    this.pingEl.textContent = v.ping === null ? "—" : String(v.ping);
+    // Verde jugable, amarillo se nota, rojo es lo que explica una muerte rara.
+    this.pingEl.className = v.ping === null || v.ping < 90 ? "" : v.ping < 160 ? "ping-mid" : "ping-bad";
 
     const hp = Math.max(0, Math.min(100, v.hp));
     this.hpFill.style.width = `${hp}%`;

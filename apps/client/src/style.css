@@ -81,6 +81,18 @@ body {
   color: var(--danger);
 }
 
+.stat-ping {
+  color: var(--muted);
+}
+
+#ping.ping-mid {
+  color: var(--gold);
+}
+
+#ping.ping-bad {
+  color: var(--danger);
+}
+
 .stat-key {
   letter-spacing: 1px;
 }

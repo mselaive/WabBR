@@ -749,7 +749,8 @@ function stepWeapon(
   const def = weaponStats(weaponIndex, activeTier(p));
   const firstBullet = state.nextBulletId;
   p.shotsFired += def.pellets;
-  p.lastShotTick = state.tick;
+  // La ballesta no te delata: se puede tirar desde un arbusto sin salir de él.
+  if (!def.silent) p.lastShotTick = state.tick;
 
   for (const pellet of shotPellets(p, weaponIndex, input.seq)) {
     state.bullets.push({
@@ -775,6 +776,7 @@ function stepWeapon(
     seq: input.seq,
     firstBullet,
     pellets: def.pellets,
+    ...(def.silent ? { silent: true } : {}),
   });
 }
 

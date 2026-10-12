@@ -56,6 +56,7 @@ const CRATE_TABLE: readonly Entry[] = [
   { kind: ITEM_WEAPON, ref: 2, weight: 13, min: 1, max: 1, tier: 0 }, // rifle
   { kind: ITEM_WEAPON, ref: 3, weight: 11, min: 1, max: 1, tier: 0 }, // escopeta
   { kind: ITEM_WEAPON, ref: 4, weight: 6, min: 1, max: 1, tier: 0 }, // francotirador
+  { kind: ITEM_WEAPON, ref: 5, weight: 7, min: 1, max: 1, tier: 0 }, // ballesta
   { kind: ITEM_ARMOR, ref: 0, weight: 11, min: 1, max: 1, tier: 1 }, // chaleco ligero
   { kind: ITEM_ARMOR, ref: 1, weight: 7, min: 1, max: 1, tier: 3 }, // chaleco pesado
   { kind: ITEM_CONSUMABLE, ref: 1, weight: 14, min: 1, max: 1, tier: 1 }, // botiquín

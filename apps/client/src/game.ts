@@ -477,6 +477,8 @@ export class Game {
           // Si no estaba predicho, sus balas se dibujan atrasadas como las de
           // cualquiera, y el fogonazo con ellas.
           if (ev.byId === this.localId && this.shots.confirm(ev.seq, ev.firstBullet, ev.pellets)) break;
+          // La ballesta no tiene fogonazo: se ve venir la flecha, no de dónde salió.
+          if (ev.silent) break;
           // Un tick antes que el resto: es cuando la bala está en el caño (ver
           // SnapshotBuffer.sample).
           this.defer(() => this.world.spawnMuzzleFlash(ev.x, ev.y, ev.aim), -MS_PER_TICK);
@@ -658,7 +660,9 @@ export class Game {
 
   /** Disparaste: la bala, el fogonazo y el retroceso salen ya, sin esperar al servidor. */
   private onLocalShot(shot: PredictedShot): void {
-    this.lastShotAt = performance.now();
+    const stats = weaponStats(shot.weapon, shot.tier);
+    // La ballesta no te saca del arbusto (ver concealedFrom).
+    if (!stats.silent) this.lastShotAt = performance.now();
     const me = this.predictor!.state;
     // La bala sale de la posición simulada, que es por donde va la real, pero
     // en pantalla arranca del arma tal como se ve.
@@ -667,9 +671,9 @@ export class Game {
     let drawn: { x: number; y: number } = this.lastDrawn ?? me;
     if (Math.hypot(drawn.x - me.x, drawn.y - me.y) > 40) drawn = me;
     this.shots.fire(shot, performance.now(), drawn.x - me.x, drawn.y - me.y);
-    this.world.spawnMuzzleFlash(drawn.x, drawn.y, me.aim);
+    if (!stats.silent) this.world.spawnMuzzleFlash(drawn.x, drawn.y, me.aim);
     // Retroceso proporcional al arma: el francotirador patea, el subfusil apenas cosquillea.
-    this.world.addShake(weaponStats(shot.weapon, shot.tier).damage * 0.055);
+    this.world.addShake(stats.damage * 0.055);
   }
 
   /** Programa un efecto para cuando el dibujo atrasado llegue a su momento. */

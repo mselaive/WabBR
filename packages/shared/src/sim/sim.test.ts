@@ -24,6 +24,7 @@ import {
   ITEM_CONSUMABLE,
   ITEM_WEAPON,
   WEAPONS,
+  WEAPON_IDS,
   weaponAt,
   weaponStats,
 } from "../items.js";
@@ -410,7 +411,7 @@ describe("rarezas", () => {
   it("ningún arma puede matar de un tiro a alguien con la vida llena", () => {
     // Es la razón por la que el francotirador tope en épica. Si alguien sube un
     // multiplicador sin pensarlo, este test se lo avisa.
-    for (let weapon = 0; weapon < 5; weapon++) {
+    for (let weapon = 0; weapon < WEAPON_IDS.length; weapon++) {
       const top = weaponStats(weapon, weaponAt(weapon).maxTier);
       // En la escopeta el disparo entero son todos los perdigones juntos, que es
       // el caso peor: a bocajarro entran todos.

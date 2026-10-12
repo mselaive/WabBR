@@ -1,5 +1,5 @@
 import { Texture } from "pixi.js";
-import { makeRng } from "@wabbr/shared";
+import { WEAPON_IDS, makeRng } from "@wabbr/shared";
 
 /**
  * Todo el arte se dibuja por código en un canvas y se sube como textura.
@@ -504,7 +504,7 @@ export function getTextures(): TexturePack {
     bullet: bullet(),
     muzzleFlash: muzzleFlash(),
     shadow: shadowBlob(),
-    itemWeapon: [0, 1, 2, 3, 4].map(weaponIcon),
+    itemWeapon: WEAPON_IDS.map((_, i) => weaponIcon(i)),
     itemBandage: bandageIcon(),
     itemMedkit: medkitIcon(),
     itemAdrenaline: adrenalineIcon(),
@@ -575,10 +575,17 @@ function drawWeapon(ctx: Ctx, index: number): void {
       rect(ctx, 3, 7, 10, 3, steel);
       rect(ctx, 3, 10, 4, 2, wood);
       break;
-    default: // francotirador
+    case 4: // francotirador
       rect(ctx, 2, 8, 12, 1, steel);
       rect(ctx, 6, 5, 5, 2, "#2f3a45"); // mira
       rect(ctx, 3, 9, 4, 2, wood);
+      break;
+    default: // ballesta: culata, arco atravesado, cuerda y la flecha cargada
+      rect(ctx, 2, 8, 9, 2, wood);
+      rect(ctx, 11, 3, 2, 11, "#5a3a1e");
+      rect(ctx, 9, 4, 1, 9, "#e8e2d0");
+      rect(ctx, 4, 7, 10, 1, steel);
+      rect(ctx, 14, 6, 1, 3, steel);
       break;
   }
 }
@@ -783,7 +790,7 @@ let causeIcons: Map<number, string> | null = null;
 export function causeIconUrl(cause: number): string {
   if (!causeIcons) {
     causeIcons = new Map();
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < WEAPON_IDS.length; i++) {
       causeIcons.set(i, iconUrl(16, 16, (ctx) => drawWeapon(ctx, i)));
     }
     // Granada / explosión.

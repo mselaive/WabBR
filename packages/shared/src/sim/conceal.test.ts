@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { WEAPON_IDS, weaponStats } from "../items.js";
 import { bushAt, generateArena } from "../map/arena.js";
 import { botInput, createBotMemory } from "./bot.js";
 import { BUSH_SHOT_REVEAL_TICKS, BUSH_SPOT_DISTANCE, concealedFrom } from "./sight.js";
 import { createGameState, createPlayer, step } from "./step.js";
-import { emptyInput, type GameState, type PlayerInput } from "./types.js";
+import { emptyInput, type GameState, type PlayerInput, type SimEvent } from "./types.js";
 
 const arena = generateArena();
 const bush = arena.decor.find((d) => d.kind === "bush")!;
@@ -55,6 +56,32 @@ describe("arbustos", () => {
     expect(concealedFrom(state, state.players[0]!, viewer.x, viewer.y)).toBe(false);
     for (let t = 0; t < BUSH_SHOT_REVEAL_TICKS + 1; t++) idle(state);
     expect(concealedFrom(state, state.players[0]!, viewer.x, viewer.y)).toBe(true);
+  });
+
+  it("la ballesta no te delata: se puede tirar desde el arbusto", () => {
+    const state = scene(300);
+    const hider = state.players[0]!;
+    const crossbow = WEAPON_IDS.indexOf("crossbow");
+    hider.slots[0] = crossbow;
+    hider.slotAmmo[0] = 1;
+    const events: SimEvent[] = [];
+    const inputs = new Map<number, PlayerInput[]>(state.players.map((p) => [p.id, []]));
+    inputs.set(1, [{ ...emptyInput(1), aim: Math.PI / 2, shoot: true }]);
+    step(state, inputs, events, arena);
+
+    const shot = events.find((e) => e.t === "shot");
+    expect(shot?.t === "shot" && shot.silent).toBe(true);
+    const viewer = state.players[1]!;
+    expect(concealedFrom(state, hider, viewer.x, viewer.y)).toBe(true);
+  });
+
+  it("dos flechas matan, también en legendaria; una no", () => {
+    const crossbow = WEAPON_IDS.indexOf("crossbow");
+    for (const tier of [0, 4]) {
+      const damage = weaponStats(crossbow, tier).damage;
+      expect(damage).toBeLessThan(100);
+      expect(damage * 2).toBeGreaterThanOrEqual(100);
+    }
   });
 
   it("los bots tampoco ven al que está escondido", () => {

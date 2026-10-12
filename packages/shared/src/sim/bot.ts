@@ -68,7 +68,7 @@ export interface BotMemory {
 /** A qué distancia ve y pelea. Más que la pantalla no tiene sentido. */
 const SIGHT = 700;
 /** Distancia que le gusta para pelear con cada arma, por índice. */
-const PREFERRED_RANGE = [260, 230, 320, 110, 480];
+const PREFERRED_RANGE = [260, 230, 320, 110, 480, 380];
 /**
  * Búsquedas de camino por tick entre todos los bots. Al arrancar la partida
  * todos quieren su primer camino a la vez, y doce búsquedas juntas pasan los

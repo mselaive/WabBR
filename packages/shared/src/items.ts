@@ -50,7 +50,7 @@ export function rarityAt(tier: number): RarityDef {
 
 // ---------------------------------------------------------------- armas
 
-export type WeaponId = "pistol" | "smg" | "rifle" | "shotgun" | "sniper";
+export type WeaponId = "pistol" | "smg" | "rifle" | "shotgun" | "sniper" | "crossbow";
 
 export interface WeaponDef {
   readonly id: WeaponId;
@@ -73,6 +73,11 @@ export interface WeaponDef {
    * un tiro desde fuera de la pantalla, que no es una pelea, es una lotería.
    */
   readonly maxTier: number;
+  /**
+   * Sin fogonazo y sin delatarte: disparar no te saca del arbusto. Los demás
+   * ven venir la flecha, pero no de dónde salió.
+   */
+  readonly silent?: boolean;
 }
 
 export const WEAPONS: Record<WeaponId, WeaponDef> = {
@@ -153,10 +158,30 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     // Tope en épica: 88 de daño sigue necesitando dos tiros.
     maxTier: 3,
   },
+  /**
+   * La del que juega escondido: dos flechas matan y no te delatan, pero hay
+   * que recargar después de cada una y la flecha es lenta. Es lo que le da
+   * sentido a quedarse en un arbusto en vez de salir a pelear.
+   */
+  crossbow: {
+    id: "crossbow",
+    name: "Ballesta",
+    damage: 50,
+    fireCd: 18,
+    magSize: 1,
+    reloadTicks: 26,
+    bulletSpeed: 720,
+    spread: 0.01,
+    lifeTicks: 18,
+    pellets: 1,
+    // En legendaria hace 75: sigue necesitando dos.
+    maxTier: 4,
+    silent: true,
+  },
 };
 
 /** El orden importa: es lo que viaja por la red. Agregá al final. */
-export const WEAPON_IDS: readonly WeaponId[] = ["pistol", "smg", "rifle", "shotgun", "sniper"];
+export const WEAPON_IDS: readonly WeaponId[] = ["pistol", "smg", "rifle", "shotgun", "sniper", "crossbow"];
 
 /** Con la que arrancás. Débil a propósito: es el motivo para buscar loot. */
 export const STARTING_WEAPON = 0;

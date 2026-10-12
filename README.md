@@ -186,11 +186,14 @@ lista una vez al arrancar, más los eventos de "lo agarró tal", "se abrió la c
 7" y "se cayó esto". De las cajas ni siquiera viaja la posición: son parte del
 mapa, y su id es su orden de aparición.
 
-- **Cinco armas** (`packages/shared/src/items.ts`): pistola, subfusil, rifle,
-  escopeta y francotirador. Dos ranuras, así que hay que elegir. La escopeta es
+- **Seis armas** (`packages/shared/src/items.ts`): pistola, subfusil, rifle,
+  escopeta, francotirador y ballesta. Dos ranuras, así que hay que elegir. La escopeta es
   para pelear de cerca: dos tiros matan hasta unos 100 px, y de ahí para afuera
   pierde contra el rifle. Su cono abría el doble y a 120 px entraban tres
   perdigones de ocho; hay tests que fijan las dos cosas.
+- **La ballesta es silenciosa**: sin fogonazo y sin delatarte, así que se puede
+  tirar desde un arbusto sin salir de él. Dos flechas matan, pero hay que recargar
+  después de cada una y la flecha es lenta. Sale sólo de las cajas.
 - **Cinco rarezas** (común → legendaria), que multiplican daño, recarga,
   cargador y precisión. No tocan la cadencia ni el alcance a propósito: un rifle
   legendario sigue siendo un rifle, no una escopeta mejor.

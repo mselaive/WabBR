@@ -263,6 +263,8 @@ export type SimEvent =
       seq: number;
       firstBullet: number;
       pellets: number;
+      /** Arma silenciosa: sin fogonazo para los demás. */
+      silent?: boolean;
     }
   | { t: "impact"; x: number; y: number; bullet: number }
   | { t: "reload"; byId: number }

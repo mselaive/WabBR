@@ -37,7 +37,7 @@ import { Net, diagnoseConnection } from "./net/connection.js";
 import { SnapshotBuffer } from "./net/interpolation.js";
 import { Predictor, type PredictedShot } from "./net/prediction.js";
 import { LocalShots } from "./net/shots.js";
-import { InputController } from "./input.js";
+import { InputController, type SpectateIntent } from "./input.js";
 import { WorldView } from "./render/world.js";
 import { Minimap } from "./render/minimap.js";
 import { causeIconUrl } from "./render/textures.js";
@@ -103,7 +103,12 @@ export class Game {
   private readonly crates = lootCrates(getArena());
   /** Ya recibimos la posición de spawn autoritativa de esta ronda. */
   private spawned = false;
+  /** A quién se sigue al espectear. Al morir, a quien te mató. */
   private spectateId = -1;
+  /** Cámara libre del espectador, o null si se está siguiendo a alguien. */
+  private freeCam: { x: number; y: number } | null = null;
+  /** El jugador que se está mirando: el HUD muestra su vida y su arma. */
+  private watched: UnpackedPlayer | null = null;
   private detachInput: (() => void) | null = null;
 
   constructor(private readonly ui: UI) {}
@@ -204,6 +209,8 @@ export class Game {
     this.input.enabled = false;
     this.input.releaseAll();
     this.spectateId = -1;
+    this.freeCam = null;
+    this.watched = null;
     this.spawned = false;
     this.lastLocal = null;
     this.lastDrawn = null;
@@ -332,6 +339,10 @@ export class Game {
       this.predictor = null;
       this.spawned = false;
       this.spectateId = -1;
+      this.freeCam = null;
+      this.watched = null;
+    this.freeCam = null;
+    this.watched = null;
     }
   }
 
@@ -462,6 +473,9 @@ export class Game {
 
     const now = performance.now();
     this.runDeferred(now);
+    // Se leen siempre, aunque no se esté mirando: si no, lo apretado en otro
+    // momento se aplicaría de golpe al morir.
+    const intents = this.input.takeSpectateIntents();
 
     const frame = this.snapshots.sample(now - INTERP_DELAY_MS);
     if (!frame) return;
@@ -496,12 +510,14 @@ export class Game {
       localPredicted ? localPredicted.x : null,
       localPredicted ? localPredicted.y : 0,
     );
-    this.updateCamera(frame, localPredicted);
-    this.minimap.draw(frame, this.roster, this.localId);
+    this.updateCamera(frame, localPredicted, intents, dt);
+    // Al espectear, el punto destacado del minimapa es el que estás mirando.
+    this.minimap.draw(frame, this.roster, this.watched?.id ?? this.localId);
     this.updateHud(frame, localPredicted);
 
     this.world.setCrosshair(this.input.mouseX, this.input.mouseY, this.phase === "playing");
     this.input.enabled = this.phase === "playing" && (this.lastLocal?.alive ?? false);
+    this.input.watching = this.phase === "playing" && this.localId >= 0 && !this.input.enabled;
   }
 
   private tickInput(): void {
@@ -569,6 +585,8 @@ export class Game {
   private updateCamera(
     frame: ReturnType<SnapshotBuffer["sample"]>,
     localPredicted: { x: number; y: number } | null,
+    intents: SpectateIntent[],
+    dt: number,
   ): void {
     if (localPredicted) {
       const cursor = this.world.screenToWorld(this.input.mouseX, this.input.mouseY);
@@ -577,18 +595,82 @@ export class Game {
         localPredicted.y + (cursor.y - localPredicted.y) * CAMERA_LEAD,
       );
       this.ui.setSpectating(null);
+      this.watched = null;
+      this.freeCam = null;
       return;
     }
 
-    // Muerto o todavía sin spawnear: seguir a quien te mató, o a cualquiera que siga vivo.
-    const alive = frame?.players.filter((p) => p.alive) ?? [];
-    const target =
-      alive.find((p) => p.id === this.spectateId) ?? alive[0] ?? null;
+    // Muerto o mirando. Se sigue a alguien —al principio, a quien te mató— y
+    // se puede cambiar de jugador o soltar la cámara. El orden es por id para
+    // que "siguiente" no salte al azar cuando cambia quién está a la vista.
+    const alive = (frame?.players.filter((p) => p.alive) ?? []).sort((a, b) => a.id - b.id);
+    let index = alive.findIndex((p) => p.id === this.spectateId);
+    if (index < 0 && alive.length > 0) {
+      // El que mirabas murió (o te mató la zona): se pasa al primero que quede.
+      index = 0;
+      this.spectateId = alive[0]!.id;
+    }
 
+    for (const intent of intents) {
+      if (intent === "toggle") {
+        this.freeCam = this.freeCam ? null : this.world.cameraCenter();
+        continue;
+      }
+      if (this.freeCam) {
+        // En cámara libre izquierda y derecha la mueven; un click vuelve a
+        // seguir al que estabas mirando.
+        if (intent === "next" || intent === "prev") this.freeCam = null;
+        continue;
+      }
+      if (alive.length === 0) continue;
+      const step = intent === "right" || intent === "next" ? 1 : -1;
+      index = (index + step + alive.length) % alive.length;
+      this.spectateId = alive[index]!.id;
+    }
+
+    const playing = this.phase === "playing";
+
+    if (this.freeCam && playing) {
+      const axes = this.input.moveAxes();
+      const len = Math.hypot(axes.x, axes.y);
+      if (len > 0) {
+        const speed = (axes.fast ? 1100 : 600) * dt;
+        this.freeCam.x += (axes.x / len) * speed;
+        this.freeCam.y += (axes.y / len) * speed;
+        // Que no se vaya al vacío de afuera del mapa.
+        const dx = this.freeCam.x - WORLD_CENTER_X;
+        const dy = this.freeCam.y - WORLD_CENTER_Y;
+        const d = Math.hypot(dx, dy);
+        if (d > WORLD_RADIUS) {
+          this.freeCam.x = WORLD_CENTER_X + (dx / d) * WORLD_RADIUS;
+          this.freeCam.y = WORLD_CENTER_Y + (dy / d) * WORLD_RADIUS;
+        }
+      }
+      this.world.setCamera(this.freeCam.x, this.freeCam.y);
+      this.watched = null;
+      this.ui.setSpectating({
+        title: "Cámara libre",
+        hint: "WASD para moverte · Shift más rápido · Espacio o click para volver",
+      });
+      return;
+    }
+
+    const target = alive[index] ?? null;
+    this.watched = target;
     if (target) {
       this.world.setCamera(target.x, target.y);
       const name = this.roster.get(target.id)?.name ?? "";
-      this.ui.setSpectating(this.phase === "playing" ? `Mirando a ${name}` : null);
+      this.ui.setSpectating(
+        playing
+          ? {
+              title: `Mirando a ${name}`,
+              hint:
+                alive.length > 1
+                  ? "Click o ← → para cambiar · Espacio: cámara libre"
+                  : "Espacio: cámara libre",
+            }
+          : null,
+      );
     } else {
       this.world.setCamera(WORLD_CENTER_X, WORLD_CENTER_Y);
       this.ui.setSpectating(null);
@@ -600,8 +682,11 @@ export class Game {
     localPredicted: { x: number; y: number } | null,
   ): void {
     const me = this.lastLocal;
-    const held = me && me.slots[me.activeSlot] !== undefined ? me.slots[me.activeSlot]! : -1;
-    const heldTier = me?.slotTiers[me.activeSlot] ?? 0;
+    // Espectando, la vida, el arma y la mochila son las del que estás mirando.
+    const shown = this.watched ?? me;
+    this.ui.setLoadoutVisible(this.phase !== "playing" || (shown?.alive ?? false));
+    const held = shown && shown.slots[shown.activeSlot] !== undefined ? shown.slots[shown.activeSlot]! : -1;
+    const heldTier = shown?.slotTiers[shown.activeSlot] ?? 0;
     // Las estadísticas ya vienen escaladas por rareza: el cargador de un rifle
     // legendario es más grande, y el HUD tiene que mostrar ese número.
     const weapon = held >= 0 ? weaponStats(held, heldTier) : null;
@@ -610,22 +695,22 @@ export class Game {
     this.ui.setHud({
       alive: this.aliveCount,
       kills: this.standings.get(this.localId)?.kills ?? 0,
-      hp: me?.alive ? me.hp : 0,
-      shield: me?.alive ? me.shield : 0,
-      stamina: me?.alive ? me.stamina : 0,
-      ammo: me?.ammo ?? 0,
+      hp: shown?.alive ? shown.hp : 0,
+      shield: shown?.alive ? shown.shield : 0,
+      stamina: shown?.alive ? shown.stamina : 0,
+      ammo: shown?.ammo ?? 0,
       magSize: weapon?.magSize ?? 0,
-      reloading: me?.reloading ?? false,
+      reloading: shown?.reloading ?? false,
       weaponName: weapon ? `${weapon.name} · ${rarity.name}` : "Con las manos",
       weaponColor: weapon ? cssColor(rarity.color) : "#e8eef5",
       slots: [0, 1].map((slot) => {
-        const index = me?.slots[slot] ?? -1;
-        const tier = me?.slotTiers[slot] ?? 0;
+        const index = shown?.slots[slot] ?? -1;
+        const tier = shown?.slotTiers[slot] ?? 0;
         return {
           key: String(slot + 1),
           name: index >= 0 ? weaponStats(index, tier).name : "vacía",
           color: index >= 0 ? cssColor(rarityAt(tier).color) : "",
-          active: (me?.activeSlot ?? 0) === slot,
+          active: (shown?.activeSlot ?? 0) === slot,
         };
       }),
     });
@@ -634,10 +719,10 @@ export class Game {
       ...CONSUMABLE_IDS.map((id, index) => ({
         key: String(index + 3),
         name: CONSUMABLES[id].name,
-        count: me?.consumables[index] ?? 0,
+        count: shown?.consumables[index] ?? 0,
       })),
       // Las granadas no ocupan ranura: van en la misma columna, con su tecla.
-      { key: "G", name: "Granadas", count: me?.grenades ?? 0 },
+      { key: "G", name: "Granadas", count: shown?.grenades ?? 0 },
     ]);
 
     this.updatePickupPrompt(me, localPredicted);

@@ -1014,6 +1014,11 @@ export class WorldView {
     this.applyCamera();
   }
 
+  /** Punto del mundo al que mira la cámara. */
+  cameraCenter(): { x: number; y: number } {
+    return { x: this.camX, y: this.camY };
+  }
+
   resize(): void {
     this.applyCamera();
   }

@@ -26,6 +26,21 @@ const LEFT = new Set(["KeyA", "ArrowLeft", "KeyQ"]);
 const RIGHT = new Set(["KeyD", "ArrowRight"]);
 const SPRINT = new Set(["ShiftLeft", "ShiftRight"]);
 
+/**
+ * Lo que se puede pedir mirando la partida después de morir. Va como intención
+ * y no como acción porque depende del modo: siguiendo a alguien, izquierda y
+ * derecha cambian de jugador; en cámara libre, las mismas teclas la mueven.
+ */
+export type SpectateIntent = "left" | "right" | "next" | "prev" | "toggle";
+
+const SPECTATE_KEYS: Record<string, SpectateIntent> = {
+  ArrowLeft: "left",
+  KeyA: "left",
+  ArrowRight: "right",
+  KeyD: "right",
+  Space: "toggle",
+};
+
 export class InputController {
   private keys = new Set<string>();
   private shooting = false;
@@ -46,15 +61,30 @@ export class InputController {
   scoreboardOpen = false;
   /** Activo solo mientras la partida está en curso. */
   enabled = false;
+  /**
+   * Muerto pero con la partida en curso: no se controla al muñeco, pero sí la
+   * cámara de espectador y la tabla. Antes, al morir se apagaba todo y ni
+   * siquiera se podía abrir la tabla con Tab.
+   */
+  watching = false;
+  private spectateIntents: SpectateIntent[] = [];
 
   attach(target: HTMLElement): () => void {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (!this.enabled) return;
+      if (!this.enabled && !this.watching) return;
+      if (this.watching) {
+        const intent = SPECTATE_KEYS[e.code];
+        if (intent && !e.repeat) this.spectateIntents.push(intent);
+        // Las teclas se siguen registrando: la cámara libre se mueve con ellas.
+        this.keys.add(e.code);
+        if (e.code.startsWith("Arrow") || e.code === "Space") e.preventDefault();
+      }
       if (e.code === "Tab") {
         e.preventDefault();
         this.scoreboardOpen = true;
         return;
       }
+      if (!this.enabled) return;
       if (e.code === "KeyR") this.reloadQueued = true;
       // Sólo en el keydown: repetir la acción mientras la tecla está apretada
       // gastaría vendas de a montones.
@@ -76,6 +106,11 @@ export class InputController {
     };
 
     const onMouseDown = (e: MouseEvent) => {
+      if (this.watching) {
+        if (e.button === 0) this.spectateIntents.push("next");
+        if (e.button === 2) this.spectateIntents.push("prev");
+        return;
+      }
       if (!this.enabled) return;
       if (e.button === 0) {
         this.shooting = true;
@@ -111,6 +146,19 @@ export class InputController {
       window.removeEventListener("mouseup", onMouseUp);
       window.removeEventListener("blur", onBlur);
     };
+  }
+
+  /** Lo que se pidió mirando desde el último cuadro. Se vacía al leerlo. */
+  takeSpectateIntents(): SpectateIntent[] {
+    if (this.spectateIntents.length === 0) return [];
+    const intents = this.spectateIntents;
+    this.spectateIntents = [];
+    return intents;
+  }
+
+  /** Dirección de las teclas de movimiento, -1/0/1 por eje. Para la cámara libre. */
+  moveAxes(): { x: number; y: number; fast: boolean } {
+    return { x: this.axis(LEFT, RIGHT), y: this.axis(UP, DOWN), fast: this.isSprinting() };
   }
 
   /** Correr se mantiene apretado, así que se lee del estado, no de un evento. */

@@ -77,6 +77,7 @@ export class UI {
   private readonly shieldFill = el("shieldFill");
   private readonly staminaFill = el("staminaFill");
   private readonly consumablesEl = el("consumables");
+  private readonly loadout = el("loadout");
   private readonly pickupPrompt = el("pickupPrompt");
   private readonly channel = el("channel");
   private readonly channelFill = el("channelFill");
@@ -101,6 +102,7 @@ export class UI {
   /** Firmas para no rehacer el DOM en cada cuadro si nada cambió. */
   private slotsSignature = "";
   private consumablesSignature = "";
+  private spectatingSignature = "";
 
   constructor(private readonly cb: UICallbacks) {
     this.nameInput.value = localStorage.getItem(NAME_KEY) ?? "";
@@ -321,6 +323,15 @@ export class UI {
     }
   }
 
+  /**
+   * Vida, arma y mochila. Se esconden cuando no hay a quién mostrar: en cámara
+   * libre se veía tu propio muñeco muerto, con vida 0 y la pistola de arranque.
+   */
+  setLoadoutVisible(visible: boolean): void {
+    this.loadout.hidden = !visible;
+    this.consumablesEl.hidden = !visible;
+  }
+
   /** Cantidades de vendas / botiquín / adrenalina, con su tecla. */
   setConsumables(items: { key: string; name: string; count: number }[]): void {
     const signature = JSON.stringify(items);
@@ -385,9 +396,21 @@ export class UI {
     this.zoneAlert.classList.toggle("critical", alert.seconds <= 5);
   }
 
-  setSpectating(text: string | null): void {
-    this.spectating.hidden = text === null;
-    if (text !== null) this.spectating.textContent = text;
+  /** A quién estás mirando después de morir y cómo cambiar. null lo esconde. */
+  setSpectating(view: { title: string; hint: string } | null): void {
+    this.spectating.hidden = view === null;
+    if (view === null) return;
+    // Se reescribe sólo si cambió: esto corre en cada cuadro.
+    const signature = `${view.title}|${view.hint}`;
+    if (this.spectatingSignature === signature) return;
+    this.spectatingSignature = signature;
+    const title = document.createElement("span");
+    title.className = "spectating-title";
+    title.textContent = view.title;
+    const hint = document.createElement("span");
+    hint.className = "spectating-hint";
+    hint.textContent = view.hint;
+    this.spectating.replaceChildren(title, hint);
   }
 
   /**

@@ -39,6 +39,8 @@ Con dos jugadores listos arranca la partida.
 | `Shift` | correr (gasta estamina) |
 | `G` | tirar una granada |
 | `Tab` | tabla de posiciones |
+| Click / `←` `→` (muerto) | mirar a otro jugador |
+| `Espacio` (muerto) | cámara libre, que se mueve con `WASD` |
 
 No ves a través de las paredes: mirá la sección de línea de vista.
 
@@ -271,6 +273,11 @@ Hay un margen de gracia de 6 ticks: se te sigue mandando a alguien 300 ms despu�
 de perderlo de vista, porque si no caminar al lado de una columna lo hace
 parpadear. Y los muertos ven todo, para que mirar la partida siga teniendo
 sentido.
+
+Al morir se sigue a quien te mató. Con click o con las flechas se pasa a otro
+jugador vivo, y el HUD muestra su vida, su arma y su mochila; con `Espacio` se
+suelta la cámara y se recorre el mapa con `WASD`. La tabla con `Tab` también
+funciona muerto: antes, al morir se apagaba todo el teclado.
 
 Las sombras del cliente no cambian nada del juego —quién ve a quién lo decide el
 servidor— pero sin ellas la gente desaparecería sin explicación visual, y eso se

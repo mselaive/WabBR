@@ -234,14 +234,37 @@ body {
   text-shadow: 0 2px 0 #0008;
 }
 
+/* Arriba, debajo del cartel de la zona. Antes iba en el centro de la pantalla,
+   que es justo donde está el jugador que estás mirando. */
 .hud-spectating {
   position: absolute;
-  top: 50%;
+  top: 64px;
   left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 14px;
+  transform: translateX(-50%);
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  background: rgba(13, 16, 20, 0.82);
+  border: 2px solid var(--line);
+  border-radius: 4px;
   text-align: center;
-  text-shadow: 0 2px 0 #000a;
+  white-space: nowrap;
+}
+
+.spectating-title {
+  font-size: 12px;
+}
+
+.spectating-hint {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+#loadout[hidden],
+#consumables[hidden] {
+  display: none;
 }
 
 .hud-spectating[hidden] {

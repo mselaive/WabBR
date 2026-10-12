@@ -766,6 +766,7 @@ function stepWeapon(
     seq: input.seq,
     firstBullet,
     pellets: def.pellets,
+    weapon: weaponIndex,
     ...(def.silent ? { silent: true } : {}),
   });
 }

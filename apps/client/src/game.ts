@@ -48,6 +48,7 @@ import { WorldView } from "./render/world.js";
 import { Minimap } from "./render/minimap.js";
 import { causeIconUrl } from "./render/textures.js";
 import { UI, type Award, type ResultRow } from "./ui.js";
+import { Sound, type Spot } from "./audio.js";
 
 /** Cuánto tira la cámara hacia el cursor (0 = centrada en el jugador). */
 const CAMERA_LEAD = 0.18;
@@ -68,6 +69,9 @@ export class Game {
   private readonly shots = new LocalShots();
   /** Tus granadas, igual: salen de la mano al apretar G. */
   private readonly grenades = new LocalGrenades();
+  private readonly sound = new Sound();
+  /** Para sonar el aviso una vez al salir de la zona, no en cada cuadro. */
+  private wasOutside = false;
   /**
    * Efectos de lo que no es tuyo, esperando a que el dibujo llegue a su momento.
    * Los demás jugadores se ven `INTERP_DELAY_MS` en el pasado: si el fogonazo
@@ -153,6 +157,18 @@ export class Game {
     );
 
     this.detachInput = this.input.attach(this.app.canvas);
+
+    // El navegador no deja sonar nada hasta el primer gesto: el audio arranca ahí.
+    const unlock = () => this.sound.unlock();
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+    window.addEventListener("keydown", (e) => {
+      if (e.code !== "KeyM" || e.repeat) return;
+      // Escribiendo el nombre o el código, la M es una letra.
+      if (e.target instanceof HTMLInputElement) return;
+      const muted = this.sound.toggleMute();
+      this.ui.addNotice(muted ? "Sonido apagado (M)" : "Sonido prendido (M)");
+    });
     window.addEventListener("resize", () => this.world.resize());
 
     this.app.ticker.add((ticker) => this.frame(ticker.deltaMS));
@@ -373,6 +389,7 @@ export class Game {
       if (this.announcedAirdrops.has(id)) continue;
       this.announcedAirdrops.add(id);
       this.ui.addNotice("Cae un paquete aéreo");
+      this.sound.airdrop();
     }
     this.standings = new Map(
       msg.st.map((r) => [r[0], { kills: r[1], alive: r[2] === 1, place: r[3] ?? 0 }]),
@@ -486,23 +503,30 @@ export class Game {
           // Si no estaba predicho, sus balas se dibujan atrasadas como las de
           // cualquiera, y el fogonazo con ellas.
           if (ev.byId === this.localId && this.shots.confirm(ev.seq, ev.firstBullet, ev.pellets)) break;
-          // La ballesta no tiene fogonazo: se ve venir la flecha, no de dónde salió.
+          // La ballesta no tiene fogonazo ni ruido: se ve venir la flecha, no de dónde salió.
           if (ev.silent) break;
           // Un tick antes que el resto: es cuando la bala está en el caño (ver
           // SnapshotBuffer.sample).
-          this.defer(() => this.world.spawnMuzzleFlash(ev.x, ev.y, ev.aim), -MS_PER_TICK);
+          this.defer(() => {
+            this.world.spawnMuzzleFlash(ev.x, ev.y, ev.aim);
+            this.sound.shot(ev.weapon ?? 0, this.spot(ev.x, ev.y));
+          }, -MS_PER_TICK);
           break;
         case "impact":
           if (this.shots.covers(ev.bullet)) {
             if (this.shots.serverImpact(ev.bullet)) this.world.spawnImpact(ev.x, ev.y);
           } else {
-            this.defer(() => this.world.spawnImpact(ev.x, ev.y));
+            this.defer(() => {
+              this.world.spawnImpact(ev.x, ev.y);
+              this.sound.impact(this.spot(ev.x, ev.y));
+            });
           }
           break;
         case "airdrop": {
           // En el reloj atrasado, que es en el que se lo ve bajar.
           this.defer(() => {
             this.world.spawnLanding(ev.x, ev.y);
+            this.sound.landing(this.spot(ev.x, ev.y));
             const me = this.lastLocal;
             if (me?.alive) {
               const dist = Math.hypot(me.x - ev.x, me.y - ev.y);
@@ -518,6 +542,7 @@ export class Game {
           // La tuya ya estalló en pantalla cuando se le acabó la mecha acá.
           if (this.grenades.covers(ev.grenade)) break;
           this.world.spawnExplosion(ev.x, ev.y);
+          this.sound.explosion(this.spot(ev.x, ev.y));
           // El sacudón cae con la distancia: una explosión lejos se ve, no se siente.
           const me = this.lastLocal;
           if (me?.alive) {
@@ -540,15 +565,21 @@ export class Game {
           if (ev.byId === this.localId && ev.targetId !== this.localId) {
             this.world.spawnDamageNumber(ev.x, ev.y, ev.amount);
             this.world.showHitMarker();
+            this.sound.hitConfirm();
           }
+          if (ev.targetId === this.localId) this.sound.hurt();
           if (ev.targetId === this.localId) {
             this.world.addShake(4 + ev.amount * 0.12);
             // La flecha apunta al origen, o sea al revés de por donde venía.
             this.world.addDamageArc(ev.dir + Math.PI);
           }
           break;
+        case "reload":
+          if (ev.byId === this.localId) this.sound.reload();
+          break;
         case "pickup":
           this.items.delete(ev.itemId);
+          if (ev.byId === this.localId) this.sound.pickup();
           break;
         case "drop":
           this.items.set(ev.item.id, ev.item);
@@ -569,7 +600,12 @@ export class Game {
             iconUrl: causeIconUrl(ev.cause),
             involvesMe: ev.targetId === this.localId || ev.byId === this.localId,
           });
-          if (ev.targetId === this.localId) this.spectateId = ev.byId;
+          if (ev.targetId === this.localId) {
+            this.spectateId = ev.byId;
+            this.sound.death();
+          } else if (ev.byId === this.localId) {
+            this.sound.kill();
+          }
           break;
         }
       }
@@ -685,6 +721,7 @@ export class Game {
   private tickGrenades(): void {
     for (const blast of this.grenades.tick(this.arena)) {
       this.world.spawnExplosion(blast.x, blast.y);
+      this.sound.explosion(this.spot(blast.x, blast.y));
       const me = this.lastDrawn;
       if (me) this.world.addShake(Math.max(0, 18 * (1 - Math.hypot(me.x - blast.x, me.y - blast.y) / 340)));
     }
@@ -706,6 +743,7 @@ export class Game {
     if (!stats.silent) this.world.spawnMuzzleFlash(drawn.x, drawn.y, me.aim);
     // Retroceso proporcional al arma: el francotirador patea, el subfusil apenas cosquillea.
     this.world.addShake(stats.damage * 0.055);
+    this.sound.shot(shot.weapon);
   }
 
   /** Programa un efecto para cuando el dibujo atrasado llegue a su momento. */
@@ -719,6 +757,12 @@ export class Game {
     if (due.length === 0) return;
     this.deferred = this.deferred.filter((d) => d.at > now);
     for (const d of due) d.run();
+  }
+
+  /** Dónde pasó algo y desde dónde se escucha: desde donde mira la cámara. */
+  private spot(x: number, y: number): Spot {
+    const ear = this.world.cameraCenter();
+    return { x, y, listenerX: ear.x, listenerY: ear.y };
   }
 
   /** Ángulo del jugador hacia el cursor, en coordenadas del mundo. */
@@ -990,8 +1034,11 @@ export class Game {
     if (!outside || !me || !localPredicted) {
       this.ui.setZoneAlert(null);
       this.world.setZoneArrow(null);
+      this.wasOutside = false;
       return;
     }
+    if (!this.wasOutside) this.sound.zoneWarning();
+    this.wasOutside = true;
 
     // El mismo daño que aplica stepZone: pasada la última fase, el de la última.
     const dps = (ZONE_PHASES[z.phase] ?? ZONE_PHASES[ZONE_PHASES.length - 1]!).dps;

@@ -40,6 +40,7 @@ Con dos jugadores listos arranca la partida.
 | `Shift` | correr (gasta estamina) |
 | `G` | tirar una granada |
 | `Tab` | tabla de posiciones |
+| `M` | silenciar el sonido |
 | Click / `←` `→` (muerto) | mirar a otro jugador |
 | `Espacio` (muerto) | cámara libre, que se mueve con `WASD` |
 
@@ -313,6 +314,21 @@ morir, por dos motivos: así también le toca al que se desconecta en el medio (
 figura con "se fue"), y dos que caen en el mismo tick —una granada, la zona— empatan
 en vez de quedar ordenados por casualidad. Si no sobrevive nadie, los últimos en caer
 comparten el primer puesto. El que entró a mirar con la partida empezada no figura.
+
+## Sonido
+
+Se genera por código, igual que el arte (`apps/client/src/audio.ts`): ruido filtrado
+para los disparos —cada arma con su voz— y las explosiones, tonos cortos para los
+avisos (acierto, te pegan, kill, recarga, recoger, fuera de la zona, paquete). Los
+sonidos del mundo se oyen según dónde pasan: más bajo cuanto más lejos (nada pasados
+1100 px) y del lado de donde vienen. Con la línea de vista tapando lo que pasa detrás
+de una pared, oír un tiro a la izquierda es información. La ballesta no hace ruido
+para los demás.
+
+`M` lo silencia y se recuerda en el navegador. Los niveles están medidos —se pueden
+renderizar sin parlantes pasándole un `OfflineAudioContext` a `unlock()`—: ninguno
+pasa de 0,41 de pico, y un tiro a media pantalla a la derecha llega al oído izquierdo
+a un tercio.
 
 ## Línea de vista
 

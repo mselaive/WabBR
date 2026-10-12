@@ -282,6 +282,13 @@ body.paired .hud-tr {
   font-size: 12px;
 }
 
+/* Cómo te mataron: arriba de todo, mientras mirás el resto de la partida. */
+.spectating-note {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 13px;
+  color: #ffb4a8;
+}
+
 .spectating-hint {
   font-family: ui-sans-serif, system-ui, sans-serif;
   font-size: 12px;

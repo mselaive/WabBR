@@ -1031,7 +1031,15 @@ function killPlayer(
 
   const killer = killerId >= 0 ? findPlayer(state, killerId) : undefined;
   if (killer && killer.id !== victim.id) killer.kills++;
-  events.push({ t: "kill", targetId: victim.id, byId: killerId, cause });
+  events.push({
+    t: "kill",
+    targetId: victim.id,
+    byId: killerId,
+    cause,
+    ...(killer && killer.id !== victim.id && killer.alive
+      ? { killerHp: Math.max(1, Math.ceil(killer.hp)), killerShield: Math.ceil(killer.shield) }
+      : {}),
+  });
 }
 
 // --------------------------------------------------------- explosiones

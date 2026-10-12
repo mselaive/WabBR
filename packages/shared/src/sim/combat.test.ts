@@ -263,6 +263,8 @@ describe("eventos de combate", () => {
     shooter.slots = [2, -1];
     shooter.slotTier = [0, 0];
     shooter.slotAmmo = [30, 0];
+    shooter.hp = 37.2;
+    shooter.shield = 20;
     state.players.push(shooter, target);
 
     const events: SimEvent[] = [];
@@ -273,6 +275,9 @@ describe("eventos de combate", () => {
     if (kill?.t !== "kill") throw new Error("no hubo muerte");
     expect(kill.cause).toBe(2);
     expect(kill.byId).toBe(shooter.id);
+    // Y cómo quedó el que mató, para el "le quedaban 38 de vida".
+    expect(kill.killerHp).toBe(38);
+    expect(kill.killerShield).toBe(20);
   });
 
   it("morir por granada y por zona se distinguen del arma", () => {

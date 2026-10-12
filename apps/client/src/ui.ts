@@ -549,11 +549,11 @@ export class UI {
   }
 
   /** A quién estás mirando después de morir y cómo cambiar. null lo esconde. */
-  setSpectating(view: { title: string; hint: string } | null): void {
+  setSpectating(view: { title: string; hint: string; note?: string } | null): void {
     this.spectating.hidden = view === null;
     if (view === null) return;
     // Se reescribe sólo si cambió: esto corre en cada cuadro.
-    const signature = `${view.title}|${view.hint}`;
+    const signature = `${view.title}|${view.hint}|${view.note ?? ""}`;
     if (this.spectatingSignature === signature) return;
     this.spectatingSignature = signature;
     const title = document.createElement("span");
@@ -563,6 +563,12 @@ export class UI {
     hint.className = "spectating-hint";
     hint.textContent = view.hint;
     this.spectating.replaceChildren(title, hint);
+    if (view.note) {
+      const note = document.createElement("span");
+      note.className = "spectating-note";
+      note.textContent = view.note;
+      this.spectating.prepend(note);
+    }
   }
 
   /**

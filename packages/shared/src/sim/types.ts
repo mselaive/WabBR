@@ -306,6 +306,12 @@ export type SimEvent =
       byId: number;
       /** Índice de arma, o CAUSE_ZONE / CAUSE_EXPLOSION. */
       cause: number;
+      /**
+       * Cómo quedó el que mató (vida y chaleco), para el resumen de "te mató
+       * X". Sólo si lo mató otro jugador.
+       */
+      killerHp?: number;
+      killerShield?: number;
     }
   | {
       t: "shot";

@@ -35,6 +35,9 @@ import {
   unpackItem,
   unpackResult,
   weaponStats,
+  weaponAt,
+  CAUSE_EXPLOSION,
+  CAUSE_ZONE,
   type ArenaMap,
   type GroundItem,
   type MatchPhase,
@@ -120,6 +123,8 @@ export class Game {
   private standings = new Map<number, { kills: number; alive: boolean; place: number; team: number }>();
   /** Modo de la sala: 1 todos contra todos, 2 dúos. */
   private teamSize = 1;
+  /** Cómo te mataron, para mostrarlo mientras mirás el resto de la partida. */
+  private deathNote = "";
   /** Lugares marcados por la pareja, que se muestran unos segundos. */
   private marks: Mark[] = [];
   /**
@@ -545,6 +550,7 @@ export class Game {
       this.predictor = null;
       this.spawned = false;
       this.spectateId = -1;
+      this.deathNote = "";
       this.freeCam = null;
       this.watched = null;
     this.freeCam = null;
@@ -748,6 +754,7 @@ export class Game {
             involvesMe: ev.targetId === this.localId || ev.byId === this.localId,
           });
           if (ev.targetId === this.localId) {
+            this.deathNote = deathNote(ev, killer?.name);
             // En dúos se sigue mirando al compañero, que sigue jugando por los dos.
             const mate = [...this.mates()].find((id) => this.standings.get(id)?.alive);
             this.spectateId = mate ?? ev.byId;
@@ -1025,6 +1032,7 @@ export class Game {
       this.ui.setSpectating({
         title: "Cámara libre",
         hint: "WASD para moverte · Shift más rápido · Espacio o click para volver",
+        note: this.deathNote,
       });
       return;
     }
@@ -1045,6 +1053,7 @@ export class Game {
                 : alive.length > 1
                   ? "Click o ← → para cambiar · Espacio: cámara libre"
                   : "Espacio: cámara libre",
+              note: this.deathNote,
             }
           : null,
       );
@@ -1346,6 +1355,26 @@ export class Game {
  * peleando. 20 proyectiles son 20 tiros de pistola o tres escopetazos.
  */
 const MIN_SHOTS_FOR_ACCURACY = 20;
+
+/**
+ * Lo primero que uno quiere saber al morir: quién, con qué y cómo lo dejó.
+ * "Le quedaban 12 de vida" es la diferencia entre "me ganó" y "casi lo tengo".
+ */
+function deathNote(ev: Extract<SimEvent, { t: "kill" }>, killerName: string | undefined): string {
+  if (ev.cause === CAUSE_ZONE) return "Te terminó la zona.";
+  if (ev.byId === ev.targetId) return "Te mataste solo.";
+  const how = ev.cause === CAUSE_EXPLOSION ? "con una explosión" : `con ${weaponArticle(ev.cause)}`;
+  const who = killerName ?? "alguien";
+  if (ev.killerHp === undefined) return `Te mató ${who} ${how}.`;
+  const shield = ev.killerShield ? ` y ${ev.killerShield} de chaleco` : "";
+  return `Te mató ${who} ${how}. Le quedaban ${ev.killerHp} de vida${shield}.`;
+}
+
+/** "el rifle", "la escopeta": el nombre del arma con su artículo. */
+function weaponArticle(index: number): string {
+  const name = weaponAt(index).name.toLowerCase();
+  return `${/a$/.test(name) ? "la" : "el"} ${name}`;
+}
 
 function shotAccuracy(r: UnpackedResult | undefined): number | null {
   return r && r.shotsFired > 0 ? r.shotsHit / r.shotsFired : null;

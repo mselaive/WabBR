@@ -379,6 +379,13 @@ impacto dice **cuánto** y **desde qué dirección**, y el de muerte dice **con 
 (índice de arma, o granada, o zona). Hay tests que lo verifican, porque son parte
 del contrato entre servidor y cliente.
 
+### Cómo te mataron
+
+Al morir, arriba de la vista de espectador queda **quién te mató, con qué y cómo lo
+dejaste**: "Te mató Lola con el rifle. Le quedaban 12 de vida y 20 de chaleco." Es la
+diferencia entre "me ganó" y "casi lo tengo". La vida del que mató viaja en el evento
+`kill` (`killerHp`, `killerShield`), así que no depende de que lo estuvieras viendo.
+
 ### Fuera de la zona
 
 Si quedás afuera, el borde de la pantalla se tiñe de rojo y late, aparece el cartel

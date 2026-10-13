@@ -123,6 +123,11 @@ espectador. `node scripts/reconnect.mjs` lo prueba contra el servidor local (con
 
 ### El lobby
 
+Si entrás con un link de invitación (`?room=XXXXXX`), el botón grande es **Entrar a la sala** y
+crear una sala nueva queda chico abajo: con "Crear sala" en grande, la gente lo apretaba y
+terminaba sola en una sala aparte. El menú y el lobby entran en un teléfono parado (antes el
+panel medía 471 px en una pantalla de 390 y se cortaba a la derecha).
+
 El que crea la sala es el host: puede forzar el arranque sin esperar a que todos marquen listo, y
 puede **echar a cualquiera** con la ✕ de su fila. Si el host se va, el puesto pasa al siguiente.
 

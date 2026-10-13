@@ -147,7 +147,10 @@ export class UI {
 
     // Si el link trae ?room=XXXX, precargar el código para que solo haya que entrar.
     const room = new URLSearchParams(location.search).get("room");
-    if (room) this.codeInput.value = room.toUpperCase();
+    if (room) {
+      this.codeInput.value = room.toUpperCase();
+      this.showInvite(room.toUpperCase());
+    }
 
     this.btnCreate.addEventListener("click", () => {
       this.hideError();
@@ -176,6 +179,23 @@ export class UI {
     el("btnLeave").addEventListener("click", () => this.cb.onLeave());
 
     this.roomCode.addEventListener("click", () => this.copyInvite());
+  }
+
+  /**
+   * Llegaste por un link de invitación: lo que querés es entrar a ESA sala.
+   * Con "Crear sala" como botón grande, la gente lo apretaba y terminaba sola
+   * en una sala nueva. Ahora el botón grande es entrar, y crear queda abajo.
+   */
+  private showInvite(code: string): void {
+    const hint = el("inviteHint");
+    hint.hidden = false;
+    hint.replaceChildren("Te invitaron a la sala ", Object.assign(document.createElement("b"), { textContent: code }), ". Poné tu nombre y entrá.");
+    el("menuActions").classList.add("invited");
+    this.btnJoin.classList.add("btn-primary");
+    this.btnJoin.textContent = "Entrar a la sala";
+    this.btnCreate.classList.remove("btn-primary");
+    this.btnCreate.classList.add("btn-ghost", "btn-small");
+    this.btnCreate.textContent = "O crear una sala nueva";
   }
 
   private tryJoin(): void {

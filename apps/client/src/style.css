@@ -310,6 +310,12 @@ body.paired .hud-tr {
   position: fixed;
   inset: 0;
   display: grid;
+  /*
+   * Una columna del ancho de la pantalla, no del contenido. Sin esto la
+   * columna crecía hasta el ancho mínimo de lo de adentro y en un teléfono
+   * parado el menú medía 471 px en una pantalla de 390: se cortaba a la derecha.
+   */
+  grid-template-columns: minmax(0, 1fr);
   place-items: center;
   background: radial-gradient(circle at 50% 30%, #1b2530 0%, #0b0e12 70%);
   padding: 24px;
@@ -322,6 +328,8 @@ body.paired .hud-tr {
 
 .screen {
   width: min(560px, 100%);
+  /* Lo mismo adentro: que nada estire el panel más allá de la pantalla. */
+  grid-template-columns: minmax(0, 1fr);
   background: var(--panel);
   border: 2px solid var(--line);
   border-radius: 10px;
@@ -406,14 +414,70 @@ input:focus {
   min-width: 0;
 }
 
+/* En un teléfono parado, el espaciado de la letra pixelada no entraba: se cortaba el código. */
+@media (max-width: 480px) {
+  /* El nombre se tiene que leer: si no entra con las etiquetas, ellas bajan de línea. */
+  .player-list .player-row {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  .player-list .player-row .who {
+    flex: 1 1 120px;
+  }
+
+  .code-input {
+    letter-spacing: 2px;
+    font-size: 13px;
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+}
+
 .menu-actions {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 
 .join-row {
   display: flex;
   gap: 10px;
+}
+
+/* Con link de invitación: primero entrar, y crear una sala queda chico abajo. */
+.menu-actions.invited .join-row {
+  order: -1;
+}
+
+.menu-actions.invited #btnJoin {
+  flex: 1.4;
+}
+
+.invite-hint {
+  margin: 0;
+  padding: 10px 12px;
+  border: 2px solid var(--accent);
+  border-radius: 6px;
+  background: rgba(74, 163, 255, 0.1);
+  text-align: center;
+  font-size: 14px;
+}
+
+.invite-hint b {
+  font-family: var(--pixel);
+  letter-spacing: 2px;
+}
+
+.invite-hint[hidden] {
+  display: none;
+}
+
+.btn.btn-small {
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
 }
 
 .btn {
@@ -485,6 +549,8 @@ input:focus {
   margin: 0;
   padding: 0;
   display: grid;
+  /* Del ancho del panel, no del contenido: si no, en el teléfono las filas se salían. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
 }
 
@@ -509,6 +575,8 @@ input:focus {
 
 .player-row .who {
   flex: 1;
+  /* Sin esto el nombre no se achica y la fila se sale del panel en el teléfono. */
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -68,12 +68,14 @@
         <h1 class="logo">Wab<span>BR</span></h1>
         <p class="tagline">Battle royale para jugar con amigos. Último en pie gana.</p>
 
+        <p id="inviteHint" class="invite-hint" hidden></p>
+
         <label class="field">
           <span>Tu nombre</span>
           <input id="nameInput" maxlength="14" placeholder="Jugador" autocomplete="off" />
         </label>
 
-        <div class="menu-actions">
+        <div id="menuActions" class="menu-actions">
           <button id="btnCreate" class="btn btn-primary">Crear sala</button>
           <div class="join-row">
             <input

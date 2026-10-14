@@ -33,6 +33,7 @@ import {
   RULES_CHAOS,
   RULES_LEGENDARY,
   RULES_SNIPERS,
+  RULES_SHOTGUNS,
   SMOKE_MAX_STACK,
   MOLOTOV_MAX_STACK,
   MINE_ARM_TICKS,
@@ -284,9 +285,13 @@ export function createGameState(seed = 1): GameState {
 function startingWeapon(rules: number): number {
   if (rules === RULES_CHAOS) return WEAPON_IDS.indexOf("rocket");
   if (rules === RULES_SNIPERS) return WEAPON_IDS.indexOf("sniper");
+  if (rules === RULES_SHOTGUNS) return SHOTGUN;
   if (rules === RULES_BLITZ) return WEAPON_IDS.indexOf("smg");
   return STARTING_WEAPON;
 }
+
+/** La única arma de la regla escopetas. */
+const SHOTGUN = WEAPON_IDS.indexOf("shotgun");
 
 /** Las armas de precisión, las únicas de la regla francotiradores. */
 const PRECISION = ["sniper", "crossbow", "revolver"].map((id) => WEAPON_IDS.indexOf(id as (typeof WEAPON_IDS)[number]));
@@ -300,6 +305,7 @@ function ruledLoot(state: GameState, item: { kind: number; ref: number; tier: nu
   if (item.kind !== ITEM_WEAPON) return { ref: item.ref, tier: item.tier };
   let ref = item.ref;
   if (state.rules === RULES_SNIPERS && !PRECISION.includes(ref)) ref = PRECISION[ref % PRECISION.length]!;
+  if (state.rules === RULES_SHOTGUNS) ref = SHOTGUN;
   const tier = state.rules === RULES_LEGENDARY ? 4 : item.tier;
   return { ref, tier: clampTier(ref, tier) };
 }

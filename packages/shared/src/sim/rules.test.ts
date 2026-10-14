@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RULES_BLITZ, RULES_CHAOS, RULES_LEGENDARY, RULES_SNIPERS, ZONE_PHASES } from "../constants.js";
+import { RULES_BLITZ, RULES_CHAOS, RULES_LEGENDARY, RULES_SHOTGUNS, RULES_SNIPERS, ZONE_PHASES } from "../constants.js";
 import { ITEM_WEAPON, WEAPON_IDS, weaponAt } from "../items.js";
 import { generateArena, lootCrates } from "../map/arena.js";
 import { createGameState, createPlayer, startMatch, step } from "./step.js";
@@ -67,5 +67,14 @@ describe("reglas especiales", () => {
       expect(p.grenades).toBe(2);
       expect(p.molotovs).toBe(2);
     }
+  });
+
+  it("escopetas: todos arrancan con una y es lo único que aparece", () => {
+    const state = begin(RULES_SHOTGUNS);
+    const shotgun = WEAPON_IDS.indexOf("shotgun");
+    for (const p of state.players) expect(p.slots[0]).toBe(shotgun);
+    const weapons = state.items.filter((i) => i.kind === ITEM_WEAPON);
+    expect(weapons.length).toBeGreaterThan(0);
+    expect(weapons.every((i) => i.ref === shotgun)).toBe(true);
   });
 });

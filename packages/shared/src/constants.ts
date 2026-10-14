@@ -258,14 +258,16 @@ export const ZONE_MIN_PACE = 0.5;
  * legendario (toda arma sale en su máxima rareza); 2 francotiradores (todos
  * arrancan con uno y sólo hay armas de precisión); 3 relámpago (la zona espera
  * un tercio y todos arrancan con subfusil y chaleco); 4 caos (todos arrancan
- * con lanzacohetes, dos granadas y dos molotovs).
+ * con lanzacohetes, dos granadas y dos molotovs); 5 escopetas (todos arrancan
+ * con una y no hay otra cosa: peleas de cerca y casas disputadas).
  */
-export const RULES = ["Normal", "Todo legendario", "Francotiradores", "Relámpago", "Caos"] as const;
+export const RULES = ["Normal", "Todo legendario", "Francotiradores", "Relámpago", "Caos", "Escopetas"] as const;
 export const RULES_NORMAL = 0;
 export const RULES_LEGENDARY = 1;
 export const RULES_SNIPERS = 2;
 export const RULES_BLITZ = 3;
 export const RULES_CHAOS = 4;
+export const RULES_SHOTGUNS = 5;
 export const ZONE_FULL_PACE_PLAYERS = 8;
 
 // ------------------------------------------------------------ caído (dúos)

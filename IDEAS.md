@@ -125,7 +125,7 @@ está en `main`. Protocolo **v3** (producción está en v2): al desplegar, prime
 
 ### Revisiones
 
-Siete revisiones independientes esta noche (subagentes que leen el diff y prueban en una copia aparte). Lo
+Ocho revisiones independientes esta noche (subagentes que leen el diff y prueban en una copia aparte). Lo
 más importante que encontraron y quedó arreglado: el que esperaba la segunda oportunidad veía a
 todos; los bots le tiraban al que caía en paracaídas y se volaban con la gallina a cohetazos; el
 tiro oído ubicaba al tirador a 80 px; el seq de la partida anterior hacía saltar la predicción al
@@ -135,7 +135,9 @@ mandar inputs (la pestaña de fondo) quedaba colgado en el paracaídas, invulner
 así; los bots iban y venían por las tirolesas sin querer; la repetición no se podía saltear (y
 las teclas apretadas durante ella se disparaban al volver); en tríos de 4 quedaba 3 contra 1; el
 chat de los muertos dejaba entrar al que tenía un compañero vivo (le podía marcar lo que le
-contaba alguien que ve todo). Cada arreglo tiene su
+contaba alguien que ve todo); un cliente modificado que mandaba un ángulo de apuntado enorme
+colgaba la pestaña de todos los que lo veían (ahora el servidor lo acota), y uno que mandaba un
+input cada medio segundo estiraba el paracaídas más de un minuto. Cada arreglo tiene su
 test, y la mayoría se probó a la inversa (romper el arreglo y ver que el test falla).
 
 ## Ideas que quedaron, en el orden en que las haría

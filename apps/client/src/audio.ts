@@ -162,6 +162,14 @@ export class Sound {
     this.tone(out, { freq: 70, endFreq: 35, decay: 0.5, gain: 1, type: "sine" });
   }
 
+  /** Un latido (dos golpes graves): te queda poca vida. */
+  heartbeat(): void {
+    const out = this.voice(undefined, 0.5);
+    if (!out) return;
+    this.tone(out, { freq: 62, endFreq: 40, decay: 0.12, gain: 1, type: "sine" });
+    this.tone(out, { freq: 55, endFreq: 38, decay: 0.14, gain: 0.8, type: "sine", delay: 0.18 });
+  }
+
   /** Un trueno: un retumbo grave que tarda en apagarse. */
   thunder(): void {
     const out = this.voice(undefined, 0.8);

@@ -162,6 +162,10 @@ export class Game {
   private deathNote = "";
   /** Cuándo volvés con la segunda oportunidad (performance.now()), o 0 si no. */
   private respawnAt = 0;
+  /** El último latido de poca vida (performance.now()). */
+  private lastHeartbeat = 0;
+  /** Ya se avisó que quedan los dos últimos en esta partida. */
+  private announcedFinal = false;
   /** Cuándo arranca sola la próxima partida (performance.now()), o 0. */
   private nextMatchAt = 0;
   /** Por quién apostaste en esta partida, o -1. */
@@ -517,6 +521,7 @@ export class Game {
         this.sawStart = true;
         this.recorded = false;
         this.respawnAt = 0;
+        this.announcedFinal = false;
         this.myBet = -1;
         this.finalBets = [];
         this.streaks.clear();
@@ -598,6 +603,14 @@ export class Game {
     this.snapshots.push(msg, performance.now());
     if (msg.bt) this.finalBets = msg.bt;
     this.aliveCount = msg.alive;
+    // Los dos últimos (o las dos últimas parejas): un aviso, una vez.
+    if (msg.phase === "playing" && !this.announcedFinal) {
+      const teams = new Set(msg.st.filter((r) => r[2] === 1).map((r) => r[4] ?? r[0]));
+      if (teams.size === 2 && msg.st.length > 2) {
+        this.announcedFinal = true;
+        this.ui.addNotice(this.teamSize === 2 ? "¡Quedan dos parejas!" : "¡Quedan dos!");
+      }
+    }
     this.wanted = msg.mw ? { id: msg.mw[0], x: msg.mw[1], y: msg.mw[2] } : null;
     this.champion = msg.ch ? { id: msg.ch[0], x: msg.ch[1], y: msg.ch[2] } : null;
     if (this.champion && this.champion.id !== this.announcedChampion && msg.phase === "playing") {
@@ -1069,6 +1082,14 @@ export class Game {
 
   private frame(deltaMS: number): void {
     const dt = deltaMS / 1000;
+
+    // Con poca vida, un latido cada tanto: es el "curate" de siempre.
+    const me = this.lastLocal;
+    const nowMs = performance.now();
+    if (this.phase === "playing" && me?.alive && !me.downed && me.hp > 0 && me.hp < 30 && nowMs - this.lastHeartbeat > 900) {
+      this.lastHeartbeat = nowMs;
+      this.sound.heartbeat();
+    }
 
     // La cuenta para la próxima partida, en el lobby.
     const left = this.nextMatchAt - performance.now();

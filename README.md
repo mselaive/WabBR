@@ -775,6 +775,9 @@ borde de un anillo alrededor tuyo aparece una marca blanca hacia ese lado, como 
 "te pegaron desde acá"; una ráfaga refresca la misma marca en vez de apilar veinte. Copiado de
 los sonidos visualizados de Fortnite: el que pelea detrás de una casa ya no es invisible.
 
+Con menos de 30 de vida suena un **latido** cada tanto (el "curate" de siempre), y cuando quedan
+los dos últimos —o las dos últimas parejas— un aviso lo dice.
+
 `M` lo silencia (en el teléfono, el botón *Sonido*) y se recuerda en el navegador, igual que el
 volumen, que se elige en el menú. Los niveles están medidos —se pueden
 renderizar sin parlantes pasándole un `OfflineAudioContext` a `unlock()`—: ninguno

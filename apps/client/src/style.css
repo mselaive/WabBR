@@ -1478,6 +1478,19 @@ body.touch #consumables .consumable {
   display: none;
 }
 
+/* La cuenta para la próxima partida, debajo de los botones del lobby. */
+.next-match {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.next-match[hidden] {
+  display: none;
+}
+
 /* Lo mejor de la noche en la sala, arriba de la lista de jugadores. */
 .room-best {
   margin: 0;

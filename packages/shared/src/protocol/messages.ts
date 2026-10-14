@@ -305,6 +305,11 @@ export interface RosterMsg {
   secondChance?: boolean;
   /** Si se empieza cayendo en paracaídas. */
   skydive?: boolean;
+  /**
+   * Recién terminada una partida: en cuántos ms arranca sola la siguiente si
+   * siguen todos listos. Ausente si no hay cuenta.
+   */
+  nextIn?: number;
 }
 
 export interface SnapshotMsg {

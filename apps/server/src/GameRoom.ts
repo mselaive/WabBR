@@ -109,6 +109,8 @@ const MARK_INTERVAL_MS = 500;
 const EMOTE_INTERVAL_MS = 1000;
 /** Cuántas veces festeja un bot una kill. */
 const BOT_EMOTE_CHANCE = 0.3;
+/** Cuánto se espera después de una partida antes de arrancar la siguiente sola. */
+const NEXT_MATCH_MS = 12_000;
 /** Para ser el campeón de la sala (y que todos te vean): ganadas, y ventaja sobre el segundo. */
 const CHAMPION_MIN_WINS = 3;
 const CHAMPION_LEAD = 2;
@@ -147,6 +149,12 @@ export class GameRoom extends Server<Env> {
   private kicked = new Set<string>();
   private loop: ReturnType<typeof setInterval> | null = null;
   private emptyTicks = 0;
+  /**
+   * Después de una partida, hasta cuándo (Date.now()) se espera antes de
+   * arrancar la siguiente aunque estén todos listos: el tiempo de mirar el
+   * resultado, cambiar algo o desmarcarse.
+   */
+  private nextMatchAt = 0;
   /** Último tick en que cada observador vio a cada objetivo, para el margen de gracia. */
   private lastSeen = new Map<number, Map<number, number>>();
   private lastPumpAt = 0;
@@ -644,8 +652,9 @@ export class GameRoom extends Server<Env> {
     }
     this.emptyTicks = 0;
 
-    // Arranque automático cuando todos marcaron "listo".
-    if (s.phase === "lobby" && this.seats.size >= MIN_PLAYERS) {
+    // Arranque automático cuando todos marcaron "listo" (y, recién terminada
+    // una partida, pasada la pausa para ver el resultado).
+    if (s.phase === "lobby" && this.seats.size >= MIN_PLAYERS && Date.now() >= this.nextMatchAt) {
       let allReady = true;
       for (const seat of this.seats.values()) if (!seat.meta.ready) allReady = false;
       if (allReady) {
@@ -1026,11 +1035,16 @@ export class GameRoom extends Server<Env> {
       p.diedAtTick = -1;
       p.killerId = -1;
     }
+    // Los que jugaron siguen listos: la próxima arranca sola en NEXT_MATCH_MS,
+    // salvo que alguien se desmarque. El que está con la conexión cortada, no
+    // (lo esperaría una partida entera). Los bots, siempre.
+    const played = s.players.some((p) => p.place > 0);
     for (const seat of this.seats.values()) {
-      // Los bots siguen listos: si no, la próxima partida los esperaría para siempre.
-      seat.meta.ready = seat.bot !== null;
+      const p = findPlayer(s, seat.playerId);
+      seat.meta.ready = seat.bot !== null || (p !== undefined && p.place > 0 && seat.goneAt === 0);
       seat.inputs.clear();
     }
+    this.nextMatchAt = played ? Date.now() + NEXT_MATCH_MS : 0;
     if (this.mapMode === 1) this.setMap(this.otherMap());
     this.broadcastRoster();
   }
@@ -1150,6 +1164,7 @@ export class GameRoom extends Server<Env> {
         mapMode: this.mapMode,
         secondChance: this.state.secondChance,
         skydive: this.state.skydive,
+        ...(this.nextMatchAt > Date.now() ? { nextIn: this.nextMatchAt - Date.now() } : {}),
       }),
     );
   }

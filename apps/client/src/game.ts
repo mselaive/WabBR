@@ -162,6 +162,8 @@ export class Game {
   private deathNote = "";
   /** Cuándo volvés con la segunda oportunidad (performance.now()), o 0 si no. */
   private respawnAt = 0;
+  /** Cuándo arranca sola la próxima partida (performance.now()), o 0. */
+  private nextMatchAt = 0;
   /** Por quién apostaste en esta partida, o -1. */
   private myBet = -1;
   /** Las apuestas de la partida que terminó: [quién, por quién]. */
@@ -492,6 +494,7 @@ export class Game {
       }
 
       case "roster":
+        this.nextMatchAt = msg.nextIn ? performance.now() + msg.nextIn : 0;
         if ((msg.map ?? 0) !== this.mapIndex) this.changeMap(msg.map ?? 0);
         this.ui.setMap(msg.mapMode ?? 0, MAPS[this.mapIndex]?.name ?? "", msg.hostId === this.localId);
         this.mapMode = msg.mapMode ?? 0;
@@ -670,7 +673,7 @@ export class Game {
     }
 
     if (to === "lobby") {
-      this.ui.resetReady();
+      // El botón de listo lo pone el roster: después de una partida seguís listo.
       this.ui.showScreen("lobby");
       this.world.reset();
       this.snapshots.clear();
@@ -1058,6 +1061,13 @@ export class Game {
 
   private frame(deltaMS: number): void {
     const dt = deltaMS / 1000;
+
+    // La cuenta para la próxima partida, en el lobby.
+    const left = this.nextMatchAt - performance.now();
+    this.ui.setNextMatch(
+      this.phase === "lobby" && left > 0 ? Math.ceil(left / 1000) : null,
+      [...this.roster.values()].every((p) => p.ready),
+    );
 
     // Los inputs salen a ritmo fijo (20 Hz), independiente de los FPS de la pantalla.
     this.inputAccumulator = Math.min(this.inputAccumulator + deltaMS, MS_PER_TICK * 3);

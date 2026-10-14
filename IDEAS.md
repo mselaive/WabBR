@@ -91,6 +91,7 @@ está en `main`.
 | Ayuda del menú | "Qué hay en el mapa" y las teclas nuevas | Captura |
 | Minas | `K`: se tira como granada, se arma donde se frena y explota con un rival; los rivales la ven sólo de cerca | 5 tests + captura en partida |
 | Dos logros más | Cazador (la gallina) y Vidente (una apuesta), con cresta y turbante; los 12 gorros en una fila | Captura del menú en PC y teléfono |
+| La próxima arranca sola | Después de una partida seguís listo y la siguiente arranca a los 12 s, salvo que alguien se desmarque | Partida por socket: arrancó sola a los 11,7 s; desmarcado, no |
 | Lo mejor de la noche | En el lobby: más ganadas, más kills y mejor apostador de la sala | Captura después de una partida |
 | Cuarta revisión | El que esperaba la segunda oportunidad veía a todos; bots volándose con la gallina a cohetazos; el aviso de vuelta decía dónde; cortarse no la hacía perder; cohete a la gallina estallando donde estaba; la vuelta se deslizaba | Tests nuevos con mutaciones + partida en el navegador |
 

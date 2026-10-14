@@ -118,6 +118,7 @@ export class UI {
   private readonly btnStart = el<HTMLButtonElement>("btnStart");
   private readonly btnAddBot = el<HTMLButtonElement>("btnAddBot");
   private readonly lobbyHint = el("lobbyHint");
+  private readonly nextMatch = el("nextMatch");
 
   private readonly aliveEl = el("alive");
   private readonly killsEl = el("kills");
@@ -344,9 +345,25 @@ export class UI {
   }
 
   resetReady(): void {
-    this.ready = false;
-    this.btnReady.textContent = "Estoy listo";
-    this.btnReady.classList.remove("is-ready");
+    this.syncReady(false);
+  }
+
+  /** El botón de listo, como lo tiene el servidor (después de una partida, seguís listo). */
+  private syncReady(ready: boolean): void {
+    this.ready = ready;
+    this.btnReady.textContent = ready ? "Listo ✓" : "Estoy listo";
+    this.btnReady.classList.toggle("is-ready", ready);
+  }
+
+  /** La cuenta para la próxima partida (en segundos), o null si no hay. */
+  setNextMatch(seconds: number | null, allReady: boolean): void {
+    const el = this.nextMatch;
+    el.hidden = seconds === null;
+    if (seconds === null) return;
+    const text = allReady
+      ? `Siguiente partida en ${seconds} s · desmarcate si querés esperar`
+      : `Siguiente partida en ${seconds} s, si están todos listos`;
+    if (el.textContent !== text) el.textContent = text;
   }
 
   // --------------------------------------------------------------- lobby
@@ -359,6 +376,7 @@ export class UI {
     this.setRoomBest(roster);
     const byId = new Map(roster.map((p) => [p.id, p]));
     const me = byId.get(localId);
+    if (me && me.ready !== this.ready) this.syncReady(me.ready);
     /** Con quién está emparejado (los dos se eligieron), o undefined. */
     const pairedWith = (p: PlayerMeta): PlayerMeta | undefined => {
       const other = p.partner === undefined ? undefined : byId.get(p.partner);

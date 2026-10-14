@@ -136,6 +136,12 @@ crear una sala nueva queda chico abajo: con "Crear sala" en grande, la gente lo 
 terminaba sola en una sala aparte. El menú y el lobby entran en un teléfono parado (antes el
 panel medía 471 px en una pantalla de 390 y se cortaba a la derecha).
 
+**La próxima arranca sola.** Al volver de una partida, los que jugaron siguen listos y la
+siguiente arranca a los 12 segundos ("Siguiente partida en 9 s"), sin que nadie tenga que volver a
+apretar nada. El que quiere esperar se desmarca y se espera como siempre; el host igual puede
+cambiar las opciones o forzar el arranque. El que tiene la conexión cortada no queda listo (si no,
+la siguiente lo dejaría afuera sin saberlo).
+
 Arriba de la lista, **lo mejor de la noche** en la sala: quién ganó más partidas, quién hizo más
 kills y quién acertó más apuestas (sólo el que va primero solo; empatados, nadie).
 

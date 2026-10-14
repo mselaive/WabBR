@@ -284,6 +284,11 @@ export interface GameState {
   smokes: SmokeState[];
   /** 1 todos contra todos, 2 dúos. Lo elige el host en el lobby. */
   teamSize: number;
+  /**
+   * El que más partidas ganó en la sala (lo decide el servidor antes de
+   * empezar), o -1. Como desventaja, todos lo ven en el minimapa.
+   */
+  championId: number;
   /** Parejas elegidas en el lobby (ids). Los demás se emparejan por sorteo. */
   pairs: [number, number][];
   airdrops: AirdropState[];

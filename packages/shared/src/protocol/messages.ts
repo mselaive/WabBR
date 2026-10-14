@@ -251,6 +251,11 @@ export interface SnapshotMsg {
   rz?: SnapStrike[];
   /** El más buscado y dónde se lo vio por última vez: [id, x, y]. Sólo si hay. */
   mw?: [number, number, number];
+  /**
+   * El campeón de la sala (el que más partidas ganó) y dónde está ahora:
+   * [id, x, y]. Es su desventaja: lo ven todos, siempre. Sólo si hay y está vivo.
+   */
+  ch?: [number, number, number];
 }
 
 export interface ItemsMsg {

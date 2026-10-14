@@ -203,6 +203,7 @@ export function createGameState(seed = 1): GameState {
     smokes: [],
     teamSize: 1,
     pairs: [],
+    championId: -1,
     airdrops: [],
     nextAirdropId: 1,
     strikes: [],

@@ -78,6 +78,13 @@ export class Minimap {
     marks: readonly Mark[] = [],
     wanted: { id: number; x: number; y: number } | null = null,
     golden: readonly { x: number; y: number }[] = [],
+    /**
+     * Mostrar a todos los que llegan en el snapshot. Sólo muerto o mirando: en
+     * juego, el minimapa no es un radar (ver abajo).
+     */
+    showAll = false,
+    /** El campeón de la sala: aparece siempre, esté donde esté. */
+    champion: { id: number; x: number; y: number } | null = null,
   ): void {
     const ctx = this.ctx;
     const cx = this.tx(WORLD_CENTER_X);
@@ -224,6 +231,11 @@ export class Minimap {
     for (const p of frame.players) {
       if (!p.alive) continue;
       const isLocal = p.id === localId;
+      // El servidor manda a todos los que están en tu línea de vista, también
+      // los que quedan fuera de la pantalla: dibujarlos acá era un radar que
+      // te mostraba gente que en la pantalla no veías. En juego, sólo vos y tu
+      // compañero.
+      if (!showAll && !isLocal && !mates.has(p.id)) continue;
       const meta = roster.get(p.id);
       ctx.fillStyle = isLocal
         ? "#ffffff"
@@ -261,6 +273,26 @@ export class Minimap {
       ctx.lineWidth = 1;
       ctx.fillRect(this.tx(c.x) - 2.5, this.ty(c.y) - 2.5, 5, 5);
       ctx.strokeRect(this.tx(c.x) - 3, this.ty(c.y) - 3, 6, 6);
+    }
+
+    // El campeón de la sala: una corona roja que lo sigue siempre.
+    if (champion) {
+      const x = this.tx(champion.x);
+      const y = this.ty(champion.y);
+      ctx.fillStyle = "#ff5c5c";
+      ctx.strokeStyle = "#000000cc";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x - 6, y + 4);
+      ctx.lineTo(x - 6, y - 3);
+      ctx.lineTo(x - 3, y);
+      ctx.lineTo(x, y - 5);
+      ctx.lineTo(x + 3, y);
+      ctx.lineTo(x + 6, y - 3);
+      ctx.lineTo(x + 6, y + 4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
     }
 
     // El más buscado: una estrella dorada donde se lo vio por última vez.

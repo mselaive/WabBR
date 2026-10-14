@@ -565,6 +565,7 @@ export class GameRoom extends Server<Env> {
     // Transiciones que dependen del contador que acaba de decrementar step().
     if (s.phase === "countdown" && s.phaseTicksLeft <= 0) {
       s.pairs = this.chosenPairs();
+      s.championId = this.roomChampion();
       startMatch(s, (Date.now() ^ (this.seats.size << 16)) | 1, this.arena);
       this.broadcast(encodeServer({ t: "start", seed: s.rng }));
       this.broadcastItems();
@@ -645,6 +646,7 @@ export class GameRoom extends Server<Env> {
       ...(s.smokes.length > 0 ? { sm: packSmokes(s) } : {}),
       ...(s.strikes.length > 0 ? { rz: packStrikes(s) } : {}),
       ...(s.wanted ? { mw: [s.wanted.id, Math.round(s.wanted.x), Math.round(s.wanted.y)] as [number, number, number] } : {}),
+      ...this.championPosition(),
     };
 
     // Fuera de la partida no hay nada que ocultar: un solo mensaje para todos.
@@ -720,6 +722,35 @@ export class GameRoom extends Server<Env> {
   }
 
   // ------------------------------------------------------------ sala
+
+  /**
+   * El que más partidas ganó en la sala, si es uno solo: es su desventaja, todos
+   * lo ven en el minimapa durante la partida. Con un empate arriba, nadie.
+   */
+  private roomChampion(): number {
+    let best = 0;
+    let champion = -1;
+    let tie = false;
+    for (const seat of this.seats.values()) {
+      const wins = seat.meta.wins ?? 0;
+      if (wins > best) {
+        best = wins;
+        champion = seat.playerId;
+        tie = false;
+      } else if (wins === best && wins > 0) {
+        tie = true;
+      }
+    }
+    return tie ? -1 : champion;
+  }
+
+  /** Dónde está el campeón de la sala, para el snapshot de todos. */
+  private championPosition(): { ch?: [number, number, number] } {
+    const s = this.state;
+    if (s.phase !== "playing" || s.championId < 0) return {};
+    const p = findPlayer(s, s.championId);
+    return p?.alive ? { ch: [p.id, Math.round(p.x), Math.round(p.y)] } : {};
+  }
 
   /** Las parejas que se eligieron mutuamente en el lobby. */
   private chosenPairs(): [number, number][] {

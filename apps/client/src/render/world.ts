@@ -860,6 +860,8 @@ export class WorldView {
     mates: ReadonlySet<number> = new Set(),
     /** El más buscado: su nombre va en dorado con una estrella. */
     wantedId = -1,
+    /** El campeón de la sala: su nombre lleva una corona. */
+    championId = -1,
   ): void {
     const seen = new Set<number>();
 
@@ -891,7 +893,8 @@ export class WorldView {
       view.flash.position.set(Math.cos(aim) * 24, Math.sin(aim) * 24 + 2);
 
       if (meta && !p.downed) {
-        const name = p.id === wantedId ? `★ ${meta.name}` : meta.name;
+        const crown = p.id === championId ? "♛ " : "";
+        const name = p.id === wantedId ? `${crown}★ ${meta.name}` : `${crown}${meta.name}`;
         if (view.label.text !== name) view.label.text = name;
         view.shirt.tint = playerColor(meta.colorIndex);
       }

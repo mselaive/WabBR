@@ -19,7 +19,7 @@ const check = (ok, que) => {
   if (!ok) fallos.push(que);
 };
 
-const estado = { id: -1, roster: [], phase: "", kills: 0, res: null, alive: 0, vio: new Set(), winner: -1 };
+const estado = { id: -1, roster: [], phase: "", kills: 0, res: null, alive: 0, vio: new Set(), winner: -1, campeon: null };
 const ws = new WebSocket(`${WS}/parties/game-room/${ROOM}?name=Host&v=2`);
 ws.on("message", (raw) => {
   const m = JSON.parse(raw.toString());
@@ -32,6 +32,7 @@ ws.on("message", (raw) => {
     for (const ev of m.ev ?? []) if (ev.t === "kill" && ev.byId >= 0) estado.kills++;
     if (m.res) estado.res = m.res;
     if (m.phase === "ended") estado.winner = m.winner;
+    if (m.phase === "playing" && m.ch) estado.campeon = m.ch[0];
   }
 });
 const enviar = (msg) => ws.send(JSON.stringify(msg));
@@ -71,6 +72,16 @@ check(
 );
 const killsSala = estado.roster.reduce((n, p) => n + (p.totalKills ?? 0), 0);
 check(killsSala === estado.kills, `y suma las kills (${killsSala} de ${estado.kills})`);
+
+// La partida siguiente: el que ganó la primera es el campeón de la sala y
+// todos lo ven en el mapa (si ganó alguien y sigue vivo al empezar).
+if (estado.winner >= 0) {
+  await hasta(() => estado.phase === "lobby", 20000);
+  estado.campeon = null;
+  enviar({ t: "start" });
+  await hasta(() => estado.campeon !== null, 20000);
+  check(estado.campeon === estado.winner, "en la partida siguiente, el ganador es el campeón y todos lo ven");
+}
 
 ws.close();
 if (fallos.length) {

@@ -131,6 +131,10 @@ export class Game {
   private recorded = false;
   /** Cómo te mataron, para mostrarlo mientras mirás el resto de la partida. */
   private deathNote = "";
+  /** El campeón de la sala (el que más partidas ganó) y dónde está, o null. */
+  private champion: { id: number; x: number; y: number } | null = null;
+  /** De qué campeón ya se avisó en esta partida. */
+  private announcedChampion = -1;
   /** El más buscado y dónde se lo vio por última vez, o null. */
   private wanted: { id: number; x: number; y: number } | null = null;
   /** Lugares marcados por la pareja, que se muestran unos segundos. */
@@ -499,6 +503,16 @@ export class Game {
     this.snapshots.push(msg, performance.now());
     this.aliveCount = msg.alive;
     this.wanted = msg.mw ? { id: msg.mw[0], x: msg.mw[1], y: msg.mw[2] } : null;
+    this.champion = msg.ch ? { id: msg.ch[0], x: msg.ch[1], y: msg.ch[2] } : null;
+    if (this.champion && this.champion.id !== this.announcedChampion && msg.phase === "playing") {
+      this.announcedChampion = this.champion.id;
+      const name = this.everyone.get(this.champion.id)?.name ?? "Alguien";
+      this.ui.addNotice(
+        this.champion.id === this.localId
+          ? "Ganaste más partidas que nadie: hoy todos te ven en el mapa"
+          : `${name} ganó más partidas: todos lo ven en el mapa (corona roja)`,
+      );
+    }
     for (const [id] of msg.ad ?? []) {
       if (this.announcedAirdrops.has(id)) continue;
       this.announcedAirdrops.add(id);
@@ -565,6 +579,7 @@ export class Game {
       this.spectateId = -1;
       this.deathNote = "";
       this.recorded = false;
+      this.announcedChampion = -1;
       this.freeCam = null;
       this.watched = null;
     this.freeCam = null;
@@ -908,6 +923,7 @@ export class Game {
       dt,
       mates,
       this.wanted?.id ?? -1,
+      this.champion?.id ?? -1,
     );
 
     this.world.updateItems(this.items.values(), performance.now());
@@ -928,7 +944,8 @@ export class Game {
       .map((id) => this.crates[id])
       .filter((c) => c !== undefined)
       .map((c) => ({ x: c.x + c.w / 2, y: c.y + c.h / 2 }));
-    this.minimap.draw(frame, this.roster, this.watched?.id ?? this.localId, mates, this.marks, this.wanted, gold);
+    const playing = this.lastLocal?.alive === true;
+    this.minimap.draw(frame, this.roster, this.watched?.id ?? this.localId, mates, this.marks, this.wanted, gold, !playing, this.champion);
     this.updateHud(frame, localPredicted);
 
     this.world.setCrosshair(this.input.mouseX, this.input.mouseY, this.phase === "playing");

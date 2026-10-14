@@ -176,6 +176,12 @@ amigos. Vive en la sala, en el asiento de cada uno: sobrevive a un corte de cone
 de la sala, y no se guarda en ningún lado. Es lo que daría un perfil sin tener cuentas (ver
 `IDEAS.md`). El que entra a mirar con la partida empezada no suma una partida jugada.
 
+**El campeón de la sala.** El que más partidas ganó en la sala (sin empate arriba) arranca cada
+partida con una desventaja: **todos lo ven siempre en el minimapa**, con una corona roja que lo
+sigue, y su nombre lleva ♛. Al empezar, un aviso le dice a todos quién es. Es para que el que
+viene ganando toda la noche no gane siempre: le da a todos un objetivo. Lo decide el servidor con
+el marcador de la sala (`roomChampion`), y su posición viaja en el snapshot (`ch`).
+
 ## El mapa
 
 Arena circular de 3000 px de diámetro, generada con semilla fija en
@@ -354,6 +360,15 @@ la gente de donde está acampando y el ruido tapa los tiros. Las muertes se anot
 bombardeo (nadie suma la kill) y los bots se van del círculo. Todo es de la simulación
 compartida con el azar de la partida (`launchStrike`, `stepStrikes`); el cliente sólo dibuja
 lo que llega en el snapshot (`rz`).
+
+## El minimapa no es un radar
+
+El servidor te manda a los que tenés en línea de vista hasta 1150 px, también los que quedan
+fuera de la pantalla (para que aparezcan sin saltos al entrar en ella). El minimapa los dibujaba
+a todos, y eso era un radar: desde un arbusto se veían puntitos de gente que en la pantalla no
+estaba. Ahora, jugando, el minimapa muestra sólo a vos y a tu compañero, más lo que es público a
+propósito: el más buscado, el campeón de la sala, los bombardeos, los paquetes, las cajas doradas
+y las fogatas. Muerto o mirando, sí se ve a todos.
 
 ## El más buscado
 

@@ -345,14 +345,17 @@ primero agarra la caja. Al tocar el piso, si cayó encima de algo, se corre al l
 cercano.
 
 En el aire no se puede disparar, tirar granadas ni curarse, y a nadie le pegan balas,
-explosiones, fuego ni la zona. Todos ven todos los paracaídas (desde abajo se ven, y desde arriba
-se ve todo). Los bots eligen una caja adentro de la zona y a su alcance, planean hasta ahí y se
+explosiones, fuego ni la zona. Todos ven todos los paracaídas (desde abajo se ven); desde arriba
+se ve como desde el piso: si no, el que vuelve con la segunda oportunidad vería a todos, también a
+los escondidos, y caería al lado. Los bots eligen una caja adentro de la zona y a su alcance, planean hasta ahí y se
 tiran encima. Con la segunda oportunidad también se vuelve cayendo (2,5 segundos), que de paso
 sirve de protección al aparecer.
 
 El planeo vive en `stepPlayerMovement`, así que el cliente lo predice como cualquier movimiento;
-los ticks que quedan viajan en el snapshot. Sin inputs (se cortó la conexión) igual se sigue
-cayendo: si no, el que se desconecta en el aire quedaría colgado.
+los ticks que quedan viajan en el snapshot. Sin inputs igual se sigue cayendo: con la conexión
+cortada, o si hace medio segundo que no llega nada (la pestaña quedó de fondo, o un cliente
+modificado que se guarda el paracaídas para cuando le convenga). Si no, quedaría colgado e
+invulnerable, y hasta podía ganar así. Lo mismo para el vuelo de un hongo o una tirolesa.
 
 ## Loot
 

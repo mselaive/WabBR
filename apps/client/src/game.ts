@@ -168,6 +168,8 @@ export class Game {
   private respawnAt = 0;
   /** Rivales a la vista (interpolados), para la ayuda de puntería del stick. */
   private assistTargets: { x: number; y: number }[] = [];
+  /** Al entrar, agregar bots y marcarse listo (el botón "Practicar con bots"). */
+  private practice = false;
   /** Cambiaste de color en esta sala: el que te toque se guarda. */
   private colorChosen = false;
   /** El último latido de poca vida (performance.now()). */
@@ -509,6 +511,12 @@ export class Game {
         this.ui.setRoom(msg.room);
         this.ui.resetReady();
         this.ui.showScreen("lobby");
+        if (this.practice) {
+          // Practicar: cinco bots y listo; la partida arranca sola.
+          this.practice = false;
+          for (let i = 0; i < 5; i++) this.net?.send({ t: "bot" });
+          this.net?.send({ t: "ready", ready: true });
+        }
         return;
       }
 
@@ -1799,6 +1807,11 @@ export class Game {
   /** Las reglas especiales. El servidor comprueba que seas el host. */
   setRules(rules: number): void {
     this.net?.send({ t: "rules", rules });
+  }
+
+  /** La próxima sala que se cree es para practicar (ver onPractice). */
+  practiceOnJoin(): void {
+    this.practice = true;
   }
 
   /** El siguiente color libre. Se recuerda para la próxima sala. */

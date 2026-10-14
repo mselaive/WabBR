@@ -24,6 +24,7 @@ export interface UICallbacks {
   onVolume: (volume: number) => void;
   onSkydive: (on: boolean) => void;
   onColor: () => void;
+  onPractice: (name: string) => void;
 }
 
 /** La apuesta del espectador: por quién se puede apostar, o por quién apostaste. */
@@ -109,6 +110,7 @@ export class UI {
   };
 
   private readonly btnCreate = el<HTMLButtonElement>("btnCreate");
+  private readonly btnPractice = el<HTMLButtonElement>("btnPractice");
   private readonly btnJoin = el<HTMLButtonElement>("btnJoin");
 
   private readonly nameInput = el<HTMLInputElement>("nameInput");
@@ -188,6 +190,10 @@ export class UI {
     this.btnCreate.addEventListener("click", () => {
       this.hideError();
       this.cb.onCreate(this.playerName());
+    });
+    this.btnPractice.addEventListener("click", () => {
+      this.hideError();
+      this.cb.onPractice(this.playerName());
     });
 
     this.btnJoin.addEventListener("click", () => this.tryJoin());
@@ -349,6 +355,7 @@ export class UI {
    */
   setEntryEnabled(enabled: boolean): void {
     this.btnCreate.disabled = !enabled;
+    this.btnPractice.disabled = !enabled;
     this.btnJoin.disabled = !enabled;
   }
 

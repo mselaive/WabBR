@@ -137,6 +137,9 @@ espectador. `node scripts/reconnect.mjs` lo prueba contra el servidor local (con
 
 ### El lobby
 
+En el menú, **Practicar con bots** crea una sala propia con cinco bots y arranca sola: para el que
+llega antes que los amigos (o quiere probar algo).
+
 Si entrás con un link de invitación (`?room=XXXXXX`), el botón grande es **Entrar a la sala** y
 crear una sala nueva queda chico abajo: con "Crear sala" en grande, la gente lo apretaba y
 terminaba sola en una sala aparte. El menú y el lobby entran en un teléfono parado (antes el

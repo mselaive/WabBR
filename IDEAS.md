@@ -117,6 +117,8 @@ está en `main`. Protocolo **v3** (producción está en v2): al desplegar, prime
 | Dificultad de los bots | Fácil / Normal / Difícil | Test + captura |
 | Teléfono | Ayuda de puntería con el stick; botón Sonido; botones de a dos y sin filas vacías | Tests + capturas emulando un teléfono |
 | Volumen | Control en el menú | Captura |
+| Practicar con bots | Un botón en el menú: sala propia con 5 bots que arranca sola | Prueba en el navegador |
+| Novedades | En el menú, lo nuevo de esta noche | Captura |
 | Ayuda del menú | "Qué hay en el mapa" y las teclas nuevas | Captura |
 
 ### Revisiones

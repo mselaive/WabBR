@@ -203,7 +203,7 @@ export class WorldView {
   /** Flechas de "te pegaron desde acá", en radianes. */
   private readonly damageArcs: { dir: number; life: number }[] = [];
   /** Tiros oídos detrás de paredes, en radianes. */
-  private readonly soundArcs: { dir: number; life: number }[] = [];
+  private readonly soundArcs: { dir: number; life: number; steps: boolean }[] = [];
   /**
    * Dónde está el jugador (en el mundo): las marcas de daño y de tiros oídos
    * se dibujan alrededor suyo, no del centro de la pantalla, porque la cámara
@@ -958,14 +958,16 @@ export class WorldView {
    * de daño. Las ráfagas de la misma dirección refrescan la misma marca en vez
    * de apilar veinte.
    */
-  addSoundArc(dir: number): void {
-    const same = this.soundArcs.find((a) => Math.abs(Math.atan2(Math.sin(a.dir - dir), Math.cos(a.dir - dir))) < 0.3);
+  addSoundArc(dir: number, steps = false): void {
+    const same = this.soundArcs.find(
+      (a) => a.steps === steps && Math.abs(Math.atan2(Math.sin(a.dir - dir), Math.cos(a.dir - dir))) < 0.3,
+    );
     if (same) {
       same.life = 1.4;
       return;
     }
-    this.soundArcs.push({ dir, life: 1.4 });
-    if (this.soundArcs.length > 6) this.soundArcs.shift();
+    this.soundArcs.push({ dir, life: 1.4, steps });
+    if (this.soundArcs.length > 8) this.soundArcs.shift();
   }
 
   /**
@@ -1048,6 +1050,15 @@ export class WorldView {
         continue;
       }
       const alpha = Math.min(1, arc.life) * 0.7;
+      if (arc.steps) {
+        // Pasos: tres puntitos amarillos, más adentro que los tiros.
+        for (const k of [-0.14, 0, 0.14]) {
+          const a = arc.dir + k;
+          this.arcLayer.circle(cx + Math.cos(a) * 135, cy + Math.sin(a) * 135, 3);
+        }
+        this.arcLayer.fill({ color: 0xffd257, alpha });
+        continue;
+      }
       for (const r of [150, 160]) {
         this.arcLayer.arc(cx, cy, r, arc.dir - 0.2, arc.dir + 0.2);
         this.arcLayer.stroke({ width: 3, color: 0xffffff, alpha, cap: "round" });

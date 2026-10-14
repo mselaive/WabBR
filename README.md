@@ -800,6 +800,10 @@ borde de un anillo alrededor tuyo aparece una marca blanca hacia ese lado, como 
 "te pegaron desde acá"; una ráfaga refresca la misma marca en vez de apilar veinte. Copiado de
 los sonidos visualizados de Fortnite: el que pelea detrás de una casa ya no es invisible.
 
+**Y los pasos del que corre.** Un rival que corre (no el que camina) a menos de 350 px y fuera de
+la vista se oye: dos golpecitos sordos de por allá y tres puntitos amarillos en el anillo, con el
+mismo rumbo aproximado que los tiros. Correr pasa a ser una decisión: llegás antes, pero te oyen.
+
 Con menos de 30 de vida suena un **latido** cada tanto (el "curate" de siempre), y cuando quedan
 los dos últimos —o las dos últimas parejas— un aviso lo dice.
 

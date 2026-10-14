@@ -518,6 +518,11 @@ export type SimEvent =
    * "por allá", no "acá".
    */
   | { t: "heard"; x: number; y: number; weapon: number }
+  /**
+   * Pasos de alguien que corre cerca y no se ve (lo arma el servidor, como
+   * "heard"): rumbo y distancia aproximados.
+   */
+  | { t: "steps"; x: number; y: number }
   /** Alguien prendió una bengala: viene un paquete a (x, y). */
   | { t: "flare"; byId: number; x: number; y: number }
   /** Quedó una mina en el piso (suena el clic de armarla). */

@@ -99,6 +99,7 @@ está en `main`.
 | Tirolesas | 6 por mapa: caminando hacia el cable desde un poste te lleva al otro, disparando | 3 tests + los 12 mapas ida y vuelta + predicción con ping + captura |
 | Regla Escopetas | Todos con escopeta y no aparece otra cosa | Test |
 | Copiar resumen de la noche | La tabla de la sala en texto, con el link, para el grupo | 2 tests + prueba en el navegador (portapapeles) |
+| Pasos que se oyen | El rival que corre cerca y no se ve se oye (rumbo aproximado); caminar es silencioso | Partida por socket (con el alcance agrandado a propósito: 615 pasos; con el real, casi nunca entre bots) |
 | La próxima arranca sola | Después de una partida seguís listo y la siguiente arranca a los 12 s, salvo que alguien se desmarque | Partida por socket: arrancó sola a los 11,7 s; desmarcado, no |
 | Lo mejor de la noche | En el lobby: más ganadas, más kills y mejor apostador de la sala | Captura después de una partida |
 | Cuarta revisión | El que esperaba la segunda oportunidad veía a todos; bots volándose con la gallina a cohetazos; el aviso de vuelta decía dónde; cortarse no la hacía perder; cohete a la gallina estallando donde estaba; la vuelta se deslizaba | Tests nuevos con mutaciones + partida en el navegador |

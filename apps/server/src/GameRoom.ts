@@ -9,6 +9,8 @@ import {
   EMOTES,
   HEARD_GRID,
   HEARING_RANGE,
+  STEPS_RANGE,
+  PLAYER_SPEED,
   MINE_SPOT,
   MAX_PLAYERS,
   RULES,
@@ -877,6 +879,7 @@ export class GameRoom extends Server<Env> {
       }
 
       const ev = this.visibleEvents(viewer);
+      ev.push(...this.footsteps(viewer, new Set(players.map((p) => p[0]!))));
 
       conn.send(
         encodeServer({
@@ -946,21 +949,38 @@ export class GameRoom extends Server<Env> {
       // El tiro que no se ve igual se oye: llega como "se oyó por allá", con el
       // rumbo y la distancia aproximados. El silencioso (la ballesta), ni eso.
       if (e.t !== "shot" || e.silent) continue;
-      const d = Math.hypot(e.x - viewer.x, e.y - viewer.y);
-      if (d <= HEARING_RANGE) {
-        // Un rumbo de 32 posibles y la distancia de a HEARD_GRID: "por allá, más
-        // o menos así de lejos". Redondear el punto en una grilla, en cambio,
-        // lo ubicaba a 80 px: un cliente modificado lo dibujaría como un radar.
-        const step = (Math.PI * 2) / 32;
-        const bearing = Math.round(Math.atan2(e.y - viewer.y, e.x - viewer.x) / step) * step;
-        const dist = Math.max(HEARD_GRID, Math.round(d / HEARD_GRID) * HEARD_GRID);
-        out.push({
-          t: "heard",
-          x: Math.round(viewer.x + Math.cos(bearing) * dist),
-          y: Math.round(viewer.y + Math.sin(bearing) * dist),
-          weapon: e.weapon ?? 0,
-        });
+      if (Math.hypot(e.x - viewer.x, e.y - viewer.y) <= HEARING_RANGE) {
+        out.push({ t: "heard", ...this.roughly(viewer, e.x, e.y), weapon: e.weapon ?? 0 });
       }
+    }
+    return out;
+  }
+
+  /**
+   * Dónde se oyó algo, sin decir dónde está: un rumbo de 32 posibles y la
+   * distancia de a HEARD_GRID, "por allá, más o menos así de lejos".
+   * Redondear el punto en una grilla, en cambio, lo ubicaba a 80 px: un
+   * cliente modificado lo dibujaría como un radar.
+   */
+  private roughly(viewer: PlayerState, x: number, y: number): { x: number; y: number } {
+    const step = (Math.PI * 2) / 32;
+    const bearing = Math.round(Math.atan2(y - viewer.y, x - viewer.x) / step) * step;
+    const dist = Math.max(HEARD_GRID, Math.round(Math.hypot(x - viewer.x, y - viewer.y) / HEARD_GRID) * HEARD_GRID);
+    return { x: Math.round(viewer.x + Math.cos(bearing) * dist), y: Math.round(viewer.y + Math.sin(bearing) * dist) };
+  }
+
+  /**
+   * Los pasos que se oyen: los de los rivales que corren cerca y no se ven
+   * (cada medio segundo). Caminando no hacen ruido: correr es una decisión.
+   */
+  private footsteps(viewer: PlayerState | undefined, sent: ReadonlySet<number>): SimEvent[] {
+    if (!viewer?.alive || this.state.tick % 10 !== 0) return [];
+    const out: SimEvent[] = [];
+    for (const p of this.state.players) {
+      if (!p.alive || p.team === viewer.team || p.airTicks > 0 || sent.has(p.id)) continue;
+      if (Math.hypot(p.vx, p.vy) < PLAYER_SPEED * 1.2) continue;
+      if (Math.hypot(p.x - viewer.x, p.y - viewer.y) > STEPS_RANGE) continue;
+      out.push({ t: "steps", ...this.roughly(viewer, p.x, p.y) });
     }
     return out;
   }

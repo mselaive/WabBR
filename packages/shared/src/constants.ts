@@ -156,6 +156,8 @@ export const CHICKEN_FEAR_RADIUS = 280;
  */
 export const HEARING_RANGE = 1100;
 export const HEARD_GRID = 160;
+/** Los pasos del que corre se oyen hasta acá (caminando no hacen ruido). */
+export const STEPS_RANGE = 350;
 
 /** El radar: 10 s activo, una marca cada 2 s, hasta 1500 px. */
 export const RADAR_TICKS = 200;

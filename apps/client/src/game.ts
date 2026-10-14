@@ -856,6 +856,13 @@ export class Game {
           if (me?.alive) this.world.addSoundArc(Math.atan2(ev.y - me.y, ev.x - me.x));
           break;
         }
+        case "steps": {
+          // Alguien corre cerca y no se ve: pasos de por allá y tres puntitos.
+          const me = this.lastLocal;
+          this.sound.steps(this.spot(ev.x, ev.y));
+          if (me?.alive) this.world.addSoundArc(Math.atan2(ev.y - me.y, ev.x - me.x), true);
+          break;
+        }
         case "impact":
           if (this.shots.covers(ev.bullet)) {
             if (this.shots.serverImpact(ev.bullet)) this.world.spawnImpact(ev.x, ev.y);

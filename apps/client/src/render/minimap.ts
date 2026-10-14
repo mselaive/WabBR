@@ -58,6 +58,35 @@ export class Minimap {
     return (y - (WORLD_CENTER_Y - WORLD_RADIUS)) * this.scale + 4;
   }
 
+  /** El mapa solo, sin nadie: la vista previa del lobby. */
+  drawPreview(): void {
+    const zone = {
+      x: WORLD_CENTER_X,
+      y: WORLD_CENTER_Y,
+      radius: WORLD_RADIUS,
+      targetX: WORLD_CENTER_X,
+      targetY: WORLD_CENTER_Y,
+      targetRadius: WORLD_RADIUS,
+      phase: 0,
+      shrinking: false,
+      ticksLeft: 0,
+    };
+    const empty: InterpolatedFrame = {
+      tick: 0,
+      players: [],
+      bullets: [],
+      grenades: [],
+      airdrops: [],
+      smokes: [],
+      strikes: [],
+      fires: [],
+      chicken: null,
+      mines: [],
+      zone,
+    };
+    this.draw(empty, new Map(), -1);
+  }
+
   /** Del click en el minimapa (píxeles CSS del elemento) al punto del mundo. */
   toWorld(clientX: number, clientY: number): { x: number; y: number } {
     const rect = this.canvas.getBoundingClientRect();

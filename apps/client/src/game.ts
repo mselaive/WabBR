@@ -264,6 +264,7 @@ export class Game {
     this.world = new WorldView(this.app, this.arena);
     const minimapCanvas = this.minimapCanvas;
     this.minimap = new Minimap(minimapCanvas, this.arena);
+    this.drawMapPreview();
     // Tocar o clickear el minimapa marca ese lugar para el compañero.
     minimapCanvas.addEventListener(
       "pointerdown",
@@ -1964,6 +1965,16 @@ export class Game {
     this.world = new WorldView(this.app, this.arena);
     this.world.setNight(this.night);
     this.minimap = new Minimap(this.minimapCanvas, this.arena);
+    this.drawMapPreview();
+  }
+
+  /** El mapa que toca, en el lobby: con "Mapa nuevo", para saber adónde se va. */
+  private drawMapPreview(): void {
+    const canvas = document.getElementById("mapPreviewCanvas") as HTMLCanvasElement | null;
+    if (!canvas) return;
+    new Minimap(canvas, this.arena).drawPreview();
+    const name = document.getElementById("mapPreviewName");
+    if (name) name.textContent = `Mapa: ${MAPS[this.mapIndex]?.name ?? ""}`;
   }
 
   private get minimapCanvas(): HTMLCanvasElement {

@@ -254,7 +254,8 @@ partida*. Hay 12 mapas (`MAPS`): las mismas piezas —distritos, casas, fogatas,
 acomodadas de otra forma, cada uno con nombre ("Mapa: Laguna Seca"). Por la red viaja sólo el
 número; cliente y servidor generan el mismo mapa. El mapa cambia en el lobby, nunca en partida:
 con *Uno nuevo cada partida*, al volver de una partida ya toca otro distinto, y el botón dice
-cuál. El cliente arma el escenario de nuevo ahí, en el lobby, y no al empezar.
+cuál. En el lobby, arriba de las opciones, se ve el mapa que toca (el mismo dibujo del
+minimapa, sin nadie) con su nombre. El cliente arma el escenario de nuevo ahí, en el lobby, y no al empezar.
 
 No son semillas al azar: probando 40, una de cada diez dejaba alguna caja donde los bots no
 llegan, y algunas tenían hongos que te dejaban adentro de un montón de cajas (eso se arregló para

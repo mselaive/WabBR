@@ -61,7 +61,7 @@ está en `main`. Protocolo **v3** (producción está en v2): al desplegar, prime
 |---|---|---|
 | Paracaídas | Se empieza cayendo: 8 s planeando para elegir dónde, E para bajar ya; en el aire nadie te pega; los bots eligen una caja. Opción del host (prendida) | 9 tests (con mutaciones) + predicción con ping + capturas |
 | Segunda oportunidad | (Warzone) Opción del host: el que muere temprano vuelve una vez a los 8 s, cayendo en paracaídas y lejos de los rivales; título "Gato" | 11 tests (con mutaciones) + partida en el navegador |
-| Mapa nuevo cada partida | Opción del host: 12 mapas con nombre, probados uno por uno; cambia en el lobby | Un test por mapa + bots del servidor en otro mapa + predicción sin correcciones |
+| Mapa nuevo cada partida | Opción del host: 12 mapas con nombre, probados uno por uno; cambia en el lobby, donde se ve el que toca | Un test por mapa + bots del servidor en otro mapa + predicción sin correcciones |
 | La próxima arranca sola | Al volver, los que jugaron siguen listos y la siguiente arranca a los 12 s, salvo que alguien se desmarque | Partida por socket |
 | Títulos para todos | Cada uno se lleva uno: "Carnicero", "Ciego: no dio una bala", "Gato", "Adivino", "Turista"... | Tests + partidas |
 | Repetición de tu muerte | Si te mata alguien, los últimos 3 s en cámara lenta; click o Espacio la saltea | Test de la copia + partida en el navegador |

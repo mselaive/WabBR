@@ -102,6 +102,8 @@ const SIGHT_GRACE_TICKS = 6;
 const MARK_INTERVAL_MS = 500;
 /** Entre una frase rápida y la siguiente. */
 const EMOTE_INTERVAL_MS = 1000;
+/** Cuántas veces festeja un bot una kill. */
+const BOT_EMOTE_CHANCE = 0.3;
 /** Para ser el campeón de la sala (y que todos te vean): ganadas, y ventaja sobre el segundo. */
 const CHAMPION_MIN_WINS = 3;
 const CHAMPION_LEAD = 2;
@@ -510,12 +512,7 @@ export class GameRoom extends Server<Env> {
         seat.lastEmoteAt = now;
         const from = findPlayer(this.state, seat.playerId);
         if (!from?.alive) return;
-        // Sólo a los que lo ven: si no, un "¡Cuidado!" diría dónde está.
-        const out = encodeServer({ t: "emote", by: from.id, id: msg.id });
-        for (const c of this.getConnections<ConnState>()) {
-          const viewer = c.state ? findPlayer(this.state, c.state.playerId) : undefined;
-          if (this.canSee(this.eyesOf(viewer), from)) c.send(out);
-        }
+        this.relayEmote(from, msg.id);
         return;
       }
 
@@ -644,7 +641,9 @@ export class GameRoom extends Server<Env> {
     }
 
     const wasPlaying = s.phase === "playing";
+    const before = this.events.length;
     step(s, inputs, this.events, this.arena);
+    this.botsCelebrate(this.events.slice(before));
     if (wasPlaying && s.phase === "ended") this.addToTally();
 
     // Transiciones que dependen del contador que acaba de decrementar step().
@@ -799,6 +798,31 @@ export class GameRoom extends Server<Env> {
     }
 
     this.events = [];
+  }
+
+  /** Una frase rápida, sólo para los que ven al que la dice: si no, un "¡Cuidado!" diría dónde está. */
+  private relayEmote(from: PlayerState, id: number): void {
+    const out = encodeServer({ t: "emote", by: from.id, id });
+    for (const c of this.getConnections<ConnState>()) {
+      const viewer = c.state ? findPlayer(this.state, c.state.playerId) : undefined;
+      if (this.canSee(this.eyesOf(viewer), from)) c.send(out);
+    }
+  }
+
+  /**
+   * Los bots, a veces, festejan una kill con un "¡GG!" o un "Jajaja", un rato
+   * después (como haría alguien de verdad, que primero termina de pelear).
+   */
+  private botsCelebrate(events: readonly SimEvent[]): void {
+    for (const e of events) {
+      if (e.t !== "kill" || e.byId < 0 || e.byId === e.targetId) continue;
+      if (!this.seats.get(e.byId)?.bot || Math.random() > BOT_EMOTE_CHANCE) continue;
+      const emote = Math.random() < 0.5 ? 0 : 1;
+      setTimeout(() => {
+        const bot = findPlayer(this.state, e.byId);
+        if (bot?.alive && this.state.phase === "playing") this.relayEmote(bot, emote);
+      }, 400 + Math.random() * 900);
+    }
   }
 
   /**

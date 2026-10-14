@@ -81,7 +81,9 @@ Juegan razonable sin ser perfectos: abren cajas y recogen armas mejores (nunca
 cambian una buena por una peor), se curan cuando no hay nadie, pelean moviéndose de
 costado a la distancia que le gusta a su arma y respetan la zona. Para que se les
 pueda ganar, tardan un instante en reaccionar al verte y apuntan con un error que
-va cambiando despacio.
+va cambiando despacio. Y a veces festejan: después de una kill, uno de cada tres dice
+"¡GG!" o "Jajaja" con el mismo globito que usan los jugadores (y, como el de ellos, sólo
+lo ve el que lo tiene a la vista).
 
 **Tiran granadas** y **se escapan de las que les caen cerca**. Como una granada no
 se tira "a" un punto —sale siempre igual y rueda unos 320 px—, el bot simula el

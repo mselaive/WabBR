@@ -93,6 +93,12 @@ export interface BetMsg {
   id: number;
 }
 
+/** El host prende o apaga el paracaídas del principio. */
+export interface SkydiveMsg {
+  t: "skydive";
+  on: boolean;
+}
+
 /** El host elige si la próxima partida es de noche. */
 export interface NightMsg {
   t: "night";
@@ -144,6 +150,7 @@ export type ClientMsg =
   | RulesMsg
   | MapModeMsg
   | SecondChanceMsg
+  | SkydiveMsg
   | BetMsg
   | PartnerMsg
   | EmoteMsg
@@ -251,11 +258,13 @@ export const SP_REVIVE_TICKS = 25;
 export const SP_MOLOTOVS = 26;
 /** Ticks que le quedan volando de un hongo saltarín (para dibujarlo en el aire). */
 export const SP_JUMP = 27;
+/** Ticks de paracaídas que le quedan (para dibujarlo cayendo y predecirlo). */
+export const SP_AIR = 28;
 /** Sólo en la tupla del propio jugador: ver `packPlayer(p, own)`. */
-export const SP_FIRE_CD = 28;
-export const SP_RELOAD_CD = 29;
-export const SP_JUMP_VX = 30;
-export const SP_JUMP_VY = 31;
+export const SP_FIRE_CD = 29;
+export const SP_RELOAD_CD = 30;
+export const SP_JUMP_VX = 31;
+export const SP_JUMP_VY = 32;
 
 export const FLAG_ALIVE = 1;
 export const FLAG_RELOADING = 2;
@@ -293,6 +302,8 @@ export interface RosterMsg {
   mapMode?: number;
   /** Si el que muere temprano vuelve una vez. */
   secondChance?: boolean;
+  /** Si se empieza cayendo en paracaídas. */
+  skydive?: boolean;
 }
 
 export interface SnapshotMsg {

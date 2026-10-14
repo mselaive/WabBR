@@ -139,6 +139,11 @@ export interface PlayerState {
   lastSeq: number;
   /** Tick en que murió, para el kill feed y la cámara de espectador. -1 si vive. */
   diedAtTick: number;
+  /**
+   * Ticks de caída en paracaídas que le quedan (0: en el piso). En el aire
+   * planea sin chocar, no puede hacer otra cosa y nadie le puede pegar.
+   */
+  airTicks: number;
   /** Lleva mochila: carga más curaciones y granadas (ver carryLimit). */
   backpack: boolean;
   /** Ticks de radar que le quedan (0: apagado). */
@@ -351,6 +356,8 @@ export interface GameState {
    * por segunda vez) vuelve una vez, con lo de arranque. Lo elige el host.
    */
   secondChance: boolean;
+  /** Se empieza cayendo en paracaídas (ver AIR_TICKS). Lo elige el host. */
+  skydive: boolean;
   /** La gallina dorada, mientras ande suelta. */
   chicken: ChickenState | null;
   /** Ya apareció en esta partida (aparece una sola vez). */

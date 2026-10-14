@@ -121,7 +121,10 @@ export class Predictor {
    * munición o la curación mal predichas, se dibujarían balas que no existen.
    */
   private step(input: PlayerInput, arena: ArenaMap): number {
+    // En paracaídas sólo se planea, igual que en el servidor.
+    const flying = this.state.airTicks > 0;
     stepPlayerMovement(this.state, input, arena);
+    if (flying) return -1;
     if (input.act === ACT_THROW || input.act === ACT_SMOKE || input.act === ACT_MOLOTOV) {
       // El mismo orden que el servidor: después de moverse, antes del arma.
       const kind = throwKind(input.act);
@@ -176,6 +179,7 @@ export class Predictor {
     s.molotovs = server.molotovs;
     // El salto de un hongo, igual que la estamina: cambia cómo se mueve.
     s.jumpTicks = server.jumpTicks;
+    s.airTicks = server.airTicks;
     s.jumpVx = server.jumpVx;
     s.jumpVy = server.jumpVy;
     // Caído se arrastra y no dispara: la predicción tiene que saberlo.

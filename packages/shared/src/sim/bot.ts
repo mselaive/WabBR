@@ -7,6 +7,7 @@ import {
   GRENADE_FRICTION,
   GRENADE_FUSE_TICKS,
   GRENADE_MAX_STACK,
+  GLIDE_SPEED,
   PLAYER_RADIUS,
   REVIVE_RANGE,
   MOLOTOV_MAX_STACK,
@@ -99,6 +100,8 @@ export interface BotMemory {
   retreat: number;
   /** 0 fácil, 1 normal, 2 difícil (ver BOT_SKILLS). Lo elige el host en el lobby. */
   skill: number;
+  /** En paracaídas: dónde decidió caer. */
+  dropGoal: { x: number; y: number } | null;
 }
 
 /**
@@ -152,6 +155,7 @@ export function createBotMemory(seed: number): BotMemory {
     grenadeHold: 0,
     retreat: 0,
     skill: 1,
+    dropGoal: null,
   };
 }
 
@@ -191,6 +195,23 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
     act: ACT_NONE,
   };
   if (!me.alive || state.phase !== "playing") return input;
+
+  // En paracaídas: planear hasta la caja que eligió y, encima, tirarse en picada.
+  if (me.airTicks > 0) {
+    mem.dropGoal ??= dropGoal(state, me, mem, crates);
+    const dx = mem.dropGoal.x - me.x;
+    const dy = mem.dropGoal.y - me.y;
+    const d = Math.hypot(dx, dy);
+    // Ocho direcciones: el input sólo acepta -1, 0 o 1 por eje.
+    if (d > 16) {
+      input.moveX = Math.abs(dx) > d * 0.38 ? Math.sign(dx) : 0;
+      input.moveY = Math.abs(dy) > d * 0.38 ? Math.sign(dy) : 0;
+    }
+    if (d < 60) input.act = ACT_PICKUP;
+    input.aim = Math.atan2(dy, dx);
+    return input;
+  }
+  mem.dropGoal = null;
 
   const target = nearestEnemy(state, me, arena);
 
@@ -452,6 +473,25 @@ function campfireGoal(state: GameState, me: PlayerState, arena: ArenaMap): { x: 
   if (!best) return null;
   // Ya al calor: quieto, que moverse no cura más rápido.
   return bestD < CAMPFIRE_RADIUS - 20 ? { x: me.x, y: me.y } : best;
+}
+
+/**
+ * Dónde cae un bot en paracaídas: al lado de una caja al azar que esté adentro
+ * de la zona y a su alcance planeando. Al lado (a 50 px) y no encima: la caja
+ * es un obstáculo, y caer arriba lo correría a otro lado.
+ */
+function dropGoal(state: GameState, me: PlayerState, mem: BotMemory, crates: readonly Obstacle[]): { x: number; y: number } {
+  const reach = me.airTicks * GLIDE_SPEED * DT * 0.9;
+  const z = state.zone;
+  const options = crates.filter((c, i) => {
+    if (state.openedCrates.includes(i)) return false;
+    const cx = c.x + c.w / 2;
+    const cy = c.y + c.h / 2;
+    return Math.hypot(cx - me.x, cy - me.y) < reach && Math.hypot(cx - z.x, cy - z.y) < z.radius * 0.8;
+  });
+  const pick = options[Math.floor(mem.random() * options.length)];
+  if (!pick) return { x: me.x, y: me.y };
+  return { x: pick.x + pick.w / 2, y: pick.y + pick.h + 50 };
 }
 
 /** La gallina dorada, si está cerca y a la vista (de noche, más cerca). */

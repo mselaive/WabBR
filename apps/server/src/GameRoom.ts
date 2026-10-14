@@ -129,7 +129,7 @@ const BOT_NAMES = [
 export class GameRoom extends Server<Env> {
   static override options = { hibernate: false };
 
-  private state: GameState = createGameState(1);
+  private state: GameState = { ...createGameState(1), skydive: true };
   private seats = new Map<number, Seat>();
   /** Token de reconexión -> id del asiento. */
   private byToken = new Map<string, number>();
@@ -403,6 +403,15 @@ export class GameRoom extends Server<Env> {
         if (msg.mode !== 0 && msg.mode !== 1) return;
         this.mapMode = msg.mode;
         this.setMap(msg.mode === 1 ? this.otherMap() : 0);
+        this.broadcastRoster();
+        return;
+      }
+
+      case "skydive": {
+        if (seat.playerId !== this.hostId) return;
+        if (this.state.phase !== "lobby") return;
+        if (typeof msg.on !== "boolean") return;
+        this.state.skydive = msg.on;
         this.broadcastRoster();
         return;
       }
@@ -726,6 +735,8 @@ export class GameRoom extends Server<Env> {
     if (viewer.id === target.id) return true;
     // Al compañero se lo ve siempre, detrás de una pared o en un arbusto.
     if (viewer.team === target.team) return true;
+    // El paracaídas se ve desde todos lados, y desde allá arriba se ve todo.
+    if (target.airTicks > 0 || viewer.airTicks > 0) return true;
     // Los muertos no se dibujan igual, y mandarlos no filtra nada.
     if (!target.alive) return true;
 
@@ -1117,6 +1128,7 @@ export class GameRoom extends Server<Env> {
         map: this.mapIndex,
         mapMode: this.mapMode,
         secondChance: this.state.secondChance,
+        skydive: this.state.skydive,
       }),
     );
   }

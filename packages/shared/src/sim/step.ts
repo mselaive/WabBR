@@ -17,6 +17,10 @@ import {
   REVIVE_RANGE,
   REVIVE_TICKS,
   RESPAWN_TICKS,
+  AIR_DIVE_TICKS,
+  AIR_RESPAWN_TICKS,
+  AIR_TICKS,
+  GLIDE_SPEED,
   RADAR_PING_EVERY,
   RADAR_RANGE,
   RADAR_TICKS,
@@ -105,6 +109,7 @@ import {
   type Resolved,
 } from "./collision.js";
 import {
+  emptyInput,
   ACT_PICKUP,
   ACT_SLOT_0,
   ACT_THROW,
@@ -185,6 +190,7 @@ export function createPlayer(id: number, x = 0, y = 0): PlayerState {
     lastSeq: 0,
     diedAtTick: -1,
     radarTicks: 0,
+    airTicks: 0,
     backpack: false,
     respawnTick: -1,
     usedSecondChance: false,
@@ -243,6 +249,7 @@ export function createGameState(seed = 1): GameState {
     night: false,
     rules: 0,
     secondChance: false,
+    skydive: false,
     chicken: null,
     chickenSpawned: false,
     airdrops: [],
@@ -377,6 +384,7 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
     p.vx = 0;
     p.vy = 0;
     equipFresh(state, p);
+    if (state.skydive) p.airTicks = AIR_TICKS;
     p.kills = 0;
     p.longestKill = 0;
     p.healed = 0;
@@ -441,6 +449,7 @@ function equipFresh(state: GameState, p: PlayerState): void {
   p.reloadCd = 0;
   p.radarTicks = 0;
   p.backpack = false;
+  p.airTicks = 0;
 }
 
 /**
@@ -491,6 +500,9 @@ function stepRespawns(state: GameState, arena: ArenaMap, events: SimEvent[]): vo
     const best = safeSpot(state, arena, random, (o) => o.team !== p.team);
 
     equipFresh(state, p);
+    // Con paracaídas, vuelve cayendo como el que se tira del avión: unos
+    // segundos para elegir dónde (y nadie le pega mientras tanto).
+    if (state.skydive) p.airTicks = AIR_RESPAWN_TICKS;
     p.x = best.x;
     p.y = best.y;
     p.vx = 0;
@@ -778,6 +790,26 @@ export function stepPlayerMovement(p: PlayerState, input: PlayerInput, arena: Ar
   const my = input.moveY;
   const len2 = mx * mx + my * my;
 
+  // En paracaídas: planea para donde se mueva, sin chocar con nada. Con E
+  // (ACT_PICKUP) se tira en picada y cae enseguida; al tocar el piso, en un
+  // lugar libre.
+  if (p.airTicks > 0) {
+    if (input.act === ACT_PICKUP && p.airTicks > AIR_DIVE_TICKS) p.airTicks = AIR_DIVE_TICKS;
+    p.airTicks--;
+    const inv = len2 > 0 ? 1 / Math.sqrt(len2) : 0;
+    p.vx = mx * inv * GLIDE_SPEED;
+    p.vy = my * inv * GLIDE_SPEED;
+    p.x += p.vx * DT;
+    p.y += p.vy * DT;
+    clampToArena(p.x, p.y, PLAYER_RADIUS, scratch);
+    p.x = scratch.x;
+    p.y = scratch.y;
+    if (p.airTicks === 0) touchDown(p, arena);
+    p.aim = input.aim;
+    p.lastSeq = input.seq;
+    return;
+  }
+
   // Volando de un hongo: derecho, sin chocar con nada, y al caer se resuelve.
   if (p.jumpTicks > 0) {
     p.jumpTicks--;
@@ -890,6 +922,31 @@ function land(p: PlayerState, arena: ArenaMap): void {
     p.y += by;
   }
   resolveObstacles(p, arena);
+}
+
+/**
+ * Al tocar el piso con el paracaídas. Si cayó encima de algo, el lugar libre
+ * más cercano: en anillos de 16 px, ocho direcciones por anillo, empezando por
+ * el norte (orden fijo: cliente y servidor tienen que elegir el mismo).
+ */
+function touchDown(p: PlayerState, arena: ArenaMap): void {
+  if (overlapsObstacle(p.x, p.y, arena)) {
+    search: for (let r = 16; r <= 400; r += 16) {
+      for (let k = 0; k < 8; k++) {
+        const a = -Math.PI / 2 + (k / 8) * Math.PI * 2;
+        const x = p.x + Math.cos(a) * r;
+        const y = p.y + Math.sin(a) * r;
+        if (insideArena(x, y, PLAYER_RADIUS + 2) && !overlapsObstacle(x, y, arena)) {
+          p.x = x;
+          p.y = y;
+          break search;
+        }
+      }
+    }
+  }
+  resolveObstacles(p, arena);
+  p.vx = 0;
+  p.vy = 0;
 }
 
 function overlapsObstacle(x: number, y: number, arena: ArenaMap): boolean {
@@ -1662,7 +1719,7 @@ export function applyExplosion(
   const team = findPlayer(state, byId)?.team;
 
   for (const p of state.players) {
-    if (!p.alive) continue;
+    if (!p.alive || p.airTicks > 0) continue;
     if (p.id !== byId && p.team === team) continue;
     const dist = Math.hypot(p.x - x, p.y - y);
     if (dist > EXPLOSION_RADIUS) continue;
@@ -1849,7 +1906,7 @@ function stepFires(state: GameState, arena: ArenaMap, events: SimEvent[]): void 
     f.ticksLeft--;
     const team = findPlayer(state, f.ownerId)?.team;
     for (const p of state.players) {
-      if (!p.alive) continue;
+      if (!p.alive || p.airTicks > 0) continue;
       if (p.id !== f.ownerId && p.team === team) continue;
       const dx = p.x - f.x;
       const dy = p.y - f.y;
@@ -1885,8 +1942,9 @@ function stepBullets(state: GameState, arena: ArenaMap, events: SimEvent[]): voi
     // Impacto contra jugadores (test de segmento: la bala no puede atravesarlos),
     // cada uno donde lo veía el que disparó.
     for (const target of state.players) {
-      // Ni al que disparó ni a sus compañeros: la bala los atraviesa.
-      if (!target.alive || target.team === b.team) continue;
+      // Ni al que disparó ni a sus compañeros: la bala los atraviesa. Ni al
+      // que viene en paracaídas: está allá arriba.
+      if (!target.alive || target.team === b.team || target.airTicks > 0) continue;
       pastPosition(target, state.tick, b.rewind, scratch);
       const t = segmentCircleT(b.x, b.y, dx, dy, scratch.x, scratch.y, PLAYER_RADIUS + BULLET_RADIUS);
       if (t >= 0 && t < bestT) {
@@ -2305,7 +2363,8 @@ function stepZone(state: GameState, arena: ArenaMap, events: SimEvent[]): void {
   const damage = dps * DT;
 
   for (const p of state.players) {
-    if (!p.alive) continue;
+    // En paracaídas la zona no quema: se está eligiendo dónde caer.
+    if (!p.alive || p.airTicks > 0) continue;
     const dx = p.x - z.x;
     const dy = p.y - z.y;
     if (dx * dx + dy * dy <= z.radius * z.radius) continue;
@@ -2357,6 +2416,7 @@ export function step(
     const input = inputs.get(p.id);
     const fromX = p.x;
     const fromY = p.y;
+    const flyingAtStart = p.airTicks > 0;
 
     if (p.boostTicks > 0) {
       p.boostTicks--;
@@ -2369,7 +2429,10 @@ export function step(
     if (input) {
       const list: readonly PlayerInput[] = isInputList(input) ? input : [input];
       for (const one of list) {
+        // En el aire sólo se planea: ni tiros, ni granadas, ni curarse.
+        const flying = p.airTicks > 0;
         stepPlayerMovement(p, one, arena);
+        if (flying) continue;
         if (one.act !== 0) {
           const before = state.nextGrenadeId;
           handleAction(state, p, one.act, arena, events);
@@ -2390,6 +2453,10 @@ export function step(
           p.reviving = -1;
         }
       }
+    } else if (p.airTicks > 0) {
+      // Sin input (se cortó, o un tick sin nada) igual se sigue cayendo: si no,
+      // el que se desconecta en el aire quedaría colgado para siempre.
+      stepPlayerMovement(p, { ...emptyInput(p.lastSeq), aim: p.aim }, arena);
     } else {
       p.vx = 0;
       p.vy = 0;
@@ -2403,16 +2470,17 @@ export function step(
         }
       }
     }
-    p.traveled += Math.hypot(p.x - fromX, p.y - fromY);
+    // Lo planeado no cuenta como caminado (el título de "Maratonista" es a pie).
+    if (!flyingAtStart) p.traveled += Math.hypot(p.x - fromX, p.y - fromY);
   }
 
   // Antes de las balas: las de este tick se prueban contra la historia, y el
   // tramo más reciente es el de ahora.
   for (const p of state.players) {
     if (!p.alive) continue;
-    if (!p.downed) autoPickup(state, p, events);
+    if (!p.downed && p.airTicks === 0) autoPickup(state, p, events);
     recordTrail(p, state.tick);
-    p.inBush = bushAt(arena, p.x, p.y);
+    p.inBush = p.airTicks === 0 && bushAt(arena, p.x, p.y);
   }
 
   stepDowned(state, events);

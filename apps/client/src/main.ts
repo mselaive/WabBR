@@ -39,6 +39,7 @@ const ui = new UI({
   onSecondChance: (on) => game.setSecondChance(on),
   onBet: (id) => game.bet(id),
   onVolume: (volume) => game.setVolume(volume),
+  onSkydive: (on) => game.setSkydive(on),
   onLeave: () => {
     game.disconnect();
     ui.showScreen("menu");

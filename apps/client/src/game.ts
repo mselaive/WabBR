@@ -82,6 +82,8 @@ const CAMERA_LEAD = 0.18;
  * vista), así que lo que entra en la pantalla más grande ya llega.
  */
 const SCOPE_ZOOM = 1.4;
+/** Cuánto más mapa se ve en paracaídas. */
+const AIR_ZOOM = 1.8;
 /** Kills dentro de esta ventana cuentan como seguidas. */
 const STREAK_WINDOW_MS = 4500;
 /** Por cantidad de kills seguidas. Las de 5 o más son todas masacre. */
@@ -291,6 +293,8 @@ export class Game {
         cortar: () => this.net?.simulateDrop(),
         paquetes: () => [...(this.snapshots.latest?.airdrops.values() ?? [])],
         gallina: () => this.snapshots.latest?.chicken ?? null,
+        // Ticks de paracaídas que le quedan (predichos y del servidor).
+        aire: () => ({ pred: this.predictor?.state.airTicks ?? -1, srv: this.snapshots.latest?.players.get(this.localId)?.airTicks ?? -1 }),
         // Un tiro oído de mentira (detrás de una pared), para ver la marca.
         oir: (x: number, y: number) => this.handleEvents([{ t: "heard", x, y, weapon: 2 }]),
         // Una pasada de radar de mentira, para ver cómo se dibuja.
@@ -496,6 +500,7 @@ export class Game {
         this.ui.setBotSkill(msg.botSkill ?? 1, this.hostId === this.localId, msg.roster.some((p) => p.bot));
         this.ui.setNight(msg.night === true, this.hostId === this.localId);
         this.ui.setSecondChance(msg.secondChance === true, this.hostId === this.localId);
+        this.ui.setSkydive(msg.skydive === true, this.hostId === this.localId);
         this.ui.setRules(msg.rules ?? 0, this.hostId === this.localId);
         this.rules = msg.rules ?? 0;
         this.night = msg.night === true;
@@ -1106,7 +1111,9 @@ export class Game {
       { ...frame, bullets, grenades },
       this.roster,
       this.localId,
-      localPredicted ? { ...localPredicted, aim, hidden, jump: this.predictor?.state.jumpTicks ?? 0 } : null,
+      localPredicted
+        ? { ...localPredicted, aim, hidden, jump: this.predictor?.state.jumpTicks ?? 0, air: this.predictor?.state.airTicks ?? 0 }
+        : null,
       dt,
       mates,
       this.wanted?.id ?? -1,
@@ -1260,7 +1267,10 @@ export class Game {
     // La mira entra y sale suave, en ~0,3 s: un salto de zoom marea.
     const me = localPredicted ? this.predictor?.state : null;
     const scoped = me ? me.slots[me.activeSlot] === WEAPON_IDS.indexOf("sniper") : false;
-    this.zoom += ((scoped ? SCOPE_ZOOM : 1) - this.zoom) * (1 - Math.exp(-dt * 10));
+    // En paracaídas se ve más mapa, para elegir dónde caer.
+    const flying = me ? me.airTicks > 0 : false;
+    const zoomTo = flying ? AIR_ZOOM : scoped ? SCOPE_ZOOM : 1;
+    this.zoom += (zoomTo - this.zoom) * (1 - Math.exp(-dt * (flying ? 10 : this.zoom > 1.5 ? 3 : 10)));
     if (Math.abs(this.zoom - 1) < 0.001) this.zoom = 1;
     this.world.setZoom(this.zoom);
 
@@ -1490,6 +1500,11 @@ export class Game {
       this.ui.setPickup(null);
       return;
     }
+    // En paracaídas, E es tirarse en picada (en el teléfono, tocar el cartel).
+    if ((this.predictor?.state.airTicks ?? 0) > 0) {
+      this.ui.setPickup("Bajar ya");
+      return;
+    }
 
     // Lo mismo que el servidor: un compañero caído al lado va antes que todo.
     const mates = this.mates();
@@ -1677,6 +1692,11 @@ export class Game {
   /** Las reglas especiales. El servidor comprueba que seas el host. */
   setRules(rules: number): void {
     this.net?.send({ t: "rules", rules });
+  }
+
+  /** Empezar en paracaídas. El servidor comprueba que seas el host. */
+  setSkydive(on: boolean): void {
+    this.net?.send({ t: "skydive", on });
   }
 
   /** Segunda oportunidad para el que muere temprano. El servidor comprueba que seas el host. */

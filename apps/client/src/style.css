@@ -1588,9 +1588,21 @@ body.touch #consumables .consumable {
  * Las opciones de sí o no, en una sola fila: cada una se prende y se apaga
  * sola. La bolita dice que es un interruptor y no una elección entre tres.
  */
+/* Cuatro: de a dos cuando no entran (en el teléfono). */
+.options-row {
+  flex-wrap: wrap;
+}
+
 .options-row .mode-btn {
+  flex: 1 1 22%;
   padding: 8px 6px;
   line-height: 1.2;
+}
+
+@media (max-width: 480px) {
+  .options-row .mode-btn {
+    flex-basis: 40%;
+  }
 }
 
 .options-row .mode-btn::before {

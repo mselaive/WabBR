@@ -605,6 +605,8 @@ export interface TexturePack {
   /** La mochila puesta: el bulto detrás del muñeco y las tiras por delante (mismo cuadro). */
   backpack: Texture;
   backpackStraps: Texture;
+  /** El paracaídas, blanco: se tiñe con el color de cada jugador. */
+  parachute: Texture;
   smokePuff: Texture;
   pump: Texture;
   campfire: Texture;
@@ -672,6 +674,29 @@ export function getTextures(): TexturePack {
       rect(ctx, 0, 7, 16, 8, "#1b1410");
       rect(ctx, 1, 8, 14, 6, "#7a5530");
       rect(ctx, 1, 8, 14, 1, "#94693c");
+    }),
+    parachute: make(30, 26, (ctx) => {
+      // Las cuerdas, del borde de la tela a los hombros (abajo al medio).
+      ctx.strokeStyle = "#1b1410";
+      ctx.lineWidth = 1;
+      for (const x of [3, 10, 20, 27]) {
+        ctx.beginPath();
+        ctx.moveTo(x + 0.5, 9);
+        ctx.lineTo(15 + (x < 15 ? -3 : 3), 25);
+        ctx.stroke();
+      }
+      // La tela: media elipse con gajos.
+      ctx.fillStyle = "#1b1410";
+      ctx.beginPath();
+      ctx.ellipse(15, 10, 15, 10, 0, Math.PI, 0);
+      ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.ellipse(15, 10, 14, 9, 0, Math.PI, 0);
+      ctx.fill();
+      rect(ctx, 9, 2, 2, 8, "#d8d8d8");
+      rect(ctx, 19, 2, 2, 8, "#d8d8d8");
+      rect(ctx, 1, 9, 28, 1, "#b8b8b8");
     }),
     backpackStraps: make(16, 18, (ctx) => {
       rect(ctx, 5, 9, 1, 6, "#5a3d22");

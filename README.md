@@ -155,8 +155,9 @@ subfusil y chaleco ligero) y *Caos* (todos arrancan con lanzacohetes, dos granad
 molotovs: partidas cortas y ruidosas para cuando son muchos). Se aplican en la simulación (`ruledLoot`, `startingWeapon`), así que
 valen igual para el botín, las cajas y los paquetes.
 
-**Opciones de sí o no.** Abajo de las reglas, una sola fila con tres interruptores que el host
-prende y apaga: *Mapa nuevo* (ver El mapa), *Segunda oportunidad* (ver más abajo) y *De noche*.
+**Opciones de sí o no.** Abajo de las reglas, una sola fila de interruptores que el host prende y
+apaga: *Mapa nuevo* (ver El mapa), *Segunda oportunidad*, *De noche* y *Paracaídas* (los dos
+últimos, ver más abajo).
 Antes eran tres filas de "esto o aquello" y el lobby no entraba en un teléfono.
 
 **De noche.** De noche ves unos 230 px alrededor tuyo y el
@@ -367,6 +368,26 @@ Todo eso vive en `packages/shared/src/sim/step.ts`, para que cliente y servidor
 no puedan discrepar. Las acciones (recoger, cambiar de arma, curarse) viajan en
 el campo `act` del mensaje de input que ya se manda 20 veces por segundo: no
 agregan ni un mensaje nuevo, que es lo que importa para la factura de Cloudflare.
+
+## Paracaídas
+
+La marca de los battle royale. Con la opción prendida (lo está de entrada; el host la puede
+apagar), la partida **empieza en el aire**: cada uno arranca donde aparecía antes, colgado de un
+paracaídas de su color, y durante 8 segundos planea a 360 px/s —más rápido que corriendo,
+alcanza para cruzar el mapa— por encima de todo. La cámara se aleja para ver dónde caer. **E**
+(en el teléfono, tocar el cartel "Bajar ya") lo tira en picada y cae en medio segundo: el que baja
+primero agarra la caja. Al tocar el piso, si cayó encima de algo, se corre al lugar libre más
+cercano.
+
+En el aire no se puede disparar, tirar granadas ni curarse, y a nadie le pegan balas,
+explosiones, fuego ni la zona. Todos ven todos los paracaídas (desde abajo se ven, y desde arriba
+se ve todo). Los bots eligen una caja adentro de la zona y a su alcance, planean hasta ahí y se
+tiran encima. Con la segunda oportunidad también se vuelve cayendo (2,5 segundos), que de paso
+sirve de protección al aparecer.
+
+El planeo vive en `stepPlayerMovement`, así que el cliente lo predice como cualquier movimiento;
+los ticks que quedan viajan en el snapshot. Sin inputs (se cortó la conexión) igual se sigue
+cayendo: si no, el que se desconecta en el aire quedaría colgado.
 
 ## Fogatas
 

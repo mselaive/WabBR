@@ -98,6 +98,8 @@ function project(x: number, y: number, lx: number, ly: number): { x: number; y: 
 
 interface PlayerView {
   root: Container;
+  /** El paracaídas, arriba de la cabeza mientras cae. */
+  chute: Sprite;
   /** La mochila: el bulto detrás y las tiras delante. */
   pack: Sprite;
   straps: Sprite;
@@ -1054,6 +1056,13 @@ export class WorldView {
     shirt.scale.set(ART_SCALE);
     shirt.tint = playerColor(meta?.colorIndex ?? 0);
 
+    const chute = new Sprite(this.tex.parachute);
+    chute.anchor.set(0.5, 1);
+    chute.scale.set(ART_SCALE);
+    chute.position.set(0, -PLAYER_RADIUS - 4);
+    chute.tint = playerColor(meta?.colorIndex ?? 0);
+    chute.visible = false;
+
     const pack = new Sprite(this.tex.backpack);
     pack.anchor.set(0.5, 0.72);
     pack.scale.set(ART_SCALE);
@@ -1080,7 +1089,7 @@ export class WorldView {
     const hpBar = new Graphics();
     hpBar.position.set(0, -PLAYER_RADIUS - 12);
 
-    root.addChild(shadow, gun, flash, pack, body, shirt, straps, hpBar, label);
+    root.addChild(shadow, chute, gun, flash, pack, body, shirt, straps, hpBar, label);
     this.entityLayer.addChild(root);
 
     // El gorro, en un cuadro 6 px más alto que el muñeco: el ancla cae en el mismo punto.
@@ -1091,6 +1100,7 @@ export class WorldView {
     root.addChild(hat);
     const view: PlayerView = {
       root,
+      chute,
       pack,
       straps,
       body,
@@ -1119,7 +1129,7 @@ export class WorldView {
     frame: InterpolatedFrame,
     roster: Map<number, PlayerMeta>,
     localId: number,
-    localOverride: { x: number; y: number; aim: number; hidden: boolean; jump?: number } | null,
+    localOverride: { x: number; y: number; aim: number; hidden: boolean; jump?: number; air?: number } | null,
     dt: number,
     /** Compañeros en dúos: su nombre va en verde. */
     mates: ReadonlySet<number> = new Set(),
@@ -1148,6 +1158,16 @@ export class WorldView {
       const jump = isLocal && localOverride ? (localOverride.jump ?? 0) : p.jumpTicks;
       view.root.scale.set(jump > 0 ? 1 + 0.45 * Math.sin(Math.PI * (1 - jump / JUMP_TICKS)) : 1);
       if (jump > 0) view.root.zIndex = y + 1000;
+      // En paracaídas: grande (está más cerca de la cámara), con la tela arriba
+      // y por encima de todo; los últimos ticks se achica hasta el piso.
+      const air = isLocal && localOverride ? (localOverride.air ?? 0) : p.airTicks;
+      view.chute.visible = air > 0;
+      if (air > 0) {
+        view.root.scale.set(1 + 0.6 * Math.min(1, air / 12));
+        view.root.zIndex = y + 2000;
+        view.chute.tint = playerColor(meta?.colorIndex ?? 0);
+        view.chute.rotation = Math.sin(performance.now() / 400 + p.id) * 0.08;
+      }
       view.root.visible = true;
       // Escondido en un arbusto: tu muñeco se ve medio transparente, para que
       // sepas que los demás no te ven.
@@ -1191,7 +1211,7 @@ export class WorldView {
       view.straps.visible = p.backpack;
       view.pack.rotation = lying;
       view.straps.rotation = lying;
-      view.gun.visible = !p.downed;
+      view.gun.visible = !p.downed && air === 0;
       if (p.downed) {
         const name = isLocal ? "Caíste" : `${meta?.name ?? ""} (caído)`;
         if (view.label.text !== name) view.label.text = name;

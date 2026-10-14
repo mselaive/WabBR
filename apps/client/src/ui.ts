@@ -21,6 +21,7 @@ export interface UICallbacks {
   onSecondChance: (on: boolean) => void;
   onBet: (id: number) => void;
   onVolume: (volume: number) => void;
+  onSkydive: (on: boolean) => void;
 }
 
 /** La apuesta del espectador: por quién se puede apostar, o por quién apostaste. */
@@ -215,6 +216,7 @@ export class UI {
     el("optMap").addEventListener("click", () => this.cb.onMapMode(isOn("optMap") ? 0 : 1));
     el("optChance").addEventListener("click", () => this.cb.onSecondChance(!isOn("optChance")));
     el("optNight").addEventListener("click", () => this.cb.onNight(!isOn("optNight")));
+    el("optSkydive").addEventListener("click", () => this.cb.onSkydive(!isOn("optSkydive")));
     for (const b of el("botSkillRow").querySelectorAll<HTMLButtonElement>("[data-skill]")) {
       b.addEventListener("click", () => this.cb.onBotSkill(Number(b.dataset.skill)));
     }
@@ -558,6 +560,11 @@ export class UI {
   /** De día o de noche. Lo cambia el host. */
   setNight(night: boolean, isHost: boolean): void {
     this.setSwitch("optNight", night, isHost);
+  }
+
+  /** Empezar en paracaídas, sí o no. Lo cambia el host. */
+  setSkydive(on: boolean, isHost: boolean): void {
+    this.setSwitch("optSkydive", on, isHost);
   }
 
   /** Segunda oportunidad, sí o no. La cambia el host. */

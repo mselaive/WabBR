@@ -80,8 +80,10 @@ async function ronda() {
   return mates;
 }
 
+// Las parejas se sortean: en 8 rondas, una de cada 25 veces no salía nunca
+// "compañero". Con 12, menos de una de cada cien.
 const vistos = new Set();
-for (let i = 0; i < 8 && vistos.size < 2; i++) vistos.add(await ronda());
+for (let i = 0; i < 12 && vistos.size < 2; i++) vistos.add(await ronda());
 check(vistos.size === 2, "se vieron los dos casos (compañero y rival)");
 
 // Parejas elegidas: si los dos se eligen, juegan juntos siempre; un bot acepta solo.

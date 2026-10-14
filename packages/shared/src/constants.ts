@@ -151,6 +151,16 @@ export const RADAR_TICKS = 200;
 export const RADAR_PING_EVERY = 40;
 export const RADAR_RANGE = 1500;
 
+/**
+ * El paracaídas: al empezar, todos caen durante AIR_TICKS planeando a
+ * GLIDE_SPEED (se llega a cualquier punto del mapa). Con E se baja ya: tarda
+ * AIR_DIVE_TICKS. El que vuelve con la segunda oportunidad cae AIR_RESPAWN_TICKS.
+ */
+export const AIR_TICKS = 160;
+export const GLIDE_SPEED = 360;
+export const AIR_DIVE_TICKS = 10;
+export const AIR_RESPAWN_TICKS = 50;
+
 /** Cuánto se espera para volver con la segunda oportunidad: 8 s. */
 export const RESPAWN_TICKS = 160;
 

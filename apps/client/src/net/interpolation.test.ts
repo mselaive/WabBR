@@ -48,4 +48,14 @@ describe("interpolación", () => {
     jump.push(snapshot(2, 1600), 50);
     expect(jump.sample(25)!.players[0]!.x).toBe(1600);
   });
+
+  it("la copia para la repetición no cambia con lo que sigue llegando", () => {
+    const buffer = new SnapshotBuffer();
+    for (let i = 0; i < 10; i++) buffer.push(snapshot(i + 1, 1000 + i * 10), i * 50);
+    const copy = buffer.copy();
+    // Llegan cuatro segundos más: al buffer vivo se le van los primeros.
+    for (let i = 10; i < 100; i++) buffer.push(snapshot(i + 1, 1000 + i * 10), i * 50);
+    expect(copy.sample(75)!.players[0]!.x).toBeCloseTo(1015, 1);
+    expect(buffer.sample(75)!.players[0]!.x).not.toBeCloseTo(1015, 1);
+  });
 });

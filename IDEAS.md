@@ -64,6 +64,7 @@ está en `main`. Protocolo **v3** (producción está en v2): al desplegar, prime
 | Mapa nuevo cada partida | Opción del host: 12 mapas con nombre, probados uno por uno; cambia en el lobby | Un test por mapa + bots del servidor en otro mapa + predicción sin correcciones |
 | La próxima arranca sola | Al volver, los que jugaron siguen listos y la siguiente arranca a los 12 s, salvo que alguien se desmarque | Partida por socket |
 | Títulos para todos | Cada uno se lleva uno: "Carnicero", "Ciego: no dio una bala", "Gato", "Adivino", "Turista"... | Tests + partidas |
+| Repetición de tu muerte | Si te mata alguien, los últimos 3 s en cámara lenta; click o Espacio la saltea | Test de la copia + partida en el navegador |
 | Apuestas de espectador | Muerto, apostás quién gana (no por tu pareja); ✓/✗ al final y en el marcador de la sala | Test + partida en el navegador |
 | Récords y logros | Récords en el navegador; 11 logros que desbloquean gorros que todos ven | Tests + capturas |
 | "¡Quedan dos!" | Aviso cuando quedan los dos últimos (si arrancaron más de dos) | 2 tests + partida |
@@ -130,8 +131,8 @@ test, y la mayoría se probó a la inversa (romper el arreglo y ver que el test 
 
 ## Ideas que quedaron, en el orden en que las haría
 
-1. **Killcam.** Ver los últimos segundos desde los ojos del que te mató. Al morir la cámara ya
-   sigue al que te mató; la repetición de verdad pide guardar historia de snapshots por jugador.
+1. **Killcam desde los ojos del otro.** La repetición de esta noche es desde tus ojos (lo que te
+   llegó). Verla desde el que te mató pide que el servidor guarde historia por jugador.
 2. **Bots que usan lo nuevo.** Ya rodean las minas que ven, pero no las tiran ni buscan
    tirolesas u hongos a propósito. Es lo que más haría que una partida contra bots se parezca a
    una entre amigos.

@@ -724,6 +724,12 @@ dejaste**: "Te mató Lola con el rifle. Le quedaban 12 de vida y 20 de chaleco."
 diferencia entre "me ganó" y "casi lo tengo". La vida del que mató viaja en el evento
 `kill` (`killerHp`, `killerShield`), así que no depende de que lo estuvieras viendo.
 
+Y si te mató otro jugador, **la repetición**: después de una pausa corta se ven los últimos tres
+segundos en cámara lenta (0,6x), siguiéndote, y después la cámara pasa al que te mató. Un click o
+Espacio la saltea. Es sólo del cliente: al morir se copia el buffer de snapshots (que ahora guarda
+cuatro segundos) y se reproduce esa copia. Son los mismos datos que te llegaron, así que no
+muestra nada que no pudieras ver; no tiene los fogonazos ni los sonidos, que son eventos.
+
 ### Fuera de la zona
 
 Si quedás afuera, el borde de la pantalla se tiñe de rojo y late, aparece el cartel

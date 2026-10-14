@@ -91,7 +91,11 @@ export interface InterpolatedFrame {
   zone: UnpackedZone;
 }
 
-const MAX_FRAMES = 30;
+/**
+ * Cuatro segundos de historia: alcanza para interpolar (con 100 ms sobra) y
+ * para la repetición de cómo te mataron, que muestra los últimos tres.
+ */
+const MAX_FRAMES = 80;
 /** Más que esto entre dos snapshots no se camina ni se salta: es un teletransporte. */
 const TELEPORT_PX = 150;
 
@@ -134,6 +138,19 @@ export class SnapshotBuffer {
     this.bulletTracks.clear();
   }
 
+  /**
+   * Una copia de lo que hay ahora, para la repetición: los snapshots que
+   * siguen llegando no la tocan (si no, mientras se reproduce en cámara lenta
+   * se irían borrando los primeros segundos).
+   */
+  copy(): SnapshotBuffer {
+    const out = new SnapshotBuffer();
+    out.frames = this.frames.slice();
+    for (const [id, track] of this.bulletTracks) out.bulletTracks.set(id, { ...track });
+    out.pushed = this.pushed;
+    return out;
+  }
+
   private trackBullets(msg: SnapshotMsg, recvAt: number): void {
     const n = ++this.pushed;
     for (const raw of msg.bullets) {
@@ -156,8 +173,8 @@ export class SnapshotBuffer {
     for (const [id, track] of this.bulletTracks) {
       if (track.seenIn === n) continue;
       if (track.goneAt === Infinity) track.goneAt = recvAt;
-      // Ni el reloj atrasado la va a volver a necesitar.
-      else if (recvAt - track.goneAt > 1000) this.bulletTracks.delete(id);
+      // Ni el reloj atrasado ni la repetición la van a volver a necesitar.
+      else if (recvAt - track.goneAt > 3500) this.bulletTracks.delete(id);
     }
   }
 

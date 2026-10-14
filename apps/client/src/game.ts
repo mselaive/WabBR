@@ -83,6 +83,9 @@ const CAMERA_LEAD = 0.18;
  * vista), así que lo que entra en la pantalla más grande ya llega.
  */
 const SCOPE_ZOOM = 1.4;
+/** La repetición de tu muerte: cuántos ms antes y a qué velocidad. */
+const REPLAY_MS = 3000;
+const REPLAY_SPEED = 0.6;
 /** Cuánto más mapa se ve en paracaídas. */
 const AIR_ZOOM = 1.8;
 /** Kills dentro de esta ventana cuentan como seguidas. */
@@ -169,6 +172,11 @@ export class Game {
   private colorChosen = false;
   /** El último latido de poca vida (performance.now()). */
   private lastHeartbeat = 0;
+  /**
+   * La repetición de cómo te mataron: una copia de los snapshots de ese
+   * momento y desde cuándo hasta cuándo reproducirla (reloj local).
+   */
+  private replay: { buffer: SnapshotBuffer; from: number; to: number; startAt: number } | null = null;
   /** Cuándo arranca sola la próxima partida (performance.now()), o 0. */
   private nextMatchAt = 0;
   /** Por quién apostaste en esta partida, o -1. */
@@ -531,6 +539,7 @@ export class Game {
         this.sawStart = true;
         this.recorded = false;
         this.respawnAt = 0;
+        this.replay = null;
         this.myBet = -1;
         this.finalBets = [];
         this.streaks.clear();
@@ -928,6 +937,7 @@ export class Game {
             this.deathNote = "";
             this.spectateId = -1;
             this.freeCam = null;
+            this.replay = null;
             this.ui.setSpectating(null);
             this.ui.addNotice("¡Segunda oportunidad! Volviste con lo de arranque");
             this.sound.airdrop();
@@ -1075,6 +1085,11 @@ export class Game {
           }
           if (ev.targetId === this.localId) {
             this.deathNote = deathNote(ev, killer?.name);
+            // Si te mató alguien, la repetición de los últimos segundos.
+            if (ev.byId >= 0 && ev.byId !== this.localId) {
+              const at = performance.now();
+              this.replay = { buffer: this.snapshots.copy(), from: at - REPLAY_MS, to: at + 50, startAt: at + 700 };
+            }
             this.respawnAt = ev.respawn ? performance.now() + RESPAWN_TICKS * MS_PER_TICK : 0;
             // Si vuelve, el predictor se planta donde aparezca, sin arrastrar
             // inputs de antes de morir (ver onSnapshot).
@@ -1134,6 +1149,8 @@ export class Game {
     const frame = this.snapshots.sample(now - INTERP_DELAY_MS);
     if (!frame) return;
     this.viewTick = frame.tick;
+
+    if (this.replay && this.playReplay(now, dt, intents)) return;
 
     // Tus balas chocan contra los demás tal como los ves, que es contra lo que
     // apuntaste. A tu compañero lo atraviesan, igual que en el servidor.
@@ -1849,6 +1866,33 @@ export class Game {
         color: cssColor(playerColor(this.everyone.get(id)?.colorIndex ?? 0)),
       })),
     };
+  }
+
+  /**
+   * Un cuadro de la repetición: lo que viste en los últimos segundos antes de
+   * morir, en cámara lenta y siguiéndote. Son los mismos snapshots que te
+   * llegaron (nada que el servidor no te haya mandado), sin los fogonazos ni
+   * los sonidos, que son eventos. Un click o Espacio la saltea. Devuelve false
+   * cuando ya terminó (o no corresponde), y el cuadro sigue como siempre.
+   */
+  private playReplay(now: number, dt: number, intents: SpectateIntent[]): boolean {
+    const r = this.replay!;
+    const t = r.from + Math.max(0, now - r.startAt) * REPLAY_SPEED;
+    if (intents.length > 0 || t > r.to || this.phase !== "playing" || this.lastLocal?.alive) {
+      this.replay = null;
+      return false;
+    }
+    const shown = r.buffer.sample(t);
+    if (!shown) {
+      this.replay = null;
+      return false;
+    }
+    this.world.update(shown, this.roster, this.localId, null, dt, this.mates(), -1, -1, this.standings.get(this.localId)?.team);
+    this.world.updateShadows(null, 0);
+    const me = shown.players.find((p) => p.id === this.localId);
+    if (me) this.world.setCamera(me.x, me.y);
+    this.ui.setSpectating({ title: "Repetición", hint: "Click o Espacio para saltarla", note: this.spectateNote() });
+    return true;
   }
 
   /** El volumen del menú (0 a 1). */

@@ -83,6 +83,7 @@ está en `main`.
 | Radar | (UAV de Warzone) Objeto raro: al levantarlo, 10 s marcando cada 2 s a los rivales cercanos en el minimapa de tu equipo; avisa al detectado | 5 tests + capturas del ícono y del minimapa |
 | Bots que festejan | Después de una kill, a veces "¡GG!" o "Jajaja" (sólo lo ve quien los ve) | Partida de bots por socket |
 | Apuestas de espectador | Muerto, apostás quién gana; al final ✓/✗, aciertos en el marcador de la sala y título "Adivino" | Test del título + partida en el navegador (apuesta y resultado) |
+| Mochila | Objeto que deja cargar la mitad más de curaciones y granadas; se ve sobre el muñeco | 5 tests + captura del muñeco |
 | Lo mejor de la noche | En el lobby: más ganadas, más kills y mejor apostador de la sala | Captura después de una partida |
 | Cuarta revisión | El que esperaba la segunda oportunidad veía a todos; bots volándose con la gallina a cohetazos; el aviso de vuelta decía dónde; cortarse no la hacía perder; cohete a la gallina estallando donde estaba; la vuelta se deslizaba | Tests nuevos con mutaciones + partida en el navegador |
 
@@ -91,8 +92,8 @@ está en `main`.
 La zona según cuántos juegan, la mira, el humo, los dúos con sus marcas y los
 controles táctiles ya están (arriba). De la lista anterior quedaron:
 
-1. **Cascos y mochilas.** Más capas de equipo para lootear. Más contenido que
-   sistema: vale la pena si las partidas se sienten cortas de cosas para encontrar.
+1. **Cascos.** La mochila ya está; un casco sería otra capa de equipo, pero sin tiros a la
+   cabeza (es vista de arriba) no tiene un efecto que no se pise con el chaleco.
 2. **Killcam.** Ver los últimos segundos desde los ojos del que te mató. Ya al
    morir la cámara sigue al que te mató, que da casi lo mismo; la repetición de
    verdad pide guardar historia de snapshots por jugador.

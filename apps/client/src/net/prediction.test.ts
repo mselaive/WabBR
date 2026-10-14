@@ -57,6 +57,7 @@ function snapshotOf(p: PlayerState, lastSeq: number): UnpackedPlayer {
     jumpVx: 0,
     jumpVy: 0,
     downed: false,
+    backpack: false,
     reviving: -1,
     reviveTicks: 0,
     fireCd: 0,

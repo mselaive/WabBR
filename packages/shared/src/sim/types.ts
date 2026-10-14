@@ -139,6 +139,8 @@ export interface PlayerState {
   lastSeq: number;
   /** Tick en que murió, para el kill feed y la cámara de espectador. -1 si vive. */
   diedAtTick: number;
+  /** Lleva mochila: carga más curaciones y granadas (ver carryLimit). */
+  backpack: boolean;
   /** Ticks de radar que le quedan (0: apagado). */
   radarTicks: number;
   /** Tick en que vuelve con la segunda oportunidad, o -1 si no está esperando. */

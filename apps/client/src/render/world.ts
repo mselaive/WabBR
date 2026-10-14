@@ -16,6 +16,7 @@ import {
   AIRDROP_FALL_TICKS,
   ITEM_ARMOR,
   ITEM_RADAR,
+  ITEM_BACKPACK,
   GRENADE_MOLOTOV,
   GRENADE_SMOKE,
   ITEM_GRENADE,
@@ -97,6 +98,9 @@ function project(x: number, y: number, lx: number, ly: number): { x: number; y: 
 
 interface PlayerView {
   root: Container;
+  /** La mochila: el bulto detrás y las tiras delante. */
+  pack: Sprite;
+  straps: Sprite;
   /** El gorro (si tiene uno de los desbloqueables) y cuál es. */
   hat: Sprite;
   hatIndex: number;
@@ -1014,6 +1018,15 @@ export class WorldView {
     shirt.scale.set(ART_SCALE);
     shirt.tint = playerColor(meta?.colorIndex ?? 0);
 
+    const pack = new Sprite(this.tex.backpack);
+    pack.anchor.set(0.5, 0.72);
+    pack.scale.set(ART_SCALE);
+    pack.visible = false;
+    const straps = new Sprite(this.tex.backpackStraps);
+    straps.anchor.set(0.5, 0.72);
+    straps.scale.set(ART_SCALE);
+    straps.visible = false;
+
     const label = new Text({
       text: meta?.name ?? "",
       style: {
@@ -1031,7 +1044,7 @@ export class WorldView {
     const hpBar = new Graphics();
     hpBar.position.set(0, -PLAYER_RADIUS - 12);
 
-    root.addChild(shadow, gun, flash, body, shirt, hpBar, label);
+    root.addChild(shadow, gun, flash, pack, body, shirt, straps, hpBar, label);
     this.entityLayer.addChild(root);
 
     // El gorro, en un cuadro 6 px más alto que el muñeco: el ancla cae en el mismo punto.
@@ -1042,6 +1055,8 @@ export class WorldView {
     root.addChild(hat);
     const view: PlayerView = {
       root,
+      pack,
+      straps,
       body,
       shirt,
       gun,
@@ -1136,6 +1151,10 @@ export class WorldView {
       view.body.rotation = lying;
       view.shirt.rotation = lying;
       view.hat.rotation = lying;
+      view.pack.visible = p.backpack;
+      view.straps.visible = p.backpack;
+      view.pack.rotation = lying;
+      view.straps.rotation = lying;
       view.gun.visible = !p.downed;
       if (p.downed) {
         const name = isLocal ? "Caíste" : `${meta?.name ?? ""} (caído)`;
@@ -1230,6 +1249,7 @@ export class WorldView {
       return item.ref === GRENADE_SMOKE ? this.tex.itemSmoke : item.ref === GRENADE_MOLOTOV ? this.tex.itemMolotov : this.tex.itemGrenade;
     }
     if (item.kind === ITEM_RADAR) return this.tex.itemRadar;
+    if (item.kind === ITEM_BACKPACK) return this.tex.itemBackpack;
     return item.ref === 0
       ? this.tex.itemBandage
       : item.ref === 1

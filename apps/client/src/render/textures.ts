@@ -601,6 +601,10 @@ export interface TexturePack {
   molotov: Texture;
   itemMolotov: Texture;
   itemRadar: Texture;
+  itemBackpack: Texture;
+  /** La mochila puesta: el bulto detrás del muñeco y las tiras por delante (mismo cuadro). */
+  backpack: Texture;
+  backpackStraps: Texture;
   smokePuff: Texture;
   pump: Texture;
   campfire: Texture;
@@ -662,6 +666,17 @@ export function getTextures(): TexturePack {
     molotov: molotov(),
     itemMolotov: molotovIcon(),
     itemRadar: radarIcon(),
+    itemBackpack: plate((ctx) => drawBackpack(ctx, 3, 3)),
+    backpack: make(16, 18, (ctx) => {
+      // Asoma a los costados y por arriba de los hombros: el resto lo tapa el cuerpo.
+      rect(ctx, 0, 7, 16, 8, "#1b1410");
+      rect(ctx, 1, 8, 14, 6, "#7a5530");
+      rect(ctx, 1, 8, 14, 1, "#94693c");
+    }),
+    backpackStraps: make(16, 18, (ctx) => {
+      rect(ctx, 5, 9, 1, 6, "#5a3d22");
+      rect(ctx, 10, 9, 1, 6, "#5a3d22");
+    }),
     smokePuff: smokePuff(),
     pump: pump(),
     campfire: campfireLogs(),
@@ -782,6 +797,15 @@ function adrenalineIcon(): Texture {
     rect(ctx, 9, 5, 1, 5, "#c3c8ce"); // aguja
     rect(ctx, 4, 10, 1, 1, "#c3c8ce");
   });
+}
+
+/** Una mochila de frente, de 10x10 desde (x, y): bolsillo, solapa y tiras. */
+function drawBackpack(ctx: Ctx, x: number, y: number): void {
+  rect(ctx, x + 1, y, 8, 10, "#1b1410");
+  rect(ctx, x + 2, y + 1, 6, 8, "#7a5530");
+  rect(ctx, x + 2, y + 1, 6, 3, "#94693c");
+  rect(ctx, x + 3, y + 5, 4, 3, "#5a3d22");
+  rect(ctx, x + 4, y + 3, 2, 1, "#c9a36a");
 }
 
 /** Una pantalla de radar: el barrido y dos puntos rojos. */

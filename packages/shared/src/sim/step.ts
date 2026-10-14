@@ -76,7 +76,9 @@ import { lerp, makeRng, nextRandom } from "../math.js";
 import {
   ARMORS,
   ITEM_ARMOR,
+  ITEM_BACKPACK,
   ITEM_RADAR,
+  BACKPACK_MULT,
   ITEM_CONSUMABLE,
   ITEM_GRENADE,
   ITEM_WEAPON,
@@ -183,6 +185,7 @@ export function createPlayer(id: number, x = 0, y = 0): PlayerState {
     lastSeq: 0,
     diedAtTick: -1,
     radarTicks: 0,
+    backpack: false,
     respawnTick: -1,
     usedSecondChance: false,
     killerId: -1,
@@ -437,6 +440,21 @@ function equipFresh(state: GameState, p: PlayerState): void {
   p.fireCd = 0;
   p.reloadCd = 0;
   p.radarTicks = 0;
+  p.backpack = false;
+}
+
+/**
+ * Cuánto puede cargar de algo que se apila (curaciones y granadas). Con
+ * mochila, la mitad más (redondeando para arriba): 8 vendas pasan a 12, 3
+ * granadas a 5. Lo usan recoger, el recoger al pasar y los bots.
+ */
+export function carryLimit(p: PlayerState, kind: number, ref: number): number {
+  let base = 0;
+  if (kind === ITEM_CONSUMABLE) base = consumableAt(ref)?.maxStack ?? 0;
+  else if (kind === ITEM_GRENADE) {
+    base = ref === GRENADE_SMOKE ? SMOKE_MAX_STACK : ref === GRENADE_MOLOTOV ? MOLOTOV_MAX_STACK : GRENADE_MAX_STACK;
+  }
+  return p.backpack ? Math.ceil(base * BACKPACK_MULT) : base;
 }
 
 /**
@@ -954,26 +972,30 @@ function takeItem(
     const def = consumableAt(item.ref);
     if (!def) return false;
     const have = p.consumables[item.ref] ?? 0;
-    if (have >= def.maxStack) return false;
-    p.consumables[item.ref] = Math.min(def.maxStack, have + item.count);
+    const limit = carryLimit(p, item.kind, item.ref);
+    if (have >= limit) return false;
+    p.consumables[item.ref] = Math.min(limit, have + item.count);
     return true;
   }
 
   if (item.kind === ITEM_GRENADE && item.ref === GRENADE_SMOKE) {
-    if (p.smokes >= SMOKE_MAX_STACK) return false;
-    p.smokes = Math.min(SMOKE_MAX_STACK, p.smokes + item.count);
+    const limit = carryLimit(p, item.kind, item.ref);
+    if (p.smokes >= limit) return false;
+    p.smokes = Math.min(limit, p.smokes + item.count);
     return true;
   }
 
   if (item.kind === ITEM_GRENADE && item.ref === GRENADE_MOLOTOV) {
-    if (p.molotovs >= MOLOTOV_MAX_STACK) return false;
-    p.molotovs = Math.min(MOLOTOV_MAX_STACK, p.molotovs + item.count);
+    const limit = carryLimit(p, item.kind, item.ref);
+    if (p.molotovs >= limit) return false;
+    p.molotovs = Math.min(limit, p.molotovs + item.count);
     return true;
   }
 
   if (item.kind === ITEM_GRENADE) {
-    if (p.grenades >= GRENADE_MAX_STACK) return false;
-    p.grenades = Math.min(GRENADE_MAX_STACK, p.grenades + item.count);
+    const limit = carryLimit(p, item.kind, item.ref);
+    if (p.grenades >= limit) return false;
+    p.grenades = Math.min(limit, p.grenades + item.count);
     return true;
   }
 
@@ -982,6 +1004,13 @@ function takeItem(
     // Sólo vale la pena si aguanta más que lo que ya tenés puesto.
     if (!def || def.shield <= p.shield) return false;
     p.shield = def.shield;
+    return true;
+  }
+
+  // La mochila se lleva puesta: una alcanza.
+  if (item.kind === ITEM_BACKPACK) {
+    if (p.backpack) return false;
+    p.backpack = true;
     return true;
   }
 
@@ -1144,12 +1173,13 @@ function autoPickup(state: GameState, p: PlayerState, events: SimEvent[]): void 
 /** ¿Entra todo el montón en la mochila? */
 function fitsWhole(p: PlayerState, item: GroundItem): boolean {
   if (item.kind === ITEM_GRENADE) {
-    if (item.ref === GRENADE_SMOKE) return p.smokes + item.count <= SMOKE_MAX_STACK;
-    if (item.ref === GRENADE_MOLOTOV) return p.molotovs + item.count <= MOLOTOV_MAX_STACK;
-    return p.grenades + item.count <= GRENADE_MAX_STACK;
+    const limit = carryLimit(p, item.kind, item.ref);
+    if (item.ref === GRENADE_SMOKE) return p.smokes + item.count <= limit;
+    if (item.ref === GRENADE_MOLOTOV) return p.molotovs + item.count <= limit;
+    return p.grenades + item.count <= limit;
   }
   const def = consumableAt(item.ref);
-  return def !== undefined && (p.consumables[item.ref] ?? 0) + item.count <= def.maxStack;
+  return def !== undefined && (p.consumables[item.ref] ?? 0) + item.count <= carryLimit(p, item.kind, item.ref);
 }
 
 function handleAction(
@@ -1562,6 +1592,10 @@ function killPlayer(
     const count = victim.consumables[i] ?? 0;
     if (count > 0) dropItem(state, victim, ITEM_CONSUMABLE, i, i, count, events);
     victim.consumables[i] = 0;
+  }
+  if (victim.backpack) {
+    dropItem(state, victim, ITEM_BACKPACK, 0, 2, 1, events);
+    victim.backpack = false;
   }
 
   const killer = killerId >= 0 ? findPlayer(state, killerId) : undefined;

@@ -458,6 +458,14 @@ ganó otro título, se lleva **Adivino: apostó por el que ganó**. Le da algo q
 primero mientras mira. El servidor valida todo (que estés muerto de verdad, que el otro esté
 vivo, una por partida) y cuenta los aciertos (`addToTally`).
 
+## La mochila
+
+Un objeto de rareza azul, en las cajas y a veces en el piso. Se lleva puesta (con E) y deja cargar
+**la mitad más de curaciones y granadas**: 8 vendas pasan a 12, 3 granadas a 5, 2 de humo a 3. Se
+ve sobre el muñeco —el bulto asoma a los costados y las tiras cruzan la remera—, así que sabés quién
+viene cargado. Al morir se suelta, como todo. Una alcanza: la segunda queda en el piso. Los límites
+salen de un solo lugar (`carryLimit`), que usan el recoger con E, el recoger al pasar y los bots.
+
 ## El radar
 
 Copiado del UAV de Warzone. Es un objeto raro (en las cajas, y muy de vez en cuando en el piso,

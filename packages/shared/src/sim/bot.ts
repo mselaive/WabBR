@@ -18,6 +18,7 @@ import {
   ARMORS,
   CRATE_REACH,
   ITEM_ARMOR,
+  ITEM_BACKPACK,
   ITEM_RADAR,
   ITEM_CONSUMABLE,
   ITEM_GRENADE,
@@ -32,7 +33,7 @@ import { makeRng } from "../math.js";
 import { segmentBoxT } from "./collision.js";
 import { findPath, navGridFor, walkableLine } from "./nav.js";
 import { concealedFrom, hasLineOfSight } from "./sight.js";
-import { advanceGrenade, canThrow, grenadeLaunch, nearCampfire } from "./step.js";
+import { advanceGrenade, canThrow, carryLimit, grenadeLaunch, nearCampfire } from "./step.js";
 import {
   ACT_NONE,
   ACT_PICKUP,
@@ -591,11 +592,13 @@ export function wants(me: PlayerState, item: GroundItem): boolean {
   }
   if (item.kind === ITEM_CONSUMABLE) {
     const def = consumableAt(item.ref);
-    return def !== undefined && (me.consumables[item.ref] ?? 0) < def.maxStack;
+    return def !== undefined && (me.consumables[item.ref] ?? 0) < carryLimit(me, item.kind, item.ref);
   }
-  if (item.kind === ITEM_GRENADE && item.ref === GRENADE_SMOKE) return me.smokes < SMOKE_MAX_STACK;
-  if (item.kind === ITEM_GRENADE && item.ref === GRENADE_MOLOTOV) return me.molotovs < MOLOTOV_MAX_STACK;
-  if (item.kind === ITEM_GRENADE) return me.grenades < GRENADE_MAX_STACK;
+  const limit = carryLimit(me, item.kind, item.ref);
+  if (item.kind === ITEM_GRENADE && item.ref === GRENADE_SMOKE) return me.smokes < limit;
+  if (item.kind === ITEM_GRENADE && item.ref === GRENADE_MOLOTOV) return me.molotovs < limit;
+  if (item.kind === ITEM_GRENADE) return me.grenades < limit;
+  if (item.kind === ITEM_BACKPACK) return !me.backpack;
   if (item.kind === ITEM_ARMOR) return (ARMORS[item.ref]?.shield ?? 0) > me.shield;
   if (item.kind === ITEM_RADAR) return me.radarTicks === 0;
   return false;

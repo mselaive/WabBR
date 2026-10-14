@@ -4,6 +4,7 @@ import {
   ITEM_ARMOR,
   ITEM_CONSUMABLE,
   ITEM_GRENADE,
+  ITEM_BACKPACK,
   ITEM_RADAR,
   ITEM_WEAPON,
   RARITIES,
@@ -53,6 +54,7 @@ const GROUND_TABLE: readonly Entry[] = [
   { kind: ITEM_GRENADE, ref: 1, weight: 4, min: 1, max: 1, tier: 1 }, // humo
   { kind: ITEM_GRENADE, ref: 2, weight: 3, min: 1, max: 1, tier: 2 }, // molotov
   { kind: ITEM_RADAR, ref: 0, weight: 1, min: 1, max: 1, tier: 3 }, // radar
+  { kind: ITEM_BACKPACK, ref: 0, weight: 2, min: 1, max: 1, tier: 2 }, // mochila
 ];
 
 /** Lo que sale de abrir una caja: armas, chalecos y curación buena. */
@@ -68,11 +70,13 @@ const CRATE_TABLE: readonly Entry[] = [
   { kind: ITEM_ARMOR, ref: 1, weight: 7, min: 1, max: 1, tier: 3 }, // chaleco pesado
   { kind: ITEM_CONSUMABLE, ref: 1, weight: 14, min: 1, max: 1, tier: 1 }, // botiquín
   { kind: ITEM_CONSUMABLE, ref: 2, weight: 13, min: 1, max: 2, tier: 2 }, // adrenalina
-  { kind: ITEM_CONSUMABLE, ref: 0, weight: 17, min: 2, max: 4, tier: 0 }, // vendas
+  { kind: ITEM_CONSUMABLE, ref: 0, weight: 19, min: 2, max: 4, tier: 0 }, // vendas
   { kind: ITEM_GRENADE, ref: 0, weight: 11, min: 1, max: 2, tier: 2 }, // granadas
   { kind: ITEM_GRENADE, ref: 1, weight: 7, min: 1, max: 2, tier: 1 }, // humo
   { kind: ITEM_GRENADE, ref: 2, weight: 5, min: 1, max: 1, tier: 2 }, // molotov
-  { kind: ITEM_RADAR, ref: 0, weight: 4, min: 1, max: 1, tier: 3 }, // radar
+  // El radar y la mochila le sacan lugar a la curación: por eso las vendas pesan un poco más.
+  { kind: ITEM_RADAR, ref: 0, weight: 3, min: 1, max: 1, tier: 3 }, // radar
+  { kind: ITEM_BACKPACK, ref: 0, weight: 5, min: 1, max: 1, tier: 2 }, // mochila
 ];
 
 /** Sólo armas: garantiza que abrir una caja siempre valga la pena. */

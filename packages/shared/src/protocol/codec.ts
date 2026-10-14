@@ -15,6 +15,7 @@ import {
   FLAG_ALIVE,
   FLAG_CONNECTED,
   FLAG_DOWNED,
+  FLAG_BACKPACK,
   FLAG_RELOADING,
   SP_ACTIVE_SLOT,
   SP_AIM,
@@ -125,6 +126,7 @@ export function packPlayer(p: PlayerState, own = false): SnapPlayer {
   if (p.reloadCd > 0) flags |= FLAG_RELOADING;
   if (p.connected) flags |= FLAG_CONNECTED;
   if (p.downed) flags |= FLAG_DOWNED;
+  if (p.backpack) flags |= FLAG_BACKPACK;
   const other = p.activeSlot === 0 ? 1 : 0;
   const packed = [
     p.id,
@@ -281,6 +283,8 @@ export interface UnpackedPlayer {
   jumpVx: number;
   jumpVy: number;
   /** Caído en dúos. */
+  /** Lleva mochila (para dibujarla). */
+  backpack: boolean;
   downed: boolean;
   /** A quién está levantando (-1 si a nadie) y cuánto le falta. */
   reviving: number;
@@ -344,6 +348,7 @@ export function unpackPlayer(s: SnapPlayer): UnpackedPlayer {
     jumpVx: s[SP_JUMP_VX] ?? 0,
     jumpVy: s[SP_JUMP_VY] ?? 0,
     downed: (flags & FLAG_DOWNED) !== 0,
+    backpack: (flags & FLAG_BACKPACK) !== 0,
     reviving: s[SP_REVIVING] ?? -1,
     reviveTicks: s[SP_REVIVE_TICKS] ?? 0,
     fireCd: s[SP_FIRE_CD] ?? 0,

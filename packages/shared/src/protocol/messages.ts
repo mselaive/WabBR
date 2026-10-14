@@ -262,6 +262,8 @@ export const FLAG_RELOADING = 2;
 export const FLAG_CONNECTED = 4;
 /** Caído en dúos (ver PlayerState.downed). */
 export const FLAG_DOWNED = 8;
+/** Lleva mochila: se dibuja, así que la ven todos. */
+export const FLAG_BACKPACK = 16;
 
 export interface WelcomeMsg {
   t: "welcome";

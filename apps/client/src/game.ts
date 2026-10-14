@@ -46,6 +46,7 @@ import {
   CAUSE_EXPLOSION,
   CAUSE_STRIKE,
   CAUSE_FIRE,
+  CAUSE_MINE,
   CAUSE_ZONE,
   type ArenaMap,
   type GroundItem,
@@ -2044,6 +2045,7 @@ function deathNote(ev: Extract<SimEvent, { t: "kill" }>, killerName: string | un
   if (ev.cause === CAUSE_ZONE) return "Te terminó la zona.";
   if (ev.cause === CAUSE_STRIKE) return "Te alcanzó el bombardeo.";
   if (ev.cause === CAUSE_FIRE) return ev.byId === ev.targetId ? "Te quemaste con tu propia molotov." : `Te quemó la molotov de ${killerName ?? "alguien"}.`;
+  if (ev.cause === CAUSE_MINE) return ev.byId === ev.targetId ? "Pisaste tu propia mina." : `Pisaste una mina de ${killerName ?? "alguien"}.`;
   if (ev.byId === ev.targetId) return "Te mataste solo.";
   const how = ev.cause === CAUSE_EXPLOSION ? "con una explosión" : `con ${weaponArticle(ev.cause)}`;
   const who = killerName ?? "alguien";

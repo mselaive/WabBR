@@ -5,7 +5,7 @@ import type { ArenaMap } from "../map/arena.js";
 import { botInput, createBotMemory } from "./bot.js";
 import { ObstacleGrid } from "./collision.js";
 import { canThrow, carryLimit, createGameState, createPlayer, step } from "./step.js";
-import { ACT_MINE, GRENADE_MINE, emptyInput, type GameState, type PlayerInput, type SimEvent } from "./types.js";
+import { ACT_MINE, CAUSE_MINE, GRENADE_MINE, emptyInput, type GameState, type PlayerInput, type SimEvent } from "./types.js";
 
 const EMPTY: ArenaMap = {
   obstacles: [],
@@ -145,5 +145,18 @@ describe("los bots y las minas", () => {
     const events = run(state, 1);
     expect(events.some((e) => e.t === "explosion")).toBe(false);
     expect(state.mines).toHaveLength(1);
+  });
+
+  it("la muerte por mina queda anotada como mina, a cuenta del que la puso", () => {
+    const state = scene();
+    plant(state);
+    const mine = state.mines[0]!;
+    run(state, MINE_ARM_TICKS);
+    const rival = state.players[1]!;
+    rival.hp = 10;
+    rival.x = mine.x + 10;
+    rival.y = mine.y;
+    const events = run(state, 1);
+    expect(events.find((e) => e.t === "kill")).toMatchObject({ targetId: 2, byId: 1, cause: CAUSE_MINE });
   });
 });

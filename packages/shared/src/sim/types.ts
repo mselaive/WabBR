@@ -47,6 +47,7 @@ export const CAUSE_ZONE = -1;
 export const CAUSE_EXPLOSION = -2;
 export const CAUSE_STRIKE = -3;
 export const CAUSE_FIRE = -4;
+export const CAUSE_MINE = -5;
 
 export function emptyInput(seq = 0): PlayerInput {
   return {

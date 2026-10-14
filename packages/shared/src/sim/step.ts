@@ -128,6 +128,7 @@ import {
   CAUSE_EXPLOSION,
   CAUSE_STRIKE,
   CAUSE_FIRE,
+  CAUSE_MINE,
   GRENADE_MOLOTOV,
   GRENADE_MINE,
   type MineState,
@@ -2103,7 +2104,7 @@ function stepMines(state: GameState, arena: ArenaMap, events: SimEvent[]): void 
           (p.x - m.x) * (p.x - m.x) + (p.y - m.y) * (p.y - m.y) <= MINE_TRIGGER * MINE_TRIGGER,
       );
     if (victim) {
-      applyExplosion(state, m.x, m.y, m.ownerId, arena, events);
+      applyExplosion(state, m.x, m.y, m.ownerId, arena, events, -1, CAUSE_MINE);
       continue;
     }
     kept.push(m);

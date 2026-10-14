@@ -1184,6 +1184,13 @@ export function causeIconUrl(cause: number): string {
       rect(ctx, 4, 8, 8, 1, "#2c3f21");
       rect(ctx, 7, 4, 2, 3, "#8a8f95");
     }));
+    // Mina: el disco con la luz roja.
+    causeIcons.set(-5, iconUrl(16, 16, (ctx) => {
+      ctx.translate(2, 4);
+      drawMine(ctx);
+      rect(ctx, 5, 1, 2, 1, "#ff4a4a");
+      ctx.translate(-2, -4);
+    }));
     // Fuego: una llama.
     causeIcons.set(-4, iconUrl(16, 16, (ctx) => {
       ellipse(ctx, 8, 10, 4, 5, "#ff7a2a");

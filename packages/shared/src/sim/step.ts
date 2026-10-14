@@ -138,6 +138,10 @@ export function createPlayer(id: number, x = 0, y = 0): PlayerState {
     downedBy: -1,
     downedCause: 0,
     longestKill: 0,
+    healed: 0,
+    selfDamage: 0,
+    traveled: 0,
+    thrown: 0,
     reviving: -1,
     reviveTicks: 0,
     fireCd: 0,
@@ -309,6 +313,10 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
     p.downedBy = -1;
     p.downedCause = 0;
     p.longestKill = 0;
+    p.healed = 0;
+    p.selfDamage = 0;
+    p.traveled = 0;
+    p.thrown = 0;
     p.reviving = -1;
     p.reviveTicks = 0;
     p.fireCd = 0;
@@ -713,6 +721,7 @@ function handleAction(
     if (!canThrow(p, kind)) return;
     if (kind === GRENADE_SMOKE) p.smokes--;
     else p.grenades--;
+    p.thrown++;
     state.grenades.push({ id: state.nextGrenadeId++, ownerId: p.id, kind, ...grenadeLaunch(p) });
     return;
   }
@@ -783,6 +792,7 @@ export function stepConsumable(
   if (def.heal > 0) {
     const before = p.hp;
     p.hp = Math.min(def.capAt, p.hp + def.heal);
+    p.healed += p.hp - before;
     events.push({ t: "heal", byId: p.id, amount: Math.round(p.hp - before) });
   }
   if (def.boostTicks > 0) p.boostTicks = def.boostTicks;
@@ -945,6 +955,7 @@ function applyDamage(
   // Lo que de verdad entra: un tiro de 64 a alguien con 10 de vida hizo 10.
   const landed = Math.min(amount, target.shield + Math.max(0, target.hp));
   target.damageTaken += landed;
+  if (byId === target.id) target.selfDamage += landed;
   if (byId !== target.id) {
     const attacker = byId >= 0 ? findPlayer(state, byId) : undefined;
     if (attacker) attacker.damageDealt += landed;
@@ -1698,6 +1709,8 @@ export function step(
   for (const p of state.players) {
     if (!p.alive) continue;
     const input = inputs.get(p.id);
+    const fromX = p.x;
+    const fromY = p.y;
 
     if (p.boostTicks > 0) {
       p.boostTicks--;
@@ -1744,6 +1757,7 @@ export function step(
         }
       }
     }
+    p.traveled += Math.hypot(p.x - fromX, p.y - fromY);
   }
 
   // Antes de las balas: las de este tick se prueban contra la historia, y el

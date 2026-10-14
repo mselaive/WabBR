@@ -125,11 +125,12 @@ export type SnapPlayer = number[];
 export type SnapStanding = [number, number, number, number, number];
 
 /**
- * [id, dañoHecho, dañoRecibido, disparos, aciertos, ticksVivo, killMásLejana] de cada uno que
+ * [id, dañoHecho, dañoRecibido, disparos, aciertos, ticksVivo, killMásLejana,
+ *  curado, dañoPropio, pxCaminados, granadasTiradas] de cada uno que
  * jugó la partida. Sólo viaja con la partida terminada: mientras se juega no le
  * sirve a nadie y el daño de los demás sería información de más.
  */
-export type SnapResult = [number, number, number, number, number, number, number];
+export type SnapResult = [number, number, number, number, number, number, number, number, number, number, number];
 
 /**
  * [id, x, y, ticksParaAterrizar] de cada paquete aéreo cayendo. Va a todos, no

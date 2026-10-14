@@ -36,6 +36,8 @@ export interface ResultRow {
   survived: number;
   /** La kill más lejana, en metros. */
   longestKill: number;
+  /** El título que se llevó ("Ciego: no dio una bala"). */
+  title?: { label: string; detail: string };
 }
 
 /** Un premio del resultado: "más daño", "mejor puntería"... */
@@ -749,6 +751,15 @@ export class UI {
         const who = document.createElement("span");
         who.className = "who";
         who.textContent = r.isLocal ? `${r.name} (vos)` : r.name;
+        if (r.title) {
+          // El título de cada uno, abajo del nombre: nadie se va sin nada.
+          const title = document.createElement("span");
+          title.className = "row-title";
+          const label = document.createElement("b");
+          label.textContent = r.title.label;
+          title.append(label, ` · ${r.title.detail}`);
+          who.append(title);
+        }
         if (r.left) {
           const left = document.createElement("span");
           left.className = "tag";

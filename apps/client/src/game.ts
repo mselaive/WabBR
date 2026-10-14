@@ -57,6 +57,7 @@ import { LocalGrenades } from "./net/grenades.js";
 import { InputController, type SpectateIntent } from "./input.js";
 import { TouchControls } from "./touch.js";
 import { PX_PER_METER, addMatch, recordsLine } from "./records.js";
+import { titlesFor } from "./titles.js";
 import { WorldView } from "./render/world.js";
 import { Minimap, type Mark } from "./render/minimap.js";
 import { causeIconUrl } from "./render/textures.js";
@@ -572,12 +573,13 @@ export class Game {
    */
   private showResult(msg: SnapshotMsg): void {
     const results = new Map((msg.res ?? []).map(unpackResult).map((r) => [r.id, r]));
-    const rows: ResultRow[] = [];
+    const rows: (ResultRow & { id: number })[] = [];
     for (const [id, kills, , place = 0] of msg.st) {
       // Sin puesto es que no jugó esta partida: entró a mirar.
       if (place <= 0) continue;
       const meta = this.everyone.get(id);
       rows.push({
+        id,
         name: meta?.name ?? "Alguien",
         kills,
         colorIndex: meta?.colorIndex ?? 0,
@@ -592,6 +594,29 @@ export class Game {
       });
     }
     rows.sort((a, b) => a.place - b.place || b.kills - a.kills);
+
+    // Un título para cada uno, con los números del resultado.
+    const titles = titlesFor(
+      rows.map((r) => {
+        const res = results.get(r.id);
+        return {
+          id: r.id,
+          place: r.place,
+          kills: r.kills,
+          damage: r.damage,
+          damageTaken: res?.damageTaken ?? 0,
+          shots: res?.shotsFired ?? 0,
+          hits: res?.shotsHit ?? 0,
+          survived: r.survived,
+          longestKill: r.longestKill,
+          healed: res?.healed ?? 0,
+          selfDamage: res?.selfDamage ?? 0,
+          traveled: Math.round((res?.traveled ?? 0) / PX_PER_METER),
+          thrown: res?.thrown ?? 0,
+        };
+      }),
+    );
+    for (const r of rows) r.title = titles.get(r.id);
 
     const mine = rows.find((r) => r.isLocal);
     // En pareja se habla en plural: el puesto es de los dos.

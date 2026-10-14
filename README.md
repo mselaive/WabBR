@@ -459,6 +459,15 @@ medio en vez de 5. Los números están en `ZONE_MIN_PACE` y
 
 ## Fin de la partida
 
+**Un título para cada uno** (`apps/client/src/titles.ts`), abajo de su nombre en la tabla:
+nadie se va sin nada. Primero los que ganaron ("Último en pie") y los mejores de verdad en algo
+("Carnicero", "Demoledor", "Ojo de halcón", "Francotirador"); después, según lo que hizo cada
+uno, para bien o para mal —"Kamikaze: se sacó 45 de vida solo", "Ciego: no dio una bala",
+"Pacifista: no disparó ni una vez"—, que pueden repetirse; después "Enfermero", "Esponja",
+"Granadero", "Gatillo fácil", "Maratonista" y "Primero en caer" entre los que quedaron; y al
+final "Luchador" o "Turista: paseó 1:12 sin hacer nada". Para esto el resultado trae además
+cuánto se curó cada uno, cuánto daño se hizo solo, cuánto caminó y cuántas granadas tiró.
+
 El resultado se ordena por **puesto**, que es lo que decide un battle royale: el
 último en pie es el 1, el último en caer el 2, y así. Las kills van al lado y
 desempatan. Arriba hay un podio con los tres primeros —cada uno con su muñeco y su

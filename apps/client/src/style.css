@@ -1438,3 +1438,17 @@ body.touch #consumables .consumable {
   font-weight: 600;
   color: var(--gold);
 }
+
+/* El título de cada uno en la tabla final, abajo del nombre. */
+.standing .who .row-title {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: normal;
+}
+
+.standing .who .row-title b {
+  color: var(--gold);
+  font-weight: 600;
+}

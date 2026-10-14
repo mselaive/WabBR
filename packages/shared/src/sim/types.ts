@@ -477,6 +477,12 @@ export type SimEvent =
    * le llega a su equipo (el servidor lo filtra).
    */
   | { t: "radar"; byId: number; team: number; pings: [number, number][] }
+  /**
+   * Un tiro que no se ve pero se oye: lo arma el servidor (no la simulación)
+   * a partir de un "shot" detrás de una pared, con el lugar redondeado a
+   * HEARD_GRID. Dice "por allá", no "acá".
+   */
+  | { t: "heard"; x: number; y: number; weapon: number }
   /** Le pegaron a la gallina dorada. */
   | { t: "cluck"; x: number; y: number; byId: number }
   /** Cazaron a la gallina dorada: el botín ya está en el piso. */

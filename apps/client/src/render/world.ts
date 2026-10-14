@@ -195,6 +195,8 @@ export class WorldView {
   private hitMarker = 0;
   /** Flechas de "te pegaron desde acá", en radianes. */
   private readonly damageArcs: { dir: number; life: number }[] = [];
+  /** Tiros oídos detrás de paredes, en radianes. */
+  private readonly soundArcs: { dir: number; life: number }[] = [];
   private readonly markerLayer = new Graphics();
   /** Marcas de la pareja, en pantalla: un rombo encima del lugar o una flecha en el borde. */
   private readonly markLayer = new Graphics();
@@ -861,6 +863,21 @@ export class WorldView {
   }
 
   /**
+   * Un tiro que se oye y no se ve, en `dir`: una marca fina más afuera que las
+   * de daño. Las ráfagas de la misma dirección refrescan la misma marca en vez
+   * de apilar veinte.
+   */
+  addSoundArc(dir: number): void {
+    const same = this.soundArcs.find((a) => Math.abs(Math.atan2(Math.sin(a.dir - dir), Math.cos(a.dir - dir))) < 0.3);
+    if (same) {
+      same.life = 1.4;
+      return;
+    }
+    this.soundArcs.push({ dir, life: 1.4 });
+    if (this.soundArcs.length > 6) this.soundArcs.shift();
+  }
+
+  /**
    * Flecha alrededor de (x, y) apuntando en `dir`, del color del borde de la
    * zona: "volvé para el azul". null la esconde.
    */
@@ -929,6 +946,20 @@ export class WorldView {
         alpha: Math.min(1, arc.life) * 0.85,
         cap: "round",
       });
+    }
+    // Los tiros oídos: más afuera, finos y blancos, con dos rayitas como de sonido.
+    for (let i = this.soundArcs.length - 1; i >= 0; i--) {
+      const arc = this.soundArcs[i]!;
+      arc.life -= dt;
+      if (arc.life <= 0) {
+        this.soundArcs.splice(i, 1);
+        continue;
+      }
+      const alpha = Math.min(1, arc.life) * 0.7;
+      for (const r of [150, 160]) {
+        this.arcLayer.arc(cx, cy, r, arc.dir - 0.2, arc.dir + 0.2);
+        this.arcLayer.stroke({ width: 3, color: 0xffffff, alpha, cap: "round" });
+      }
     }
   }
 

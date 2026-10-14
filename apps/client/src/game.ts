@@ -807,6 +807,14 @@ export class Game {
             this.sound.shot(ev.weapon ?? 0, this.spot(ev.x, ev.y));
           }, -MS_PER_TICK);
           break;
+        case "heard": {
+          // Un tiro detrás de una pared: suena apagado desde por allá, y una
+          // marca en el borde dice la dirección (no la distancia).
+          const me = this.lastLocal;
+          this.defer(() => this.sound.shot(ev.weapon, this.spot(ev.x, ev.y), true), -MS_PER_TICK);
+          if (me?.alive) this.world.addSoundArc(Math.atan2(ev.y - me.y, ev.x - me.x));
+          break;
+        }
         case "impact":
           if (this.shots.covers(ev.bullet)) {
             if (this.shots.serverImpact(ev.bullet)) this.world.spawnImpact(ev.x, ev.y);

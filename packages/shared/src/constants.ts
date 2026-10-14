@@ -139,6 +139,13 @@ export const CHICKEN_WALK_SPEED = 55;
 /** A cuánto se asusta de alguien. */
 export const CHICKEN_FEAR_RADIUS = 280;
 
+/**
+ * Los tiros que no se ven se oyen hasta esta distancia, con el lugar
+ * redondeado a una grilla de este tamaño: dan la dirección, no la posición.
+ */
+export const HEARING_RANGE = 1100;
+export const HEARD_GRID = 160;
+
 /** El radar: 10 s activo, una marca cada 2 s, hasta 1500 px. */
 export const RADAR_TICKS = 200;
 export const RADAR_PING_EVERY = 40;

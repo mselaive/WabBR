@@ -709,6 +709,14 @@ sonidos del mundo se oyen según dónde pasan: más bajo cuanto más lejos (nada
 de una pared, oír un tiro a la izquierda es información. La ballesta no hace ruido
 para los demás.
 
+**Los tiros que no se ven se oyen.** Antes el servidor filtraba el disparo detrás de una pared
+igual que la bala, así que ni sonaba. Ahora llega como "se oyó un tiro por allá": el servidor lo
+convierte en un evento `heard` con el lugar redondeado a una grilla de 160 px (da la dirección,
+no la posición exacta) y sólo hasta 1100 px. Suena apagado (más bajo y con menos agudos) y en el
+borde de un anillo alrededor tuyo aparece una marca blanca hacia ese lado, como las rojas de
+"te pegaron desde acá"; una ráfaga refresca la misma marca en vez de apilar veinte. Copiado de
+los sonidos visualizados de Fortnite: el que pelea detrás de una casa ya no es invisible.
+
 `M` lo silencia y se recuerda en el navegador. Los niveles están medidos —se pueden
 renderizar sin parlantes pasándole un `OfflineAudioContext` a `unlock()`—: ninguno
 pasa de 0,41 de pico, y un tiro a media pantalla a la derecha llega al oído izquierdo

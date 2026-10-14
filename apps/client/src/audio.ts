@@ -81,11 +81,12 @@ export class Sound {
   // ------------------------------------------------------------ sonidos
 
   /** Un disparo. `at` y `from` ubican el sonido; sin ellos suena en el centro (el tuyo). */
-  shot(weapon: number, at?: Spot): void {
+  /** Un tiro. `muffled`: detrás de una pared, más bajo y apagado (se oye, no se ve). */
+  shot(weapon: number, at?: Spot, muffled = false): void {
     const v = WEAPON_VOICES[weapon] ?? WEAPON_VOICES[0]!;
-    const out = this.voice(at, v.gain);
+    const out = this.voice(at, v.gain * (muffled ? 0.6 : 1));
     if (!out) return;
-    this.noiseBurst(out, { type: "lowpass", freq: v.filter, decay: v.decay, gain: 1 });
+    this.noiseBurst(out, { type: "lowpass", freq: muffled ? v.filter * 0.35 : v.filter, decay: v.decay, gain: 1 });
     if (v.thump > 0) this.tone(out, { freq: v.thump, endFreq: v.thump * 0.5, decay: 0.08, gain: 0.8, type: "sine" });
   }
 

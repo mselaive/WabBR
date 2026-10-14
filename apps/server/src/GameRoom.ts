@@ -7,6 +7,8 @@ import {
   EMPTY_ROOM_SHUTDOWN_TICKS,
   InputQueue,
   EMOTES,
+  HEARD_GRID,
+  HEARING_RANGE,
   MAX_PLAYERS,
   RULES,
   WORLD_CENTER_X,
@@ -875,13 +877,32 @@ export class GameRoom extends Server<Env> {
     // Las pasadas del radar son del equipo que lo levantó: a nadie más.
     const events = this.events.filter((e) => e.t !== "radar" || e.team === viewer?.team);
     if (!viewer || this.seesAll(viewer)) return events;
-    return events.filter((e) => {
-      // El disparo silencioso sólo le sirve al que tiró (para emparejar su
-      // bala): a los demás les diría dónde está, y la ballesta no delata.
-      if (e.t === "shot" && e.silent && e.byId !== viewer.id) return false;
-      if (e.t !== "shot" && e.t !== "hit" && e.t !== "impact" && e.t !== "explosion") return true;
-      return hasLineOfSight(viewer.x, viewer.y, e.x, e.y, this.arena);
-    });
+    const out: SimEvent[] = [];
+    for (const e of events) {
+      if (this.eventVisible(viewer, e)) {
+        out.push(e);
+        continue;
+      }
+      // El tiro que no se ve igual se oye: llega como "se oyó por allá", con el
+      // lugar redondeado. El silencioso (la ballesta), ni eso.
+      if (e.t === "shot" && !e.silent && Math.hypot(e.x - viewer.x, e.y - viewer.y) <= HEARING_RANGE) {
+        out.push({
+          t: "heard",
+          x: Math.round(e.x / HEARD_GRID) * HEARD_GRID,
+          y: Math.round(e.y / HEARD_GRID) * HEARD_GRID,
+          weapon: e.weapon ?? 0,
+        });
+      }
+    }
+    return out;
+  }
+
+  private eventVisible(viewer: PlayerState, e: SimEvent): boolean {
+    // El disparo silencioso sólo le sirve al que tiró (para emparejar su
+    // bala): a los demás les diría dónde está, y la ballesta no delata.
+    if (e.t === "shot" && e.silent && e.byId !== viewer.id) return false;
+    if (e.t !== "shot" && e.t !== "hit" && e.t !== "impact" && e.t !== "explosion") return true;
+    return hasLineOfSight(viewer.x, viewer.y, e.x, e.y, this.arena);
   }
 
   // ------------------------------------------------------------ sala

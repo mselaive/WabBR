@@ -1,5 +1,6 @@
 import { Server, type Connection, type ConnectionContext, type WSMessage } from "partyserver";
 import {
+  AIR_DIVE_TICKS,
   BTN_RELOAD,
   BTN_SHOOT,
   BTN_SPRINT,
@@ -96,6 +97,8 @@ interface Seat {
   bet: number;
   /** Ticks seguidos sin inputs mientras vuela (ver tick()). */
   starved: number;
+  /** Ticks seguidos en el aire (ver tick()). */
+  flyingFor: number;
   /** Cuándo mandó su último mensaje al chat del lobby. */
   lastChatAt: number;
 }
@@ -118,6 +121,10 @@ const EMOTE_INTERVAL_MS = 1000;
 const BOT_EMOTE_CHANCE = 0.3;
 /** Cuánto se espera después de una partida antes de arrancar la siguiente sola. */
 const NEXT_MATCH_MS = 12_000;
+/** El ángulo de apuntado más grande que manda un cliente de verdad (π en milirradianes). */
+const AIM_LIMIT = 3142;
+/** Lo más que alguien puede estar en el aire de corrido (en ticks): el paracaídas y un poco. */
+const MAX_FLYING_TICKS = 220;
 /** De a un mensaje cada esto en el chat del lobby. */
 const CHAT_INTERVAL_MS = 1200;
 /** Volando, cuántos ticks sin inputs se esperan antes de seguir la caída sin él. */
@@ -247,6 +254,7 @@ export class GameRoom extends Server<Env> {
       lastEmoteAt: 0,
       bet: -1,
       starved: 0,
+      flyingFor: 0,
       lastChatAt: 0,
       bot: null,
     };
@@ -379,13 +387,18 @@ export class GameRoom extends Server<Env> {
   private handle(conn: Connection<ConnState>, seat: Seat, msg: ClientMsg): void {
     switch (msg.t) {
       case "in": {
-        if (typeof msg.seq !== "number") return;
+        if (typeof msg.seq !== "number" || !Number.isFinite(msg.seq)) return;
         seat.inputs.push({
           seq: msg.seq,
           // Clamp a -1/0/1: el cliente no decide su propia velocidad.
           moveX: clampAxis(msg.mx),
           moveY: clampAxis(msg.my),
-          aim: unpackAim(typeof msg.aim === "number" ? msg.aim : 0),
+          // Un ángulo de verdad (milirradianes de -π a π). Sin acotar, un
+          // cliente modificado mandaba 1e20 y el de todos los demás se colgaba
+          // interpolándolo; con Infinity, sobre un hongo, quedaba en NaN.
+          aim: unpackAim(
+            typeof msg.aim === "number" && Number.isFinite(msg.aim) ? Math.max(-AIM_LIMIT, Math.min(AIM_LIMIT, msg.aim)) : 0,
+          ),
           shoot: (msg.btn & BTN_SHOOT) !== 0,
           reload: (msg.btn & BTN_RELOAD) !== 0,
           sprint: (msg.btn & BTN_SPRINT) !== 0,
@@ -745,7 +758,12 @@ export class GameRoom extends Server<Env> {
       const me = findPlayer(s, seat.playerId);
       const flying = me !== undefined && me.alive && (me.airTicks > 0 || me.jumpTicks > 0);
       seat.starved = batch.length === 0 && flying ? seat.starved + 1 : 0;
-      if (seat.starved > STARVED_FLYING_TICKS) continue;
+      // Y aunque mande un input cada tanto (que reinicia lo de arriba), no se
+      // queda en el aire más que el paracaídas entero: después se tira en
+      // picada y cae sin él.
+      seat.flyingFor = flying ? seat.flyingFor + 1 : 0;
+      if (seat.flyingFor > MAX_FLYING_TICKS && me !== undefined && me.airTicks > AIR_DIVE_TICKS) me.airTicks = AIR_DIVE_TICKS;
+      if (seat.starved > STARVED_FLYING_TICKS || seat.flyingFor > MAX_FLYING_TICKS) continue;
       inputs.set(seat.playerId, batch);
     }
 
@@ -1233,6 +1251,7 @@ export class GameRoom extends Server<Env> {
       lastEmoteAt: 0,
       bet: -1,
       starved: 0,
+      flyingFor: 0,
       lastChatAt: 0,
       bot: { ...createBotMemory((Date.now() ^ (playerId * 7919)) | 0), skill: this.botSkill },
     });

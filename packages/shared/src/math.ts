@@ -30,9 +30,12 @@ export function lerp(a: number, b: number, t: number): number {
 
 /** Interpolación angular por el camino corto. Para el ángulo de apuntado. */
 export function lerpAngle(a: number, b: number, t: number): number {
-  let d = b - a;
-  while (d > Math.PI) d -= Math.PI * 2;
-  while (d < -Math.PI) d += Math.PI * 2;
+  // Sin bucles: con un ángulo enorme (que el servidor ya no deja pasar), restar
+  // 2π de a uno no terminaba nunca y colgaba la pestaña.
+  let d = (b - a) % (Math.PI * 2);
+  if (!Number.isFinite(d)) return Number.isFinite(b) ? b : a;
+  if (d > Math.PI) d -= Math.PI * 2;
+  else if (d < -Math.PI) d += Math.PI * 2;
   return a + d * t;
 }
 

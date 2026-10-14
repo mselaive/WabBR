@@ -881,8 +881,11 @@ export function stepPlayerMovement(p: PlayerState, input: PlayerInput, arena: Ar
   // Pisó un hongo: sale para donde iba, o para donde apunta si estaba quieto.
   if (!p.downed && onJumpPad(arena, p.x, p.y)) {
     const inv = len2 > 0 ? 1 / Math.sqrt(len2) : 0;
-    const dx = len2 > 0 ? mx * inv : Math.cos(input.aim);
-    const dy = len2 > 0 ? my * inv : Math.sin(input.aim);
+    // Un ángulo que no es un número (no lo deja pasar el servidor) no lanza a
+    // nadie a NaN: hacia la derecha.
+    const aim = Number.isFinite(input.aim) ? input.aim : 0;
+    const dx = len2 > 0 ? mx * inv : Math.cos(aim);
+    const dy = len2 > 0 ? my * inv : Math.sin(aim);
     p.jumpTicks = JUMP_TICKS;
     p.jumpVx = dx * JUMP_SPEED;
     p.jumpVy = dy * JUMP_SPEED;

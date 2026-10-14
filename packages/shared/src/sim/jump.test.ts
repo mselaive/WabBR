@@ -65,4 +65,11 @@ describe("hongos saltarines", () => {
       }
     }
   });
+
+  it("un ángulo que no es un número no lo manda a NaN", () => {
+    const p = createPlayer(1, pad.x, pad.y);
+    stepPlayerMovement(p, { ...emptyInput(1), aim: Infinity }, map);
+    for (let t = 2; t < 30; t++) stepPlayerMovement(p, emptyInput(t), map);
+    expect(Number.isFinite(p.x) && Number.isFinite(p.y)).toBe(true);
+  });
 });

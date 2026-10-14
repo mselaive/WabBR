@@ -324,6 +324,26 @@ nadie arranque al lado de otro. El anillo gira con cada partida y el lugar de ca
 uno se sortea: antes salía del orden de llegada a la sala, así que el que la creaba
 aparecía siempre al este y el segundo siempre enfrente.
 
+## Paracaídas
+
+La marca de los battle royale. Con la opción prendida (lo está de entrada; el host la puede
+apagar), la partida **empieza en el aire**: cada uno arranca donde aparecía antes, colgado de un
+paracaídas de su color, y durante 8 segundos planea a 360 px/s —más rápido que corriendo,
+alcanza para cruzar el mapa— por encima de todo. La cámara se aleja para ver dónde caer. **E**
+(en el teléfono, tocar el cartel "Bajar ya") lo tira en picada y cae en medio segundo: el que baja
+primero agarra la caja. Al tocar el piso, si cayó encima de algo, se corre al lugar libre más
+cercano.
+
+En el aire no se puede disparar, tirar granadas ni curarse, y a nadie le pegan balas,
+explosiones, fuego ni la zona. Todos ven todos los paracaídas (desde abajo se ven, y desde arriba
+se ve todo). Los bots eligen una caja adentro de la zona y a su alcance, planean hasta ahí y se
+tiran encima. Con la segunda oportunidad también se vuelve cayendo (2,5 segundos), que de paso
+sirve de protección al aparecer.
+
+El planeo vive en `stepPlayerMovement`, así que el cliente lo predice como cualquier movimiento;
+los ticks que quedan viajan en el snapshot. Sin inputs (se cortó la conexión) igual se sigue
+cayendo: si no, el que se desconecta en el aire quedaría colgado.
+
 ## Loot
 
 Hay dos fuentes de botín, y la separación es lo que mantiene el mapa legible:
@@ -397,6 +417,49 @@ no puedan discrepar. Las acciones (recoger, cambiar de arma, curarse) viajan en
 el campo `act` del mensaje de input que ya se manda 20 veces por segundo: no
 agregan ni un mensaje nuevo, que es lo que importa para la factura de Cloudflare.
 
+## La mochila
+
+Un objeto de rareza azul, en las cajas y a veces en el piso. Se lleva puesta (con E) y deja cargar
+**la mitad más de curaciones y granadas**: 8 vendas pasan a 12, 3 granadas a 5, 2 de humo a 3. Se
+ve sobre el muñeco —el bulto asoma a los costados y las tiras cruzan la remera—, así que sabés quién
+viene cargado. Al morir se suelta, como todo. Una alcanza: la segunda queda en el piso. Los límites
+salen de un solo lugar (`carryLimit`), que usan el recoger con E, el recoger al pasar y los bots.
+
+## Minas
+
+Con **K** se tira una mina como si fuera una granada: rueda, y donde se frena queda en el piso.
+Se arma al segundo y medio (recién puesta no explota: si no, te explotaría a vos) y explota cuando
+un rival pasa a menos de 30 px, con la explosión de una granada a cuenta del que la puso. A los del
+equipo no les explota, y pasado un minuto y medio se apaga sola. Se llevan dos (tres con mochila).
+
+Lo que las hace justas: los rivales las ven recién **de cerca** (a 110 px y a la vista), con una
+lucecita roja que parpadea cuando está armada; las tuyas y las de tu pareja se ven siempre, con
+la luz verde. El servidor manda a cada uno sólo las minas que puede ver, y el aviso de "quedó una
+mina acá" sólo le llega al equipo que la puso. Los bots no las juntan (no las usan); las que ven
+(de cerca y a la vista, como cualquiera) las rodean, y las que no ven, las pisan.
+
+## El radar
+
+Copiado del UAV de Warzone. Es un objeto raro (en las cajas, y muy de vez en cuando en el piso,
+con borde violeta) que **se prende al levantarlo**: durante 10 segundos, cada 2, marca en el
+minimapa de tu equipo dónde están los rivales a menos de 1500 px —también los que están en un
+arbusto: es la respuesta al que se queda escondido—. Entre pasada y pasada no se los sigue: cada
+marca es dónde estaban, y se apaga sola. Si un rival prende uno cerca tuyo, te avisa ("¡Un rival
+prendió un radar cerca!") y tenés hasta la próxima pasada para moverte. Con uno andando, el
+segundo queda en el piso.
+
+Las pasadas son eventos de la simulación (`stepRadars`) y el servidor se las manda sólo al
+equipo del que lo levantó: a nadie más le llega dónde estaban los demás. Los bots lo levantan
+(si lo ven) pero no lo usan.
+
+## La bengala
+
+Copiada de los pedidos de suministros de Warzone y de Apex. Es el objeto más raro de las cajas
+(borde naranja): al levantarla **pide un paquete aéreo** al lado tuyo, en el primer lugar libre,
+con el botín de siempre y los diez segundos de caída de siempre. Todos lo ven venir —el aviso, el
+anillo en el piso y el paquete bajando—, así que es un faro: o lo defendés o te lo sacan. Los bots
+también la levantan (y se arma lío).
+
 ## Tirolesas
 
 Seis por mapa: un cable entre dos postes de madera, de 450 a 750 px, con lugar alrededor de cada
@@ -409,35 +472,6 @@ es una tirolesa: se dibuja colgado y no saltando, y suena la polea en vez del "b
 al final del generador con su propio azar, así el resto del mapa no se movió. Cada tirolesa de
 cada mapa está probada de ida y de vuelta (llega a un lugar libre, cerca del otro poste), y la
 predicción del cliente viaja igual que el servidor con 150 ms de ping.
-
-## Paracaídas
-
-La marca de los battle royale. Con la opción prendida (lo está de entrada; el host la puede
-apagar), la partida **empieza en el aire**: cada uno arranca donde aparecía antes, colgado de un
-paracaídas de su color, y durante 8 segundos planea a 360 px/s —más rápido que corriendo,
-alcanza para cruzar el mapa— por encima de todo. La cámara se aleja para ver dónde caer. **E**
-(en el teléfono, tocar el cartel "Bajar ya") lo tira en picada y cae en medio segundo: el que baja
-primero agarra la caja. Al tocar el piso, si cayó encima de algo, se corre al lugar libre más
-cercano.
-
-En el aire no se puede disparar, tirar granadas ni curarse, y a nadie le pegan balas,
-explosiones, fuego ni la zona. Todos ven todos los paracaídas (desde abajo se ven, y desde arriba
-se ve todo). Los bots eligen una caja adentro de la zona y a su alcance, planean hasta ahí y se
-tiran encima. Con la segunda oportunidad también se vuelve cayendo (2,5 segundos), que de paso
-sirve de protección al aparecer.
-
-El planeo vive en `stepPlayerMovement`, así que el cliente lo predice como cualquier movimiento;
-los ticks que quedan viajan en el snapshot. Sin inputs (se cortó la conexión) igual se sigue
-cayendo: si no, el que se desconecta en el aire quedaría colgado.
-
-## Fogatas
-
-Copiadas de Fortnite. Hay **6 fogatas** en el mapa, una en cada uno de los distritos más
-grandes, al aire libre (un puntito naranja en el minimapa). Quedándote a menos de 70 px de una,
-y si no te pegaron en los últimos 3 segundos, recuperás 3 de vida por segundo hasta llenarte.
-Lento a propósito: es para el respiro entre peleas, no para curarte en medio de una. El HUD avisa
-"Al calor de la fogata". Los bots heridos y sin curaciones van a la más cercana. Se ubican al
-final del generador del mapa y con su propio azar, así el resto del mapa queda idéntico.
 
 ## Hongos saltarines
 
@@ -457,6 +491,15 @@ reconciliar. Un test lo prueba con 150 ms de ping: el cliente vuela y cae donde 
 corregir nada. El test de reconciliación con inputs perdidos usa el mapa sin hongos: un input
 perdido justo al pisar uno cambia todo el salto, y en el juego no pasa porque los inputs van por
 TCP.
+
+## Fogatas
+
+Copiadas de Fortnite. Hay **6 fogatas** en el mapa, una en cada uno de los distritos más
+grandes, al aire libre (un puntito naranja en el minimapa). Quedándote a menos de 70 px de una,
+y si no te pegaron en los últimos 3 segundos, recuperás 3 de vida por segundo hasta llenarte.
+Lento a propósito: es para el respiro entre peleas, no para curarte en medio de una. El HUD avisa
+"Al calor de la fogata". Los bots heridos y sin curaciones van a la más cercana. Se ubican al
+final del generador del mapa y con su propio azar, así el resto del mapa queda idéntico.
 
 ## La caja dorada
 
@@ -510,59 +553,6 @@ bombardeo (nadie suma la kill) y los bots se van del círculo. Todo es de la sim
 compartida con el azar de la partida (`launchStrike`, `stepStrikes`); el cliente sólo dibuja
 lo que llega en el snapshot (`rz`).
 
-## Apuestas de espectador
-
-Muerto (y sin segunda oportunidad por delante), arriba aparece **"¿Quién gana?"** con un botón por
-cada uno de los que siguen en pie (los ocho con más kills, en orden fijo). Se apuesta una vez y
-no se cambia; todos se enteran ("Mati apuesta por Juan"). Al final, debajo del resultado, quién
-apostó por quién con ✓ o ✗; el que acertó suma en el marcador de la sala ("2 apuestas") y, si no
-ganó otro título, se lleva **Adivino: apostó por el que ganó**. Le da algo que hacer al que cayó
-primero mientras mira. El servidor valida todo (que estés muerto de verdad, que el otro esté
-vivo, una por partida) y cuenta los aciertos (`addToTally`).
-
-## Minas
-
-Con **K** se tira una mina como si fuera una granada: rueda, y donde se frena queda en el piso.
-Se arma al segundo y medio (recién puesta no explota: si no, te explotaría a vos) y explota cuando
-un rival pasa a menos de 30 px, con la explosión de una granada a cuenta del que la puso. A los del
-equipo no les explota, y pasado un minuto y medio se apaga sola. Se llevan dos (tres con mochila).
-
-Lo que las hace justas: los rivales las ven recién **de cerca** (a 110 px y a la vista), con una
-lucecita roja que parpadea cuando está armada; las tuyas y las de tu pareja se ven siempre, con
-la luz verde. El servidor manda a cada uno sólo las minas que puede ver, y el aviso de "quedó una
-mina acá" sólo le llega al equipo que la puso. Los bots no las juntan (no las usan); las que ven
-(de cerca y a la vista, como cualquiera) las rodean, y las que no ven, las pisan.
-
-## La mochila
-
-Un objeto de rareza azul, en las cajas y a veces en el piso. Se lleva puesta (con E) y deja cargar
-**la mitad más de curaciones y granadas**: 8 vendas pasan a 12, 3 granadas a 5, 2 de humo a 3. Se
-ve sobre el muñeco —el bulto asoma a los costados y las tiras cruzan la remera—, así que sabés quién
-viene cargado. Al morir se suelta, como todo. Una alcanza: la segunda queda en el piso. Los límites
-salen de un solo lugar (`carryLimit`), que usan el recoger con E, el recoger al pasar y los bots.
-
-## La bengala
-
-Copiada de los pedidos de suministros de Warzone y de Apex. Es el objeto más raro de las cajas
-(borde naranja): al levantarla **pide un paquete aéreo** al lado tuyo, en el primer lugar libre,
-con el botín de siempre y los diez segundos de caída de siempre. Todos lo ven venir —el aviso, el
-anillo en el piso y el paquete bajando—, así que es un faro: o lo defendés o te lo sacan. Los bots
-también la levantan (y se arma lío).
-
-## El radar
-
-Copiado del UAV de Warzone. Es un objeto raro (en las cajas, y muy de vez en cuando en el piso,
-con borde violeta) que **se prende al levantarlo**: durante 10 segundos, cada 2, marca en el
-minimapa de tu equipo dónde están los rivales a menos de 1500 px —también los que están en un
-arbusto: es la respuesta al que se queda escondido—. Entre pasada y pasada no se los sigue: cada
-marca es dónde estaban, y se apaga sola. Si un rival prende uno cerca tuyo, te avisa ("¡Un rival
-prendió un radar cerca!") y tenés hasta la próxima pasada para moverte. Con uno andando, el
-segundo queda en el piso.
-
-Las pasadas son eventos de la simulación (`stepRadars`) y el servidor se las manda sólo al
-equipo del que lo levantó: a nadie más le llega dónde estaban los demás. Los bots lo levantan
-(si lo ven) pero no lo usan.
-
 ## El minimapa no es un radar
 
 El servidor te manda a los que tenés en línea de vista hasta 1150 px, también los que quedan
@@ -603,6 +593,16 @@ pie, mira con sus ojos, como cualquier muerto de la pareja.)
 
 Vive en la simulación compartida (`secondChanceOpen`, `stepRespawns`): el cliente no predice nada
 especial, al volver el predictor se planta donde apareció como al empezar la partida.
+
+## Apuestas de espectador
+
+Muerto (y sin segunda oportunidad por delante), arriba aparece **"¿Quién gana?"** con un botón por
+cada uno de los que siguen en pie (los ocho con más kills, en orden fijo). Se apuesta una vez y
+no se cambia; todos se enteran ("Mati apuesta por Juan"). Al final, debajo del resultado, quién
+apostó por quién con ✓ o ✗; el que acertó suma en el marcador de la sala ("2 apuestas") y, si no
+ganó otro título, se lleva **Adivino: apostó por el que ganó**. Le da algo que hacer al que cayó
+primero mientras mira. El servidor valida todo (que estés muerto de verdad, que el otro esté
+vivo, una por partida) y cuenta los aciertos (`addToTally`).
 
 ## Correr y granadas
 
@@ -879,8 +879,14 @@ packages/shared/     simulación, mapa y protocolo (TS puro, sin dependencias)
 apps/server/         Worker + Durable Object
   src/GameRoom.ts      loop de 20 Hz, lobby, snapshots, validación de input
 apps/client/         juego
-  src/net/             conexión, predicción/reconciliación, interpolación
+  src/game.ts          el juego en el cliente: mensajes, cuadros, cámara, HUD
+  src/net/             conexión, predicción/reconciliación, interpolación (y la repetición)
   src/render/          PixiJS: mundo, texturas generadas por código, minimapa
+  src/titles.ts        un título para cada uno al final
+  src/records.ts       récords personales (en el navegador)
+  src/achievements.ts  logros y gorros (en el navegador)
+  src/summary.ts       el resumen de la noche para copiar
+  src/aimAssist.ts     la ayuda de puntería del stick
 ```
 
 ## Cómo se siente fluido
@@ -1038,6 +1044,15 @@ y con pérdida de paquetes.
 `shots.test.ts` pone a jugar al cliente y al servidor de verdad —predicción, cola de inputs, `step`
 y el codec del snapshot— con latencia y con jitter, y comprueba que cada bala del servidor ya
 estuviera dibujada y por el mismo camino. Con el servidor repitiendo inputs como antes, falla.
+
+`maps.test.ts` revisa cada uno de los 12 mapas: los distritos, que se pueda entrar a todas las
+casas, las apariciones, que los bots lleguen a las cajas, los saltos de cada hongo en 32
+direcciones y cada tirolesa de ida y de vuelta. Lo que tiene que ver con el vuelo (hongos,
+tirolesas, paracaídas) además se prueba con la predicción del cliente y 150 ms de ping.
+
+Los arreglos importantes se probaron también al revés: romper el arreglo a propósito (en una
+copia, nunca con `git checkout`) y ver que algún test falle. Si no fallaba, el test se hizo más
+exigente.
 
 Contra el servidor local (`npm run dev` en otra terminal) hay scripts con sockets de verdad:
 `scripts/server-bots.mjs` (una partida de bots entera y el marcador de la sala),

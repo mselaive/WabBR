@@ -17,6 +17,7 @@ import {
   REVIVE_RANGE,
   REVIVE_TICKS,
   RULES_BLITZ,
+  RULES_CHAOS,
   RULES_LEGENDARY,
   RULES_SNIPERS,
   SMOKE_MAX_STACK,
@@ -245,6 +246,7 @@ export function createGameState(seed = 1): GameState {
 
 /** Con qué arranca cada uno según las reglas. */
 function startingWeapon(rules: number): number {
+  if (rules === RULES_CHAOS) return WEAPON_IDS.indexOf("rocket");
   if (rules === RULES_SNIPERS) return WEAPON_IDS.indexOf("sniper");
   if (rules === RULES_BLITZ) return WEAPON_IDS.indexOf("smg");
   return STARTING_WEAPON;
@@ -369,9 +371,10 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
     p.boostTicks = 0;
     p.stamina = STAMINA_MAX;
     p.staminaDelay = 0;
-    p.grenades = 0;
+    // Caos: con granadas y molotovs de entrada.
+    p.grenades = state.rules === RULES_CHAOS ? 2 : 0;
     p.smokes = 0;
-    p.molotovs = 0;
+    p.molotovs = state.rules === RULES_CHAOS ? 2 : 0;
     p.downed = false;
     p.downedBy = -1;
     p.downedCause = 0;

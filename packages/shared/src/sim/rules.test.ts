@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RULES_BLITZ, RULES_LEGENDARY, RULES_SNIPERS, ZONE_PHASES } from "../constants.js";
+import { RULES_BLITZ, RULES_CHAOS, RULES_LEGENDARY, RULES_SNIPERS, ZONE_PHASES } from "../constants.js";
 import { ITEM_WEAPON, WEAPON_IDS, weaponAt } from "../items.js";
 import { generateArena, lootCrates } from "../map/arena.js";
 import { createGameState, createPlayer, startMatch, step } from "./step.js";
@@ -57,5 +57,15 @@ describe("reglas especiales", () => {
     const p = blitz.players[0]!;
     expect(p.slots[0]).toBe(WEAPON_IDS.indexOf("smg"));
     expect(p.shield).toBeGreaterThan(0);
+  });
+
+  it("caos: todos con lanzacohetes legendario, dos granadas y dos molotovs", () => {
+    const state = begin(RULES_CHAOS);
+    for (const p of state.players) {
+      expect(p.slots[0]).toBe(WEAPON_IDS.indexOf("rocket"));
+      expect(p.slotTier[0]).toBe(4);
+      expect(p.grenades).toBe(2);
+      expect(p.molotovs).toBe(2);
+    }
   });
 });

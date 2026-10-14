@@ -72,7 +72,7 @@ está en `main`.
 | Dificultad de los bots | Fácil / Normal / Difícil en el lobby: reacción, puntería y granadas | Test + captura del lobby |
 | Revólver y ametralladora | Dos armas más: la pistola pesada y la de 60 balas | Tests de todas las armas + íconos revisados |
 | De noche | Opción del host: ves poco alrededor; fogatas, fuego, explosiones y fogonazos iluminan | Capturas |
-| Reglas especiales | Normal / Todo legendario / Francotiradores / Relámpago, las elige el host | 3 tests + captura del lobby |
+| Reglas especiales | Normal / Todo legendario / Francotiradores / Relámpago / Caos, las elige el host | 4 tests + captura del lobby + 3 partidas de 16 bots en Caos |
 | Logros y gorros | 9 logros que desbloquean gorros que todos ven, sin cuentas | 4 tests + capturas del menú y del gorro en partida |
 | Hongos saltarines | 10 en el mapa: te lanzan por encima de lo que haya, predicho en el cliente | 6 tests (incluye predicción con ping) + capturas |
 | Molotov | `J`: charco de fuego 6 s que quema al que lo pisa | 7 tests + captura |

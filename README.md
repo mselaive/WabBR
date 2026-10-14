@@ -145,8 +145,9 @@ en el lobby: en partida, echar sería un arma más.
 **Reglas especiales.** Para variar la noche, el host elige entre *Normal*, *Todo legendario*
 (toda arma —en el piso, en cajas, en paquetes y la de arranque— sale en su máxima rareza),
 *Francotiradores* (todos arrancan con uno y las armas que aparecen son sólo francotirador,
-ballesta o revólver) y *Relámpago* (la zona espera un tercio en cada fase y todos arrancan con
-subfusil y chaleco ligero). Se aplican en la simulación (`ruledLoot`, `startingWeapon`), así que
+ballesta o revólver), *Relámpago* (la zona espera un tercio en cada fase y todos arrancan con
+subfusil y chaleco ligero) y *Caos* (todos arrancan con lanzacohetes, dos granadas y dos
+molotovs: partidas cortas y ruidosas para cuando son muchos). Se aplican en la simulación (`ruledLoot`, `startingWeapon`), así que
 valen igual para el botín, las cajas y los paquetes.
 
 **De noche.** El host elige *De día* o *De noche*. De noche ves unos 230 px alrededor tuyo y el

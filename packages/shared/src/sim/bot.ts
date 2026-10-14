@@ -1,5 +1,6 @@
 import {
   DT,
+  EXPLOSION_MAX_DAMAGE,
   EXPLOSION_RADIUS,
   GRENADE_FRICTION,
   GRENADE_FUSE_TICKS,
@@ -134,6 +135,8 @@ export function createBotMemory(seed: number): BotMemory {
 export function weaponScore(index: number, tier: number): number {
   if (index < 0) return 0;
   const def = weaponStats(index, tier);
+  // El daño del cohete es de la explosión: se cuenta un impacto cerca.
+  if (def.explosive) return (EXPLOSION_MAX_DAMAGE * 0.7) / def.fireCd;
   return (def.damage * def.pellets) / def.fireCd;
 }
 
@@ -222,8 +225,10 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
     if (weapon >= 0) {
       const def = weaponStats(weapon, me.slotTier[me.activeSlot] ?? 0);
       const range = def.bulletSpeed * def.lifeTicks * DT * 0.9;
-      // Un barril al lado en la línea de tiro estallaría encima suyo.
-      input.shoot = mem.reaction === 0 && dist < range && !barrelInTheWay(state, me, target, arena);
+      // Un barril al lado en la línea de tiro estallaría encima suyo, y un
+      // cohete contra alguien que tiene encima, también.
+      const tooClose = def.explosive === true && dist < EXPLOSION_RADIUS + 40;
+      input.shoot = mem.reaction === 0 && dist < range && !tooClose && !barrelInTheWay(state, me, target, arena);
     }
 
     if (mem.throwCd > 0) mem.throwCd--;

@@ -37,6 +37,7 @@ interface LocalBullet {
   offX: number;
   offY: number;
   alive: boolean;
+  rocket: boolean;
 }
 
 interface Shot {
@@ -82,7 +83,8 @@ export class LocalShots {
 
   /** `offX/offY`: dónde está el arma dibujada respecto de la simulada. */
   fire(shot: PredictedShot, now: number, offX = 0, offY = 0): void {
-    const life = weaponStats(shot.weapon, shot.tier).lifeTicks * DT;
+    const def = weaponStats(shot.weapon, shot.tier);
+    const life = def.lifeTicks * DT;
     this.shots.push({
       seq: shot.seq,
       firedAt: now,
@@ -98,6 +100,7 @@ export class LocalShots {
         offX,
         offY,
         alive: true,
+        rocket: def.explosive === true,
       })),
       serverIds: [],
     });
@@ -201,7 +204,7 @@ export class LocalShots {
     for (const shot of this.shots) {
       for (const b of shot.bullets) {
         if (b.alive) {
-          out.push({ id: b.id, x: b.x + b.offX, y: b.y + b.offY, angle: Math.atan2(b.vy, b.vx) });
+          out.push({ id: b.id, x: b.x + b.offX, y: b.y + b.offY, angle: Math.atan2(b.vy, b.vx), rocket: b.rocket });
         }
       }
     }

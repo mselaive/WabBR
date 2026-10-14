@@ -45,7 +45,7 @@ import {
   SP_X,
   SP_Y,
 } from "./messages.js";
-import type { GroundItem } from "../items.js";
+import { weaponAt, type GroundItem } from "../items.js";
 import type {
   BulletState,
   GameState,
@@ -211,7 +211,8 @@ export function unpackSmoke(s: SnapSmoke): SmokeState {
 }
 
 export function packBullet(b: BulletState): SnapBullet {
-  return [b.id, q(b.x, P), q(b.y, P), q(b.vx, 1), q(b.vy, 1)];
+  const base: SnapBullet = [b.id, q(b.x, P), q(b.y, P), q(b.vx, 1), q(b.vy, 1)];
+  return weaponAt(b.weapon).explosive ? [...base, 1] as SnapBullet : base;
 }
 
 export function packZone(z: ZoneState): SnapZone {
@@ -282,6 +283,8 @@ export interface UnpackedBullet {
   y: number;
   vx: number;
   vy: number;
+  /** Un cohete: se dibuja más grande y con estela. */
+  rocket: boolean;
 }
 
 export interface UnpackedZone {
@@ -332,7 +335,7 @@ export function unpackPlayer(s: SnapPlayer): UnpackedPlayer {
 }
 
 export function unpackBullet(s: SnapBullet): UnpackedBullet {
-  return { id: s[0], x: s[1], y: s[2], vx: s[3], vy: s[4] };
+  return { id: s[0], x: s[1], y: s[2], vx: s[3], vy: s[4], rocket: s[5] === 1 };
 }
 
 export function unpackZone(s: SnapZone): UnpackedZone {

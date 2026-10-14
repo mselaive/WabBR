@@ -43,7 +43,7 @@ interface BulletTrack {
   /** Llegada del primer snapshot que la trajo. */
   bornAt: number;
   /** Llegada del primero que ya no la trajo. Infinity mientras siga viniendo. */
-  goneAt: number;
+  goneAt: number;  rocket: boolean;
 }
 
 export interface InterpolatedBullet {
@@ -51,6 +51,7 @@ export interface InterpolatedBullet {
   x: number;
   y: number;
   angle: number;
+  rocket?: boolean;
 }
 
 export interface InterpolatedFrame {
@@ -164,7 +165,7 @@ export class SnapshotBuffer {
     for (const [id, b] of this.bulletTracks) {
       if (renderTime < b.bornAt - MS_PER_TICK || renderTime >= b.goneAt) continue;
       const dt = (renderTime - b.seenAt) / 1000;
-      bullets.push({ id, x: b.x + b.vx * dt, y: b.y + b.vy * dt, angle: Math.atan2(b.vy, b.vx) });
+      bullets.push({ id, x: b.x + b.vx * dt, y: b.y + b.vy * dt, angle: Math.atan2(b.vy, b.vx), rocket: b.rocket });
     }
 
     if (renderTime >= last.recvAt) {

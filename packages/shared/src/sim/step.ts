@@ -58,6 +58,7 @@ import {
   WEAPON_IDS,
   clampTier,
   consumableAt,
+  weaponAt,
   weaponStats,
   type GroundItem,
 } from "../items.js";
@@ -1289,6 +1290,20 @@ function stepBullets(state: GameState, arena: ArenaMap, events: SimEvent[]): voi
     const nx = b.x + dx * bestT;
     const ny = b.y + dy * bestT;
 
+    // El cohete no pega: estalla donde toca, un poco antes de la pared para
+    // que la pared no se trague su propia explosión.
+    const def = weaponAt(b.weapon);
+    if (def.explosive && (hitPlayer || hitBox || b.life <= 1 || outsideArena(nx, ny))) {
+      const back = hitBox ? 10 / Math.max(1, Math.hypot(b.vx, b.vy)) : 0;
+      events.push({ t: "impact", x: nx, y: ny, bullet: b.id });
+      if (hitPlayer) {
+        const owner = findPlayer(state, b.ownerId);
+        if (owner) owner.shotsHit++;
+      }
+      applyExplosion(state, nx - b.vx * back, ny - b.vy * back, b.ownerId, arena, events, -1, b.weapon);
+      continue;
+    }
+
     if (hitPlayer) {
       events.push({
         t: "hit",
@@ -1330,6 +1345,14 @@ function stepBullets(state: GameState, arena: ArenaMap, events: SimEvent[]): voi
   }
 
   state.bullets = kept;
+}
+
+/** ¿El punto ya está contra el muro circular de la arena? */
+function outsideArena(x: number, y: number): boolean {
+  const cx = x - WORLD_CENTER_X;
+  const cy = y - WORLD_CENTER_Y;
+  const limit = WORLD_RADIUS - BULLET_RADIUS;
+  return cx * cx + cy * cy >= limit * limit;
 }
 
 // ------------------------------------------------------ paquetes aéreos

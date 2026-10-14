@@ -155,8 +155,11 @@ export type SnapGrenade = [number, number, number, number, number];
  */
 export type SnapSmoke = [number, number, number, number];
 
-/** [id, x, y, vx, vy] — la velocidad permite extrapolar entre snapshots. */
-export type SnapBullet = [number, number, number, number, number];
+/**
+ * [id, x, y, vx, vy, cohete?] — la velocidad permite extrapolar entre
+ * snapshots. El sexto va sólo en los cohetes (1), que se dibujan distinto.
+ */
+export type SnapBullet = [number, number, number, number, number] | [number, number, number, number, number, number];
 
 /** [x, y, radius, targetX, targetY, targetRadius, phase, shrinking(0|1), ticksLeft] */
 export type SnapZone = [number, number, number, number, number, number, number, number, number];

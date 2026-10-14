@@ -102,7 +102,7 @@ interface Effect {
   maxLife: number;
   vx: number;
   vy: number;
-  kind: "flash" | "spark" | "blood" | "blast" | "number";
+  kind: "flash" | "spark" | "blood" | "blast" | "number" | "puff";
 }
 
 export class WorldView {
@@ -145,6 +145,8 @@ export class WorldView {
   private readonly barrelSprites = new Map<number, Sprite>();
   private readonly effects: Effect[] = [];
 
+  /** Última bocanada de estela de cohete (performance.now()), para no llenar de humo. */
+  private lastPuff = 0;
   /** Sacudón pendiente, en píxeles. Se apaga solo. */
   private shake = 0;
   /** Marca de acierto sobre la mira: segundos que le quedan. */
@@ -1103,11 +1105,12 @@ export class WorldView {
 
   private updateBullets(frame: InterpolatedFrame): void {
     const seen = new Set<number>();
+    const now = performance.now();
     for (const b of frame.bullets) {
       seen.add(b.id);
       let sprite = this.bullets.get(b.id);
       if (!sprite) {
-        sprite = new Sprite(this.tex.bullet);
+        sprite = new Sprite(b.rocket ? this.tex.rocket : this.tex.bullet);
         sprite.anchor.set(0.5);
         sprite.scale.set(ART_SCALE);
         this.bulletLayer.addChild(sprite);
@@ -1115,6 +1118,14 @@ export class WorldView {
       }
       sprite.position.set(b.x, b.y);
       sprite.rotation = b.angle;
+      // Estela de humo del cohete: una bocanada cada tanto, atrás de la llama.
+      if (b.rocket && now - this.lastPuff > 35) {
+        this.lastPuff = now;
+        const puff = new Graphics().circle(0, 0, 4).fill(0xc8ccd0);
+        puff.position.set(b.x - Math.cos(b.angle) * 14, b.y - Math.sin(b.angle) * 14);
+        this.effectLayer.addChild(puff);
+        this.effects.push({ node: puff, life: 0.45, maxLife: 0.45, vx: 0, vy: 0, kind: "puff" });
+      }
     }
     for (const [id, sprite] of this.bullets) {
       if (seen.has(id)) continue;
@@ -1205,6 +1216,10 @@ export class WorldView {
       } else if (fx.kind === "number") {
         fx.node.y += fx.vy * dt;
         fx.vy *= 0.93;
+      } else if (fx.kind === "puff") {
+        // El humo de la estela: crece y se apaga.
+        fx.node.scale.set(1 + (1 - t) * 1.5);
+        fx.node.alpha = t * 0.5;
       } else if (fx.kind === "blast") {
         // Se abre de golpe y se desvanece: la curva es lo que la hace sentir seca.
         fx.node.scale.set(0.4 + (1 - t) * 2.2);

@@ -24,6 +24,7 @@ const WEAPON_VOICES = [
   { filter: 900, decay: 0.22, thump: 70, gain: 1 }, // escopeta
   { filter: 2600, decay: 0.35, thump: 60, gain: 1 }, // francotirador
   { filter: 4000, decay: 0.05, thump: 0, gain: 0.35 }, // ballesta: un chasquido
+  { filter: 600, decay: 0.45, thump: 45, gain: 1 }, // lanzacohetes: un soplido grave
 ];
 
 export class Sound {

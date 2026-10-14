@@ -268,11 +268,17 @@ lista una vez al arrancar, más los eventos de "lo agarró tal", "se abrió la c
 7" y "se cayó esto". De las cajas ni siquiera viaja la posición: son parte del
 mapa, y su id es su orden de aparición.
 
-- **Seis armas** (`packages/shared/src/items.ts`): pistola, subfusil, rifle,
-  escopeta, francotirador y ballesta. Dos ranuras, así que hay que elegir. La escopeta es
+- **Siete armas** (`packages/shared/src/items.ts`): pistola, subfusil, rifle,
+  escopeta, francotirador, ballesta y lanzacohetes. Dos ranuras, así que hay que elegir. La escopeta es
   para pelear de cerca: dos tiros matan hasta unos 100 px, y de ahí para afuera
   pierde contra el rifle. Su cono abría el doble y a 120 px entraban tres
   perdigones de ocho; hay tests que fijan las dos cosas.
+- **El lanzacohetes** es el arma rara: sale de los paquetes aéreos y muy de vez en cuando de
+  una caja. El cohete es lento (se ve venir, con su estela de humo, y se esquiva) y no pega:
+  estalla donde toca o al final de su alcance, con la misma explosión que la granada. De
+  lleno deja a cualquiera con unos 10 de vida, nunca lo mata de un tiro; te lastima a vos si
+  lo tirás pegado a alguien, y hace estallar barriles. Los bots lo usan de lejos y no lo
+  disparan contra el que tienen encima.
 - **La ballesta es silenciosa**: sin fogonazo y sin delatarte, así que se puede
   tirar desde un arbusto sin salir de él. Dos flechas matan, pero hay que recargar
   después de cada una y la flecha es lenta. Sale sólo de las cajas.

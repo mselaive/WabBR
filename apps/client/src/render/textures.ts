@@ -404,6 +404,20 @@ function bullet(): Texture {
   });
 }
 
+/** El cohete: cuerpo gris, punta roja y la llama atrás. Apunta a la derecha, como la bala. */
+function rocket(): Texture {
+  return make(12, 6, (ctx) => {
+    rect(ctx, 0, 2, 3, 2, "#ffb347");
+    rect(ctx, 1, 1, 1, 4, "#ff7a2a");
+    rect(ctx, 3, 1, 6, 4, "#8a929b");
+    rect(ctx, 3, 1, 6, 1, "#b9c0c8");
+    rect(ctx, 9, 2, 2, 2, "#d9483b");
+    rect(ctx, 11, 2, 1, 2, "#a8302a");
+    rect(ctx, 3, 0, 2, 1, "#5a6068");
+    rect(ctx, 3, 5, 2, 1, "#5a6068");
+  });
+}
+
 function muzzleFlash(): Texture {
   return make(10, 8, (ctx) => {
     ellipse(ctx, 3, 4, 3, 3, "#fff3c4");
@@ -492,6 +506,7 @@ export interface TexturePack {
   hayBale: Texture;
   fence: Texture;
   grenade: Texture;
+  rocket: Texture;
   itemGrenade: Texture;
   smokeGrenade: Texture;
   itemSmoke: Texture;
@@ -542,6 +557,7 @@ export function getTextures(): TexturePack {
     hayBale: hayBale(),
     fence: fence(),
     grenade: grenade(),
+    rocket: rocket(),
     itemGrenade: grenadeIcon(),
     smokeGrenade: smokeGrenade(),
     itemSmoke: smokeIcon(),
@@ -605,12 +621,19 @@ function drawWeapon(ctx: Ctx, index: number): void {
       rect(ctx, 6, 5, 5, 2, "#2f3a45"); // mira
       rect(ctx, 3, 9, 4, 2, wood);
       break;
-    default: // ballesta: culata, arco atravesado, cuerda y la flecha cargada
+    case 5: // ballesta: culata, arco atravesado, cuerda y la flecha cargada
       rect(ctx, 2, 8, 9, 2, wood);
       rect(ctx, 11, 3, 2, 11, "#5a3a1e");
       rect(ctx, 9, 4, 1, 9, "#e8e2d0");
       rect(ctx, 4, 7, 10, 1, steel);
       rect(ctx, 14, 6, 1, 3, steel);
+      break;
+    default: // lanzacohetes: el tubo verde con la punta del cohete asomando
+      rect(ctx, 2, 6, 11, 4, "#4f6b3a");
+      rect(ctx, 2, 6, 11, 1, "#6b8a50");
+      rect(ctx, 13, 7, 2, 2, "#d9483b");
+      rect(ctx, 5, 10, 2, 3, wood);
+      rect(ctx, 8, 4, 2, 2, "#2f3a45");
       break;
   }
 }

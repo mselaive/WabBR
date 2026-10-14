@@ -50,7 +50,7 @@ export function rarityAt(tier: number): RarityDef {
 
 // ---------------------------------------------------------------- armas
 
-export type WeaponId = "pistol" | "smg" | "rifle" | "shotgun" | "sniper" | "crossbow";
+export type WeaponId = "pistol" | "smg" | "rifle" | "shotgun" | "sniper" | "crossbow" | "rocket";
 
 export interface WeaponDef {
   readonly id: WeaponId;
@@ -78,6 +78,11 @@ export interface WeaponDef {
    * ven venir la flecha, pero no de dónde salió.
    */
   readonly silent?: boolean;
+  /**
+   * El proyectil estalla donde pega (o al final de su alcance) con la misma
+   * explosión que la granada. El daño es todo de la explosión.
+   */
+  readonly explosive?: boolean;
 }
 
 export const WEAPONS: Record<WeaponId, WeaponDef> = {
@@ -178,10 +183,31 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     maxTier: 4,
     silent: true,
   },
+  /**
+   * El arma rara: sale de los paquetes aéreos y muy de vez en cuando de una
+   * caja. El cohete es lento —se ve venir y se esquiva— y no pega de por sí:
+   * estalla. Un impacto de lleno deja a cualquiera con 10 de vida, nunca lo
+   * mata de un tiro (la regla de todas las armas). Te lastima a vos también.
+   */
+  rocket: {
+    id: "rocket",
+    name: "Lanzacohetes",
+    damage: 0,
+    fireCd: 20,
+    magSize: 1,
+    reloadTicks: 70,
+    bulletSpeed: 480,
+    spread: 0.03,
+    lifeTicks: 34,
+    pellets: 1,
+    // La rareza sólo apura la recarga: el daño es de la explosión.
+    maxTier: 4,
+    explosive: true,
+  },
 };
 
 /** El orden importa: es lo que viaja por la red. Agregá al final. */
-export const WEAPON_IDS: readonly WeaponId[] = ["pistol", "smg", "rifle", "shotgun", "sniper", "crossbow"];
+export const WEAPON_IDS: readonly WeaponId[] = ["pistol", "smg", "rifle", "shotgun", "sniper", "crossbow", "rocket"];
 
 /** Con la que arrancás. Débil a propósito: es el motivo para buscar loot. */
 export const STARTING_WEAPON = 0;

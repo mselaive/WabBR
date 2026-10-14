@@ -23,6 +23,8 @@ import {
   STRIKE_RADIUS,
   STRIKE_TICKS,
   STRIKE_WARN_TICKS,
+  WANTED_MIN_KILLS,
+  WANTED_REVEAL_TICKS,
   SMOKE_TICKS,
   SPRINT_MULT,
   STAMINA_DRAIN,
@@ -195,6 +197,7 @@ export function createGameState(seed = 1): GameState {
     nextAirdropId: 1,
     strikes: [],
     nextStrikeId: 1,
+    wanted: null,
     barrelHp: new Map(),
     explodedBarrels: [],
     items: [],
@@ -222,6 +225,7 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
   state.nextAirdropId = 1;
   state.strikes = [];
   state.nextStrikeId = 1;
+  state.wanted = null;
   state.barrelHp = new Map();
   state.explodedBarrels = [];
   state.zone = createZone(zonePace(active.length));
@@ -1043,6 +1047,15 @@ function killPlayer(
 
   const killer = killerId >= 0 ? findPlayer(state, killerId) : undefined;
   if (killer && killer.id !== victim.id) killer.kills++;
+
+  // La recompensa por el más buscado: el que lo mata se cura entero.
+  if (state.wanted?.id === victim.id) {
+    state.wanted = null;
+    if (killer && killer.id !== victim.id && killer.alive) {
+      if (!killer.downed) killer.hp = PLAYER_MAX_HP;
+      events.push({ t: "bounty", byId: killer.id, targetId: victim.id });
+    }
+  }
   events.push({
     t: "kill",
     targetId: victim.id,
@@ -1415,6 +1428,45 @@ function launchStrike(state: GameState, events: SimEvent[]): void {
   events.push({ t: "strike", x, y });
 }
 
+/**
+ * Quién es el más buscado: el único primero en kills entre los que siguen en
+ * pie, con al menos WANTED_MIN_KILLS. Su posición se refresca cada
+ * WANTED_REVEAL_TICKS, y al aparecer uno nuevo se lo muestra en el acto.
+ */
+function stepWanted(state: GameState, events: SimEvent[]): void {
+  let best = -1;
+  let leader: PlayerState | null = null;
+  let tie = false;
+  for (const p of state.players) {
+    if (!p.alive) continue;
+    if (p.kills > best) {
+      best = p.kills;
+      leader = p;
+      tie = false;
+    } else if (p.kills === best) {
+      tie = true;
+    }
+  }
+  if (!leader || tie || best < WANTED_MIN_KILLS) {
+    // Con un empate sigue el que ya era, si sigue empatado arriba: no se lo
+    // saca por alcanzarlo, hay que pasarlo.
+    const current = state.wanted ? findPlayer(state, state.wanted.id) : undefined;
+    if (!current?.alive || current.kills < best || best < WANTED_MIN_KILLS) state.wanted = null;
+    else if (state.tick - state.wanted!.seenTick >= WANTED_REVEAL_TICKS) reveal(state, current);
+    return;
+  }
+  if (state.wanted?.id !== leader.id) {
+    events.push({ t: "wanted", id: leader.id });
+    reveal(state, leader);
+    return;
+  }
+  if (state.tick - state.wanted.seenTick >= WANTED_REVEAL_TICKS) reveal(state, leader);
+}
+
+function reveal(state: GameState, p: PlayerState): void {
+  state.wanted = { id: p.id, x: p.x, y: p.y, seenTick: state.tick };
+}
+
 /** ¿El punto está bajo techo? Ahí no cae ninguna bomba. */
 function underRoof(x: number, y: number, arena: ArenaMap): boolean {
   return arena.buildings.some((b) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h);
@@ -1659,6 +1711,7 @@ export function step(
   stepBullets(state, arena, events);
   stepZone(state, arena, events);
   stepStrikes(state, arena, events);
+  stepWanted(state, events);
   stepAirdrops(state, events);
 
   // Una pareja con los dos caídos ya no tiene quién la levante: se terminan.

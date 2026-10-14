@@ -110,6 +110,15 @@ export const STRIKE_TICKS = 6 * TICK_RATE;
 export const STRIKE_BOMB_EVERY = 10;
 
 /**
+ * El más buscado (de Warzone): el que va primero en kills, con al menos
+ * WANTED_MIN_KILLS y sin empate, aparece en el mapa de todos cada
+ * WANTED_REVEAL_TICKS. El que lo mata se cura entero. Le da un objetivo a
+ * todos y un precio a ir ganando.
+ */
+export const WANTED_MIN_KILLS = 3;
+export const WANTED_REVEAL_TICKS = 5 * TICK_RATE;
+
+/**
  * Vida de un barril: dos o tres tiros de pistola. Al llegar a cero estalla
  * como una granada (applyExplosion) y queda quemado, todavía de cobertura.
  */

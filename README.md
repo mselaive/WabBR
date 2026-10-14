@@ -335,6 +335,16 @@ bombardeo (nadie suma la kill) y los bots se van del círculo. Todo es de la sim
 compartida con el azar de la partida (`launchStrike`, `stepStrikes`); el cliente sólo dibuja
 lo que llega en el snapshot (`rz`).
 
+## El más buscado
+
+Copiado de Warzone. El que va primero en kills —con al menos 3 y sin empate— es **el más
+buscado**: le aparece a todos una estrella dorada en el minimapa donde se lo vio, que se
+refresca cada 5 segundos (es una pista, no un radar), y su nombre va en dorado con una ★. El
+que lo mata **cobra la recompensa: vida llena**, y todos se enteran por el aviso. Para dejar de
+serlo hay que pasarlo: alcanzarlo en kills no alcanza. Le da a todos un objetivo y un precio
+a ir ganando. Los bots que ya tienen algo mejor que la pistola van a buscarlo si está cerca;
+con la pistola de arranque, no: sería regalarle otra kill.
+
 ## Correr y granadas
 
 **Correr** (`Shift`) va 1,45× más rápido y gasta estamina: unos 3 segundos de

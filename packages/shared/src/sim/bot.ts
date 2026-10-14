@@ -287,7 +287,8 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
       // Curarse arranca acá: quedarse quieto para no cancelarlo.
       if (act >= ACT_USE_BASE) return input;
     }
-    goal = pickGoal(state, me, mem, crates);
+    // Armado y sin nadie a la vista: a cazar al más buscado, si está cerca.
+    goal = huntWanted(state, me) ?? pickGoal(state, me, mem, crates);
     if (goal) input.aim = Math.atan2(goal.y - me.y, goal.x - me.x);
   }
 
@@ -378,6 +379,22 @@ function smokeAim(me: PlayerState, target: PlayerState, arena: ArenaMap): number
     if (off < SMOKE_RADIUS * 0.6) return aim;
   }
   return null;
+}
+
+/**
+ * Dónde se vio por última vez al más buscado, si vale la pena ir: que no sea
+ * él mismo ni su compañero, que esté a menos de 1400 px y que el bot ya tenga
+ * algo mejor que la pistola de arranque. Con la pistola, ir a buscar al que
+ * va ganando es regalarle otra kill.
+ */
+function huntWanted(state: GameState, me: PlayerState): { x: number; y: number } | null {
+  const w = state.wanted;
+  if (!w || w.id === me.id) return null;
+  const target = state.players.find((p) => p.id === w.id);
+  if (!target?.alive || target.team === me.team) return null;
+  if (Math.hypot(w.x - me.x, w.y - me.y) > 1400) return null;
+  const armed = me.slots.some((s) => s >= 0 && s !== 0);
+  return armed ? { x: w.x, y: w.y } : null;
 }
 
 /**

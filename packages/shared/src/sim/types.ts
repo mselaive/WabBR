@@ -282,6 +282,11 @@ export interface GameState {
   /** Bombardeos anunciados o en curso. */
   strikes: StrikeState[];
   nextStrikeId: number;
+  /**
+   * El más buscado y dónde se lo vio por última vez (se actualiza cada
+   * WANTED_REVEAL_TICKS, no en cada tick: es una pista, no un radar). null si no hay.
+   */
+  wanted: { id: number; x: number; y: number; seenTick: number } | null;
   /** Vida que les queda a los barriles tocados, por índice de obstáculo. */
   barrelHp: Map<number, number>;
   /** Barriles que ya estallaron, por índice de obstáculo. Quedan quemados. */
@@ -374,4 +379,8 @@ export type SimEvent =
   /** Aterrizó un paquete aéreo: su botín llega con eventos "drop". */
   | { t: "airdrop"; x: number; y: number }
   /** Se anunció un bombardeo: las bombas empiezan en STRIKE_WARN_TICKS. */
-  | { t: "strike"; x: number; y: number };
+  | { t: "strike"; x: number; y: number }
+  /** Hay un nuevo más buscado. */
+  | { t: "wanted"; id: number }
+  /** Alguien mató al más buscado y cobró la recompensa. */
+  | { t: "bounty"; byId: number; targetId: number };

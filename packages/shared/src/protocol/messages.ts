@@ -248,6 +248,8 @@ export interface SnapshotMsg {
   sm?: SnapSmoke[];
   /** Bombardeos anunciados o en curso. Sólo cuando hay alguno. */
   rz?: SnapStrike[];
+  /** El más buscado y dónde se lo vio por última vez: [id, x, y]. Sólo si hay. */
+  mw?: [number, number, number];
 }
 
 export interface ItemsMsg {

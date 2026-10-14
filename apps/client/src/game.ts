@@ -126,6 +126,8 @@ export class Game {
   private teamSize = 1;
   /** Cómo te mataron, para mostrarlo mientras mirás el resto de la partida. */
   private deathNote = "";
+  /** El más buscado y dónde se lo vio por última vez, o null. */
+  private wanted: { id: number; x: number; y: number } | null = null;
   /** Lugares marcados por la pareja, que se muestran unos segundos. */
   private marks: Mark[] = [];
   /**
@@ -487,6 +489,7 @@ export class Game {
   private onSnapshot(msg: SnapshotMsg): void {
     this.snapshots.push(msg, performance.now());
     this.aliveCount = msg.alive;
+    this.wanted = msg.mw ? { id: msg.mw[0], x: msg.mw[1], y: msg.mw[2] } : null;
     for (const [id] of msg.ad ?? []) {
       if (this.announcedAirdrops.has(id)) continue;
       this.announcedAirdrops.add(id);
@@ -660,6 +663,24 @@ export class Game {
         case "throw":
           if (ev.byId === this.localId) this.grenades.confirm(ev.seq, ev.grenade);
           break;
+        case "wanted": {
+          const name = this.everyone.get(ev.id)?.name ?? "Alguien";
+          this.ui.addNotice(
+            ev.id === this.localId
+              ? "¡Sos el más buscado! Todos te ven en el mapa"
+              : `${name} es el más buscado: el que lo mate se cura entero`,
+          );
+          break;
+        }
+        case "bounty": {
+          const by = this.everyone.get(ev.byId)?.name ?? "Alguien";
+          const target = this.everyone.get(ev.targetId)?.name ?? "alguien";
+          this.ui.addNotice(
+            ev.byId === this.localId ? `Cobraste la recompensa por ${target}: vida llena` : `${by} cobró la recompensa por ${target}`,
+          );
+          if (ev.byId === this.localId) this.sound.pickup();
+          break;
+        }
         case "strike":
           this.ui.addNotice("¡Bombardeo! Salí de la zona roja o metete en una casa");
           this.sound.siren();
@@ -838,6 +859,7 @@ export class Game {
       localPredicted ? { ...localPredicted, aim, hidden } : null,
       dt,
       mates,
+      this.wanted?.id ?? -1,
     );
 
     this.world.updateItems(this.items.values(), performance.now());
@@ -853,7 +875,7 @@ export class Game {
     this.marks = this.marks.filter((m) => m.until > now);
     this.world.drawMarks(this.marks);
     // Al espectear, el punto destacado del minimapa es el que estás mirando.
-    this.minimap.draw(frame, this.roster, this.watched?.id ?? this.localId, mates, this.marks);
+    this.minimap.draw(frame, this.roster, this.watched?.id ?? this.localId, mates, this.marks, this.wanted);
     this.updateHud(frame, localPredicted);
 
     this.world.setCrosshair(this.input.mouseX, this.input.mouseY, this.phase === "playing");

@@ -783,6 +783,8 @@ export class WorldView {
     dt: number,
     /** Compañeros en dúos: su nombre va en verde. */
     mates: ReadonlySet<number> = new Set(),
+    /** El más buscado: su nombre va en dorado con una estrella. */
+    wantedId = -1,
   ): void {
     const seen = new Set<number>();
 
@@ -814,12 +816,13 @@ export class WorldView {
       view.flash.position.set(Math.cos(aim) * 24, Math.sin(aim) * 24 + 2);
 
       if (meta && !p.downed) {
-        if (view.label.text !== meta.name) view.label.text = meta.name;
+        const name = p.id === wantedId ? `★ ${meta.name}` : meta.name;
+        if (view.label.text !== name) view.label.text = name;
         view.shirt.tint = playerColor(meta.colorIndex);
       }
       view.label.visible = !isLocal || p.downed;
-      // El compañero se distingue de lejos: nombre en verde.
-      view.label.style.fill = mates.has(p.id) ? 0x7dff9a : 0xffffff;
+      // El compañero se distingue de lejos: nombre en verde; el más buscado, en dorado.
+      view.label.style.fill = mates.has(p.id) ? 0x7dff9a : p.id === wantedId ? 0xffc94a : 0xffffff;
 
       // Caído: acostado, sin arma y con el nombre avisándolo. Es lo que le dice
       // al compañero "vení a levantarme" y al rival "rematalo".

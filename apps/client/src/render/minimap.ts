@@ -76,6 +76,7 @@ export class Minimap {
     localId: number,
     mates: ReadonlySet<number> = new Set(),
     marks: readonly Mark[] = [],
+    wanted: { id: number; x: number; y: number } | null = null,
   ): void {
     const ctx = this.ctx;
     const cx = this.tx(WORLD_CENTER_X);
@@ -242,6 +243,26 @@ export class Minimap {
         ctx.arc(this.tx(p.x), this.ty(p.y), 5, 0, Math.PI * 2);
         ctx.stroke();
       }
+    }
+
+    // El más buscado: una estrella dorada donde se lo vio por última vez.
+    if (wanted) {
+      const x = this.tx(wanted.x);
+      const y = this.ty(wanted.y);
+      const pulse = 0.6 + 0.4 * Math.sin(performance.now() / 160);
+      ctx.fillStyle = `rgba(255, 201, 74, ${pulse.toFixed(2)})`;
+      ctx.strokeStyle = "#000000aa";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const r = i % 2 === 0 ? 7 : 3;
+        const a = -Math.PI / 2 + (i * Math.PI) / 5;
+        if (i === 0) ctx.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+        else ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
     }
 
     // Marcas de la pareja: un anillo que se cierra sobre el lugar, del color

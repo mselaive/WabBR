@@ -1458,3 +1458,33 @@ body.touch #consumables .consumable {
   color: #ffd2a0;
   background: rgba(40, 20, 8, 0.85);
 }
+
+/* "¡Doble kill!": grande, en el medio, un momento. */
+.streak-banner {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--pixel);
+  font-size: 26px;
+  color: var(--gold);
+  text-shadow: 3px 3px 0 #000;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.streak-banner[hidden] {
+  display: none;
+}
+
+.streak-banner.pop {
+  animation: streak-pop 1.8s ease-out both;
+}
+
+@keyframes streak-pop {
+  0% { transform: translateX(-50%) scale(0.4); opacity: 0; }
+  12% { transform: translateX(-50%) scale(1.15); opacity: 1; }
+  22% { transform: translateX(-50%) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-14px); }
+}

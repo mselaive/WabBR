@@ -431,6 +431,11 @@ balance de las explosiones queda en un solo lugar.
 
 ## Feedback de combate
 
+**Rachas**: varias kills en menos de 4,5 segundos son "¡Doble kill!", "¡Triple kill!",
+"¡Cuádruple kill!" y "¡Masacre!"; 5 kills sin morir, "¡Imparable!", y 8, "¡Leyenda!". La tuya sale
+en grande en el medio de la pantalla con unas notas que suben; la de los demás, en el registro,
+para que se sepa a quién hay que frenar. Se arma en el cliente con los eventos de kill.
+
 Sin esto no sabés si le estás pegando a alguien, y con línea de vista tampoco
 sabés desde dónde te disparan. Son cinco señales, todas en el cliente:
 

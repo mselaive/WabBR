@@ -146,6 +146,7 @@ export class UI {
   /** Firmas para no rehacer el DOM en cada cuadro si nada cambió. */
   private slotsSignature = "";
   private consumablesSignature = "";
+  private streakTimer = 0;
   private spectatingSignature = "";
 
   constructor(private readonly cb: UICallbacks) {
@@ -652,6 +653,19 @@ export class UI {
   }
 
   /** Un aviso en la columna del kill feed, resaltado: "paquete en camino". */
+  /** "¡Doble kill!" en grande en el medio de la pantalla, un momento. */
+  showStreak(text: string): void {
+    const banner = el("streakBanner");
+    banner.textContent = text;
+    banner.hidden = false;
+    // Reiniciar la animación aunque el anterior siga en pantalla.
+    banner.classList.remove("pop");
+    void banner.offsetWidth;
+    banner.classList.add("pop");
+    clearTimeout(this.streakTimer);
+    this.streakTimer = window.setTimeout(() => (banner.hidden = true), 1800);
+  }
+
   addNotice(text: string): void {
     const line = document.createElement("div");
     line.className = "kill-line notice";

@@ -115,6 +115,16 @@ export class Sound {
     this.tone(out, { freq: 990, decay: 0.22, gain: 0.8, type: "triangle", delay: 0.08 });
   }
 
+  /** Una racha tuya: más notas cuanto más larga. */
+  streak(level: number): void {
+    const out = this.voice(undefined, 0.45);
+    if (!out) return;
+    const notes = [660, 880, 990, 1320, 1760];
+    for (let i = 0; i < Math.min(notes.length, level + 1); i++) {
+      this.tone(out, { freq: notes[i]!, decay: 0.12, gain: 0.8, type: "square", delay: i * 0.07 });
+    }
+  }
+
   /** Te mataron: una nota que cae. */
   death(): void {
     const out = this.voice(undefined, 0.5);

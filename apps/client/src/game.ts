@@ -74,6 +74,10 @@ const CAMERA_LEAD = 0.18;
  * vista), así que lo que entra en la pantalla más grande ya llega.
  */
 const SCOPE_ZOOM = 1.4;
+/** Kills dentro de esta ventana cuentan como seguidas. */
+const STREAK_WINDOW_MS = 4500;
+/** Por cantidad de kills seguidas. Las de 5 o más son todas masacre. */
+const MULTI_KILLS = ["", "", "¡Doble kill!", "¡Triple kill!", "¡Cuádruple kill!", "¡Masacre!"];
 /** Cuánto dura una marca en pantalla. */
 const MARK_MS = 5000;
 /** Qué tan adelante del muñeco va la mira cuando se apunta con el stick táctil. */
@@ -127,6 +131,8 @@ export class Game {
   private standings = new Map<number, { kills: number; alive: boolean; place: number; team: number }>();
   /** Modo de la sala: 1 todos contra todos, 2 dúos. */
   private teamSize = 1;
+  /** Kills recientes (performance.now()) y kills en esta vida, por jugador: para las rachas. */
+  private streaks = new Map<number, { recent: number[]; life: number }>();
   /** Si los récords de esta partida ya se sumaron. */
   private recorded = false;
   /** Cómo te mataron, para mostrarlo mientras mirás el resto de la partida. */
@@ -580,6 +586,7 @@ export class Game {
       this.deathNote = "";
       this.recorded = false;
       this.announcedChampion = -1;
+      this.streaks.clear();
       this.freeCam = null;
       this.watched = null;
     this.freeCam = null;
@@ -836,6 +843,7 @@ export class Game {
             iconUrl: causeIconUrl(ev.cause),
             involvesMe: ev.targetId === this.localId || ev.byId === this.localId,
           });
+          this.countStreak(ev.byId, ev.targetId, killer?.name);
           if (ev.targetId === this.localId) {
             this.deathNote = deathNote(ev, killer?.name);
             // En dúos se sigue mirando al compañero, que sigue jugando por los dos.
@@ -1399,6 +1407,33 @@ export class Game {
   /** Agregar un bot a la sala. El servidor comprueba que seas el host. */
   addBot(): void {
     this.net?.send({ t: "bot" });
+  }
+
+  /**
+   * Las rachas, como en los shooters: varias kills seguidas ("¡Doble kill!")
+   * o muchas sin morir ("¡Imparable!"). La tuya sale en grande y con sonido; la
+   * de los demás, en el registro, para que se sepa a quién hay que frenar.
+   */
+  private countStreak(byId: number, targetId: number, killerName: string | undefined): void {
+    this.streaks.delete(targetId);
+    if (byId < 0 || byId === targetId) return;
+    const now = performance.now();
+    const s = this.streaks.get(byId) ?? { recent: [], life: 0 };
+    s.recent = s.recent.filter((t) => now - t < STREAK_WINDOW_MS);
+    s.recent.push(now);
+    s.life++;
+    this.streaks.set(byId, s);
+
+    const multi = MULTI_KILLS[Math.min(s.recent.length, MULTI_KILLS.length - 1)] ?? "";
+    const life = s.life === 5 ? "¡Imparable!" : s.life === 8 ? "¡Leyenda!" : "";
+    const text = multi || life;
+    if (!text) return;
+    if (byId === this.localId) {
+      this.ui.showStreak(text);
+      this.sound.streak(Math.max(s.recent.length - 1, s.life >= 5 ? 3 : 0));
+    } else {
+      this.ui.addNotice(`${killerName ?? "Alguien"}: ${text}`);
+    }
   }
 
   /**

@@ -29,7 +29,7 @@ const check = (ok, que) => {
 
 function cliente(room, name) {
   const c = { id: -1, phase: "", teams: new Map(), marks: [], emotes: [] };
-  c.ws = new WebSocket(`${WS}/parties/game-room/${room}?name=${name}&v=2`);
+  c.ws = new WebSocket(`${WS}/parties/game-room/${room}?name=${name}&v=3`);
   c.ws.on("message", (raw) => {
     const m = JSON.parse(raw.toString());
     if (m.t === "welcome") c.id = m.you;

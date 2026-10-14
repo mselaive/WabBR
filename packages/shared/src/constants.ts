@@ -264,5 +264,5 @@ export const ROOM_CODE_LENGTH = 6;
  * al revés) ya no puedan jugar juntos: el que tiene la pestaña abierta durante
  * un despliegue ve "recargá la página" en vez de un juego que falla raro.
  */
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
 export const MAX_NAME_LENGTH = 14;

@@ -38,6 +38,7 @@ const ui = new UI({
   onMapMode: (mode) => game.setMapMode(mode),
   onSecondChance: (on) => game.setSecondChance(on),
   onBet: (id) => game.bet(id),
+  onVolume: (volume) => game.setVolume(volume),
   onLeave: () => {
     game.disconnect();
     ui.showScreen("menu");
@@ -45,6 +46,7 @@ const ui = new UI({
 });
 
 game = new Game(ui);
+ui.setVolume(game.volume);
 // Tus números de siempre, guardados en este navegador.
 ui.setMyStats(recordsLine());
 

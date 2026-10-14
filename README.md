@@ -717,7 +717,8 @@ borde de un anillo alrededor tuyo aparece una marca blanca hacia ese lado, como 
 "te pegaron desde acá"; una ráfaga refresca la misma marca en vez de apilar veinte. Copiado de
 los sonidos visualizados de Fortnite: el que pelea detrás de una casa ya no es invisible.
 
-`M` lo silencia y se recuerda en el navegador. Los niveles están medidos —se pueden
+`M` lo silencia (en el teléfono, el botón *Sonido*) y se recuerda en el navegador, igual que el
+volumen, que se elige en el menú. Los niveles están medidos —se pueden
 renderizar sin parlantes pasándole un `OfflineAudioContext` a `unlock()`—: ninguno
 pasa de 0,41 de pico, y un tiro a media pantalla a la derecha llega al oído izquierdo
 a un tercio.

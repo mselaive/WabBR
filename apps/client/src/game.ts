@@ -255,6 +255,7 @@ export class Game {
       slots: document.getElementById("slots")!,
       consumables: document.getElementById("consumables")!,
       pickup: document.getElementById("pickupPrompt")!,
+      onMute: () => this.toggleMute(),
     });
     this.detachInput = () => {
       detachKeys();
@@ -272,8 +273,7 @@ export class Game {
       if (e.code !== "KeyM" || e.repeat) return;
       // Escribiendo el nombre o el código, la M es una letra.
       if (e.target instanceof HTMLInputElement) return;
-      const muted = this.sound.toggleMute();
-      this.ui.addNotice(muted ? "Sonido apagado (M)" : "Sonido prendido (M)");
+      this.toggleMute();
     }, { signal });
     window.addEventListener("resize", () => this.world.resize());
 
@@ -1731,6 +1731,24 @@ export class Game {
         color: cssColor(playerColor(this.everyone.get(id)?.colorIndex ?? 0)),
       })),
     };
+  }
+
+  /** El volumen del menú (0 a 1). */
+  get volume(): number {
+    return this.sound.volume;
+  }
+
+  setVolume(volume: number): void {
+    this.sound.unlock();
+    this.sound.setVolume(volume);
+    // Un tic para que se oiga cómo queda.
+    this.sound.pickup();
+  }
+
+  /** Silenciar o no, desde el botón del teléfono (en la compu es la M). */
+  private toggleMute(): void {
+    const muted = this.sound.toggleMute();
+    this.ui.addNotice(muted ? "Sonido apagado" : "Sonido prendido");
   }
 
   /** Apostar por alguien. El servidor comprueba que puedas. */

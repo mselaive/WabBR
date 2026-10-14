@@ -20,6 +20,7 @@ export interface UICallbacks {
   onMapMode: (mode: number) => void;
   onSecondChance: (on: boolean) => void;
   onBet: (id: number) => void;
+  onVolume: (volume: number) => void;
 }
 
 /** La apuesta del espectador: por quién se puede apostar, o por quién apostaste. */
@@ -206,6 +207,11 @@ export class UI {
     }
     // Las opciones de sí o no: cada botón se prende y se apaga.
     const isOn = (id: string): boolean => el(id).getAttribute("aria-checked") === "true";
+    const volume = el("volumeInput") as HTMLInputElement;
+    volume.addEventListener("input", () => {
+      el("volumeValue").textContent = `${volume.value}%`;
+      this.cb.onVolume(Number(volume.value) / 100);
+    });
     el("optMap").addEventListener("click", () => this.cb.onMapMode(isOn("optMap") ? 0 : 1));
     el("optChance").addEventListener("click", () => this.cb.onSecondChance(!isOn("optChance")));
     el("optNight").addEventListener("click", () => this.cb.onNight(!isOn("optNight")));
@@ -521,6 +527,13 @@ export class UI {
     const el = this.roomBest;
     el.hidden = parts.length === 0;
     el.textContent = parts.length > 0 ? `La noche · ${parts.join(" · ")}` : "";
+  }
+
+  /** El volumen guardado, para que el control arranque donde quedó. */
+  setVolume(volume: number): void {
+    const input = el("volumeInput") as HTMLInputElement;
+    input.value = String(Math.round(volume * 100));
+    el("volumeValue").textContent = `${input.value}%`;
   }
 
   /** Las reglas especiales. Las cambia el host. */

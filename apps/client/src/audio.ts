@@ -11,6 +11,7 @@
  */
 
 const MUTE_KEY = "wabbr:mute";
+const VOLUME_KEY = "wabbr:volume";
 /** Más lejos que esto no se oye: algo más que la pantalla. */
 const HEARING = 1100;
 /** Volumen general. Bajo a propósito: es fácil subirlo y molesto que te aturda. */
@@ -34,13 +35,33 @@ export class Sound {
   private master: GainNode | null = null;
   private noise: AudioBuffer | null = null;
   muted = false;
+  /** Volumen elegido en el menú, de 0 a 1 (encima del general, que ya es bajo). */
+  volume = 1;
 
   constructor() {
     try {
       this.muted = localStorage.getItem(MUTE_KEY) === "1";
+      const stored = Number(localStorage.getItem(VOLUME_KEY) ?? 1);
+      if (Number.isFinite(stored)) this.volume = Math.max(0, Math.min(1, stored));
     } catch {
       // Sin almacenamiento: se arranca con sonido.
     }
+  }
+
+  /** La ganancia que corresponde ahora: nada si está silenciado. */
+  private level(): number {
+    return this.muted ? 0 : MASTER * this.volume;
+  }
+
+  /** El volumen del menú. Se recuerda en el navegador. */
+  setVolume(volume: number): void {
+    this.volume = Math.max(0, Math.min(1, volume));
+    try {
+      localStorage.setItem(VOLUME_KEY, String(this.volume));
+    } catch {
+      // Igual se aplica en esta sesión.
+    }
+    if (this.master && this.ctx) this.master.gain.setTargetAtTime(this.level(), this.ctx.currentTime, 0.02);
   }
 
   /**
@@ -58,7 +79,7 @@ export class Sound {
       return;
     }
     this.master = this.ctx.createGain();
-    this.master.gain.value = this.muted ? 0 : MASTER;
+    this.master.gain.value = this.level();
     this.master.connect(this.ctx.destination);
     // Un segundo de ruido blanco, reusado por todos los sonidos que lo necesitan.
     const length = this.ctx.sampleRate;
@@ -74,7 +95,7 @@ export class Sound {
     } catch {
       // Igual se aplica en esta sesión.
     }
-    if (this.master && this.ctx) this.master.gain.setTargetAtTime(this.muted ? 0 : MASTER, this.ctx.currentTime, 0.02);
+    if (this.master && this.ctx) this.master.gain.setTargetAtTime(this.level(), this.ctx.currentTime, 0.02);
     return this.muted;
   }
 

@@ -85,6 +85,7 @@ está en `main`.
 | Apuestas de espectador | Muerto, apostás quién gana; al final ✓/✗, aciertos en el marcador de la sala y título "Adivino" | Test del título + partida en el navegador (apuesta y resultado) |
 | Mochila | Objeto que deja cargar la mitad más de curaciones y granadas; se ve sobre el muñeco | 5 tests + captura del muñeco |
 | Tiros que se oyen | (Sonidos visualizados de Fortnite) Un tiro detrás de una pared suena apagado y marca la dirección en pantalla, con el lugar redondeado | Partida por socket: 21 tiros oídos, todos en la grilla y a menos de 1150 px |
+| Volumen y silencio en el teléfono | Control de volumen en el menú; botón Sonido en los controles táctiles (no hay M) | Capturas + prueba con pantalla táctil |
 | Lo mejor de la noche | En el lobby: más ganadas, más kills y mejor apostador de la sala | Captura después de una partida |
 | Cuarta revisión | El que esperaba la segunda oportunidad veía a todos; bots volándose con la gallina a cohetazos; el aviso de vuelta decía dónde; cortarse no la hacía perder; cohete a la gallina estallando donde estaba; la vuelta se deslizaba | Tests nuevos con mutaciones + partida en el navegador |
 

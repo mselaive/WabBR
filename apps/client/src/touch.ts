@@ -52,9 +52,11 @@ export class TouchControls {
    */
   attach(
     stage: HTMLElement,
-    hud: { root: HTMLElement; slots: HTMLElement; consumables: HTMLElement; pickup: HTMLElement },
+    hud: { root: HTMLElement; slots: HTMLElement; consumables: HTMLElement; pickup: HTMLElement; onMute?: () => void },
   ): () => void {
     const abort = new AbortController();
+    // En el teléfono no hay M: silenciar va con un botón.
+    if (hud.onMute) this.buttons.append(this.button("Sonido", hud.onMute));
     const opts = { signal: abort.signal, passive: false };
     document.body.append(this.layer);
     hud.root.append(this.buttons);

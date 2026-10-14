@@ -428,6 +428,13 @@ h3 {
   color: var(--muted);
 }
 
+.volume-field input[type="range"] {
+  padding: 0;
+  border: 0;
+  background: none;
+  accent-color: var(--accent);
+}
+
 input {
   font: inherit;
   padding: 12px 14px;

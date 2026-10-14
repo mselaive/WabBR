@@ -15,7 +15,13 @@ import {
 } from "@wabbr/shared";
 import { Predictor } from "./prediction.js";
 
-const arena: ArenaMap = generateArena();
+/**
+ * El mapa de verdad, sin los hongos saltarines. Estos tests simulan inputs
+ * perdidos, y uno perdido justo al pisar un hongo cambia todo el salto: 400 px
+ * de diferencia que ninguna cota de "un tick de movimiento" cubre. En el juego
+ * los inputs viajan por TCP y no se pierden; los saltos se prueban aparte.
+ */
+const arena: ArenaMap = { ...generateArena(), jumpPads: [] };
 
 /** Igual que el codec: las posiciones viajan redondeadas a 0.1 px. */
 const quantize = (v: number): number => Math.round(v * 10) / 10;
@@ -47,6 +53,9 @@ function snapshotOf(p: PlayerState, lastSeq: number): UnpackedPlayer {
     grenades: 0,
     smokes: 0,
     molotovs: 0,
+    jumpTicks: 0,
+    jumpVx: 0,
+    jumpVy: 0,
     downed: false,
     reviving: -1,
     reviveTicks: 0,

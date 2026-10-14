@@ -140,6 +140,12 @@ export class Sound {
     this.tone(out, { freq: 70, endFreq: 35, decay: 0.5, gain: 1, type: "sine" });
   }
 
+  /** Un hongo saltarín: un "boing" que sube. */
+  jump(): void {
+    const out = this.voice(undefined, 0.4);
+    if (out) this.tone(out, { freq: 180, endFreq: 520, decay: 0.3, gain: 0.9, type: "sine" });
+  }
+
   /** Una molotov se rompe: vidrio y una llamarada. */
   fire(at?: Spot): void {
     const out = this.voice(at, 0.7);

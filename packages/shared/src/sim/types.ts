@@ -111,6 +111,13 @@ export interface PlayerState {
   /** Quién lo tiró y con qué: si se desangra, la kill es de ése. */
   downedBy: number;
   downedCause: number;
+  /**
+   * Volando de un hongo saltarín: ticks que le quedan y velocidad. Viajan en
+   * el snapshot (la velocidad, sólo al dueño), para que la predicción vuele igual.
+   */
+  jumpTicks: number;
+  jumpVx: number;
+  jumpVy: number;
   /** Último tick en que recibió daño: la fogata sólo cura al que está tranquilo. */
   lastHurtTick: number;
   /** La kill más lejana de la partida, en px (para el premio y los récords). */

@@ -353,6 +353,22 @@ Lento a propósito: es para el respiro entre peleas, no para curarte en medio de
 "Al calor de la fogata". Los bots heridos y sin curaciones van a la más cercana. Se ubican al
 final del generador del mapa y con su propio azar, así el resto del mapa queda idéntico.
 
+## Hongos saltarines
+
+Copiados de Fortnite. Hay **10 hongos** repartidos por el anillo del mapa (y en el minimapa, un
+puntito rojo). Pisar uno te lanza unos 400 px para donde ibas —o para donde apuntás, si estabas
+quieto— **por encima de lo que haya en el camino**: paredes, cajas, contenedores. Sirven para
+escapar de una pelea o de la zona. En el aire el muñeco se agranda como si subiera y suena un
+"boing". Al caer se resuelve la colisión como siempre (un test prueba los 10 hongos en 8
+direcciones: nadie queda adentro de nada).
+
+El salto vive en `stepPlayerMovement`, que es compartido: el cliente lo predice igual que el
+servidor, y el estado del salto viaja en el snapshot (la velocidad, sólo al dueño) para
+reconciliar. Un test lo prueba con 150 ms de ping: el cliente vuela y cae donde el servidor sin
+corregir nada. El test de reconciliación con inputs perdidos usa el mapa sin hongos: un input
+perdido justo al pisar uno cambia todo el salto, y en el juego no pasa porque los inputs van por
+TCP.
+
 ## La caja dorada
 
 En cada partida se sortea **una caja dorada** entre todas las del mapa (distinta cada vez, con

@@ -145,6 +145,15 @@ export const GOLDEN_CRATES = 1;
 export const CAMPFIRE_RADIUS = 70;
 export const CAMPFIRE_HEAL_PER_S = 3;
 export const CAMPFIRE_CALM_TICKS = 3 * TICK_RATE;
+
+/**
+ * Hongos saltarines (de Fortnite): pisar uno te lanza para donde ibas (o para
+ * donde apuntás, si estabas quieto) por encima de lo que haya en el camino.
+ * Mientras volás no chocás con nada; al caer, se resuelve como siempre.
+ */
+export const JUMP_PAD_RADIUS = 18;
+export const JUMP_TICKS = 18;
+export const JUMP_SPEED = 460;
 export const WANTED_REVEAL_TICKS = 5 * TICK_RATE;
 
 /**

@@ -74,6 +74,7 @@ está en `main`.
 | De noche | Opción del host: ves poco alrededor; fogatas, fuego, explosiones y fogonazos iluminan | Capturas |
 | Reglas especiales | Normal / Todo legendario / Francotiradores / Relámpago, las elige el host | 3 tests + captura del lobby |
 | Logros y gorros | 9 logros que desbloquean gorros que todos ven, sin cuentas | 4 tests + capturas del menú y del gorro en partida |
+| Hongos saltarines | 10 en el mapa: te lanzan por encima de lo que haya, predicho en el cliente | 6 tests (incluye predicción con ping) + capturas |
 | Molotov | `J`: charco de fuego 6 s que quema al que lo pisa | 7 tests + captura |
 
 ## Ideas que quedaron, en el orden en que las haría

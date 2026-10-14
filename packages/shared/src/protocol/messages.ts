@@ -225,9 +225,13 @@ export const SP_SMOKES = 23;
 export const SP_REVIVING = 24;
 export const SP_REVIVE_TICKS = 25;
 export const SP_MOLOTOVS = 26;
+/** Ticks que le quedan volando de un hongo saltarín (para dibujarlo en el aire). */
+export const SP_JUMP = 27;
 /** Sólo en la tupla del propio jugador: ver `packPlayer(p, own)`. */
-export const SP_FIRE_CD = 27;
-export const SP_RELOAD_CD = 28;
+export const SP_FIRE_CD = 28;
+export const SP_RELOAD_CD = 29;
+export const SP_JUMP_VX = 30;
+export const SP_JUMP_VY = 31;
 
 export const FLAG_ALIVE = 1;
 export const FLAG_RELOADING = 2;

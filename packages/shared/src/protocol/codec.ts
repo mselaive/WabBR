@@ -37,6 +37,9 @@ import {
   SP_GRENADES,
   SP_SMOKES,
   SP_MOLOTOVS,
+  SP_JUMP,
+  SP_JUMP_VX,
+  SP_JUMP_VY,
   SP_REVIVE_TICKS,
   SP_REVIVING,
   SP_STAMINA,
@@ -151,8 +154,11 @@ export function packPlayer(p: PlayerState, own = false): SnapPlayer {
     p.reviving,
     p.reviveTicks,
     p.molotovs,
+    p.jumpTicks,
   ];
-  if (own) packed.push(p.fireCd, p.reloadCd);
+  // Del propio, además los relojes del arma y la velocidad del salto: la
+  // predicción los necesita para seguir igual que el servidor.
+  if (own) packed.push(p.fireCd, p.reloadCd, q(p.jumpVx, P), q(p.jumpVy, P));
   return packed;
 }
 
@@ -270,6 +276,10 @@ export interface UnpackedPlayer {
   grenades: number;
   smokes: number;
   molotovs: number;
+  /** Volando de un hongo: ticks que le quedan y velocidad (ésta, sólo en el propio). */
+  jumpTicks: number;
+  jumpVx: number;
+  jumpVy: number;
   /** Caído en dúos. */
   downed: boolean;
   /** A quién está levantando (-1 si a nadie) y cuánto le falta. */
@@ -330,6 +340,9 @@ export function unpackPlayer(s: SnapPlayer): UnpackedPlayer {
     grenades: s[SP_GRENADES] ?? 0,
     smokes: s[SP_SMOKES] ?? 0,
     molotovs: s[SP_MOLOTOVS] ?? 0,
+    jumpTicks: s[SP_JUMP] ?? 0,
+    jumpVx: s[SP_JUMP_VX] ?? 0,
+    jumpVy: s[SP_JUMP_VY] ?? 0,
     downed: (flags & FLAG_DOWNED) !== 0,
     reviving: s[SP_REVIVING] ?? -1,
     reviveTicks: s[SP_REVIVE_TICKS] ?? 0,

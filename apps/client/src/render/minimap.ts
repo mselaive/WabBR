@@ -257,6 +257,17 @@ export class Minimap {
       }
     }
 
+    // Hongos saltarines: un puntito rojo con borde blanco.
+    for (const pad of this.arena.jumpPads ?? []) {
+      ctx.fillStyle = "#d9483b";
+      ctx.strokeStyle = "#ffffffaa";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(this.tx(pad.x), this.ty(pad.y), 2.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+
     // Fogatas: un puntito naranja, para saber dónde ir a curarse.
     for (const f of this.arena.campfires ?? []) {
       ctx.fillStyle = "#ff9a3c";

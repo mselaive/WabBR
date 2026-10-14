@@ -20,6 +20,7 @@ import {
   ITEM_GRENADE,
   FIRE_RADIUS,
   CAMPFIRE_RADIUS,
+  JUMP_TICKS,
   SMOKE_RADIUS,
   STRIKE_RADIUS,
   smokeRadius,
@@ -238,6 +239,7 @@ export class WorldView {
     this.buildWallRing();
     this.buildObstacles();
     this.buildCampfires();
+    this.buildJumpPads();
     this.buildDecor();
     this.drawCrosshair();
   }
@@ -538,6 +540,18 @@ export class WorldView {
       flame.zIndex = f.y + 1;
       this.entityLayer.addChild(flame);
       this.flames.push(flame);
+    }
+  }
+
+  /** Los hongos saltarines: un sprite cada uno, en la capa ordenada por Y. */
+  private buildJumpPads(): void {
+    for (const pad of this.arena.jumpPads ?? []) {
+      const s = new Sprite(this.tex.jumpPad);
+      s.anchor.set(0.5, 0.6);
+      s.scale.set(ART_SCALE);
+      s.position.set(pad.x, pad.y);
+      s.zIndex = pad.y - 20;
+      this.entityLayer.addChild(s);
     }
   }
 
@@ -982,7 +996,7 @@ export class WorldView {
     frame: InterpolatedFrame,
     roster: Map<number, PlayerMeta>,
     localId: number,
-    localOverride: { x: number; y: number; aim: number; hidden: boolean } | null,
+    localOverride: { x: number; y: number; aim: number; hidden: boolean; jump?: number } | null,
     dt: number,
     /** Compañeros en dúos: su nombre va en verde. */
     mates: ReadonlySet<number> = new Set(),
@@ -1007,6 +1021,10 @@ export class WorldView {
 
       view.root.position.set(x, y);
       view.root.zIndex = y;
+      // Volando de un hongo: más grande en el medio del salto, como si subiera.
+      const jump = isLocal && localOverride ? (localOverride.jump ?? 0) : p.jumpTicks;
+      view.root.scale.set(jump > 0 ? 1 + 0.45 * Math.sin(Math.PI * (1 - jump / JUMP_TICKS)) : 1);
+      if (jump > 0) view.root.zIndex = y + 1000;
       view.root.visible = true;
       // Escondido en un arbusto: tu muñeco se ve medio transparente, para que
       // sepas que los demás no te ven.

@@ -137,6 +137,8 @@ export class Game {
   private teamSize = 1;
   /** Reglas especiales de la sala (índice en RULES). */
   private rules = 0;
+  /** Si en el input anterior ya estaba volando de un hongo (para el sonido). */
+  private wasJumping = false;
   /** Si la partida es de noche (para el logro "Búho"). */
   private night = false;
   /** Kills recientes (performance.now()) y kills en esta vida, por jugador: para las rachas. */
@@ -978,7 +980,7 @@ export class Game {
       { ...frame, bullets, grenades },
       this.roster,
       this.localId,
-      localPredicted ? { ...localPredicted, aim, hidden } : null,
+      localPredicted ? { ...localPredicted, aim, hidden, jump: this.predictor?.state.jumpTicks ?? 0 } : null,
       dt,
       mates,
       this.wanted?.id ?? -1,
@@ -1018,6 +1020,10 @@ export class Game {
     const input = this.input.sample(this.seq++, aim, this.viewTick);
     const shot = this.predictor.apply(input, this.arena);
     if (shot) this.onLocalShot(shot);
+    // Pisó un hongo: el "boing" sale con el salto predicho, no un ping después.
+    const jumping = this.predictor.state.jumpTicks > 0;
+    if (jumping && !this.wasJumping) this.sound.jump();
+    this.wasJumping = jumping;
     const thrown = this.predictor.takeThrow();
     if (thrown) this.grenades.throw(thrown.seq, thrown.kind, thrown.launch);
 

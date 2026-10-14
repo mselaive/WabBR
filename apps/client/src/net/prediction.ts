@@ -174,6 +174,10 @@ export class Predictor {
     s.grenades = server.grenades;
     s.smokes = server.smokes;
     s.molotovs = server.molotovs;
+    // El salto de un hongo, igual que la estamina: cambia cómo se mueve.
+    s.jumpTicks = server.jumpTicks;
+    s.jumpVx = server.jumpVx;
+    s.jumpVy = server.jumpVy;
     // Caído se arrastra y no dispara: la predicción tiene que saberlo.
     s.downed = server.downed;
     s.fireCd = server.fireCd;

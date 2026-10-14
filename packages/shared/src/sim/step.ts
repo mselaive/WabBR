@@ -32,6 +32,9 @@ import {
   STRIKE_WARN_TICKS,
   GOLDEN_CRATES,
   CAMPFIRE_CALM_TICKS,
+  JUMP_PAD_RADIUS,
+  JUMP_SPEED,
+  JUMP_TICKS,
   CAMPFIRE_HEAL_PER_S,
   CAMPFIRE_RADIUS,
   WANTED_LEAD,
@@ -154,6 +157,9 @@ export function createPlayer(id: number, x = 0, y = 0): PlayerState {
     downedBy: -1,
     downedCause: 0,
     longestKill: 0,
+    jumpTicks: 0,
+    jumpVx: 0,
+    jumpVy: 0,
     lastHurtTick: -1000,
     healed: 0,
     selfDamage: 0,
@@ -370,6 +376,9 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
     p.downedBy = -1;
     p.downedCause = 0;
     p.longestKill = 0;
+    p.jumpTicks = 0;
+    p.jumpVx = 0;
+    p.jumpVy = 0;
     p.lastHurtTick = -1000;
     p.healed = 0;
     p.selfDamage = 0;
@@ -473,6 +482,35 @@ export function stepPlayerMovement(p: PlayerState, input: PlayerInput, arena: Ar
   const my = input.moveY;
   const len2 = mx * mx + my * my;
 
+  // Volando de un hongo: derecho, sin chocar con nada, y al caer se resuelve.
+  if (p.jumpTicks > 0) {
+    p.jumpTicks--;
+    p.vx = p.jumpVx;
+    p.vy = p.jumpVy;
+    p.x += p.vx * DT;
+    p.y += p.vy * DT;
+    if (p.jumpTicks === 0) resolveObstacles(p, arena);
+    clampToArena(p.x, p.y, PLAYER_RADIUS, scratch);
+    p.x = scratch.x;
+    p.y = scratch.y;
+    p.aim = input.aim;
+    p.lastSeq = input.seq;
+    return;
+  }
+
+  // Pisó un hongo: sale para donde iba, o para donde apunta si estaba quieto.
+  if (!p.downed && onJumpPad(arena, p.x, p.y)) {
+    const inv = len2 > 0 ? 1 / Math.sqrt(len2) : 0;
+    const dx = len2 > 0 ? mx * inv : Math.cos(input.aim);
+    const dy = len2 > 0 ? my * inv : Math.sin(input.aim);
+    p.jumpTicks = JUMP_TICKS;
+    p.jumpVx = dx * JUMP_SPEED;
+    p.jumpVy = dy * JUMP_SPEED;
+    // Cortar la curación: volando no se venda nadie.
+    p.useCd = 0;
+    p.useIndex = -1;
+  }
+
   // La adrenalina y el sprint son lo único que cambia la velocidad, y por eso
   // `boostTicks` y `stamina` viajan en el snapshot: si el cliente no los
   // supiera, predeciría de más en cuanto se le acabara la estamina.
@@ -505,19 +543,7 @@ export function stepPlayerMovement(p: PlayerState, input: PlayerInput, arena: Ar
   p.x += p.vx * DT;
   p.y += p.vy * DT;
 
-  // Dos pasadas: la primera puede empujar el círculo contra otra caja.
-  for (let pass = 0; pass < 2; pass++) {
-    arena.grid.query(p.x, p.y, PLAYER_RADIUS, nearby);
-    if (nearby.length === 0) break;
-    nearby.sort((a, b) => a - b); // orden fijo => resultado determinista
-    for (let i = 0; i < nearby.length; i++) {
-      const box = arena.obstacles[nearby[i]!]!;
-      if (resolveCircleBox(p.x, p.y, PLAYER_RADIUS, box, scratch)) {
-        p.x = scratch.x;
-        p.y = scratch.y;
-      }
-    }
-  }
+  resolveObstacles(p, arena);
 
   clampToArena(p.x, p.y, PLAYER_RADIUS, scratch);
   p.x = scratch.x;
@@ -525,6 +551,37 @@ export function stepPlayerMovement(p: PlayerState, input: PlayerInput, arena: Ar
 
   p.aim = input.aim;
   p.lastSeq = input.seq;
+}
+
+/** Saca al jugador de lo que esté pisando. */
+function resolveObstacles(p: PlayerState, arena: ArenaMap): void {
+  // Dos pasadas: la primera puede empujar el círculo contra otra caja. Al caer
+  // de un salto pueden hacer falta más: se cayó en el medio de algo.
+  for (let pass = 0; pass < 4; pass++) {
+    arena.grid.query(p.x, p.y, PLAYER_RADIUS, nearby);
+    if (nearby.length === 0) break;
+    nearby.sort((a, b) => a - b); // orden fijo => resultado determinista
+    let moved = false;
+    for (let i = 0; i < nearby.length; i++) {
+      const box = arena.obstacles[nearby[i]!]!;
+      if (resolveCircleBox(p.x, p.y, PLAYER_RADIUS, box, scratch)) {
+        p.x = scratch.x;
+        p.y = scratch.y;
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
+}
+
+/** ¿Está parado sobre un hongo saltarín? */
+export function onJumpPad(arena: ArenaMap, x: number, y: number): boolean {
+  for (const pad of arena.jumpPads ?? []) {
+    const dx = pad.x - x;
+    const dy = pad.y - y;
+    if (dx * dx + dy * dy <= JUMP_PAD_RADIUS * JUMP_PAD_RADIUS) return true;
+  }
+  return false;
 }
 
 // ------------------------------------------------------------ inventario

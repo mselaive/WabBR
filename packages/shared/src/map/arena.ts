@@ -112,6 +112,8 @@ export interface ArenaMap {
   grid: ObstacleGrid;
   /** Fogatas: al lado de una, sin que te peguen, te curás de a poco. Una por distrito. */
   campfires?: { x: number; y: number }[];
+  /** Hongos saltarines: pisarlos te lanza (ver JUMP_*). */
+  jumpPads?: { x: number; y: number }[];
 }
 
 /** Los colliders de árboles/rocas son más chicos que el sprite: se camina "por debajo" de la copa. */
@@ -847,7 +849,41 @@ export function generateArena(seed = ARENA_SEED): ArenaMap {
   }
 
   const campfires = placeCampfires(seed, districts, buildings, obstacles);
-  return { obstacles, decor, buildings, paths, ponds, districts, grid: new ObstacleGrid(obstacles), campfires };
+  const jumpPads = placeJumpPads(seed, buildings, obstacles, campfires);
+  return { obstacles, decor, buildings, paths, ponds, districts, grid: new ObstacleGrid(obstacles), campfires, jumpPads };
+}
+
+/** Cuántos hongos saltarines hay en el mapa. */
+const JUMP_PADS = 10;
+
+/**
+ * Los hongos, al aire libre y con lugar alrededor, repartidos por el anillo
+ * del mapa (no en el centro, que es la ciudad). Como las fogatas, al final y
+ * con su propio azar: no mueven nada de lo que ya estaba.
+ */
+function placeJumpPads(
+  seed: number,
+  buildings: readonly Building[],
+  obstacles: readonly Obstacle[],
+  avoid: readonly { x: number; y: number }[],
+): { x: number; y: number }[] {
+  const rnd = makeRng(seed ^ 0x5a17);
+  const pads: { x: number; y: number }[] = [];
+  for (let i = 0; i < JUMP_PADS; i++) {
+    for (let attempt = 0; attempt < 200; attempt++) {
+      // Un sector del anillo para cada uno, así quedan repartidos.
+      const a = ((i + rnd()) / JUMP_PADS) * Math.PI * 2;
+      const r = WORLD_RADIUS * (0.35 + rnd() * 0.5);
+      const x = WORLD_CENTER_X + Math.cos(a) * r;
+      const y = WORLD_CENTER_Y + Math.sin(a) * r;
+      if (buildings.some((b) => x > b.x - 60 && x < b.x + b.w + 60 && y > b.y - 60 && y < b.y + b.h + 60)) continue;
+      if (obstacles.some((o) => x > o.x - 50 && x < o.x + o.w + 50 && y > o.y - 50 && y < o.y + o.h + 50)) continue;
+      if (avoid.some((f) => Math.hypot(f.x - x, f.y - y) < 150)) continue;
+      pads.push({ x, y });
+      break;
+    }
+  }
+  return pads;
 }
 
 /** Cuántas fogatas hay: más y las curaciones dejarían de valer algo. */

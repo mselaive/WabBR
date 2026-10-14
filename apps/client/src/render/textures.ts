@@ -603,6 +603,7 @@ export interface TexturePack {
   smokePuff: Texture;
   pump: Texture;
   campfire: Texture;
+  jumpPad: Texture;
   /** Por índice de gorro (el 0 queda vacío: es la gorra de la remera). */
   hats: Texture[];
 }
@@ -660,6 +661,7 @@ export function getTextures(): TexturePack {
     smokePuff: smokePuff(),
     pump: pump(),
     campfire: campfireLogs(),
+    jumpPad: jumpPad(),
     hats: Array.from({ length: HAT_COUNT }, (_, i) => hatTexture(i)),
   };
   return pack;
@@ -963,6 +965,19 @@ function smokePuff(): Texture {
     ellipse(ctx, 16, 15, 13, 12, "#b4bac0");
     ellipse(ctx, 13, 12, 8, 7, "#cdd2d6");
     ellipse(ctx, 11, 10, 3, 3, "#e1e4e7");
+  });
+}
+
+/** El hongo saltarín: sombrero rojo con lunares, visto desde arriba. */
+function jumpPad(): Texture {
+  return make(20, 16, (ctx) => {
+    ellipse(ctx, 10, 12, 5, 3, "#e8dcc0");
+    ellipse(ctx, 10, 8, 9, 6, "#a8302a");
+    ellipse(ctx, 10, 7, 8, 5, "#d9483b");
+    ellipse(ctx, 7, 6, 1.5, 1.5, "#ffffff");
+    ellipse(ctx, 13, 5, 1.5, 1.5, "#ffffff");
+    ellipse(ctx, 11, 9, 1.2, 1.2, "#ffffff");
+    ellipse(ctx, 5, 9, 1, 1, "#ffffff");
   });
 }
 

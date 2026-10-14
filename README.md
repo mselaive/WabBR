@@ -1159,6 +1159,12 @@ hacer compatible, subí `PROTOCOL_VERSION` en `constants.ts`: el cliente la mand
 conectarse y el servidor rechaza las que no coinciden con "Hay una versión nueva del
 juego: recargá la página", en vez de dejar jugar a un cliente que va a fallar raro.
 
+La rama de la segunda noche (`noche2`) es **v3** (producción está en v2): cambió la forma del
+snapshot, así que no hay compatibilidad hacia atrás. Orden: `npm run deploy:server`, probar que
+`wss://wabbr-server.mselaivecode.workers.dev/parties/game-room/XXXXXX?v=3` da `welcome` (y `?v=2`
+el aviso de recargar), y recién ahí pasar la rama a `main`. Entre una cosa y la otra, el que tenga
+la página abierta ve "recargá"; conviene hacerlo cuando no haya nadie jugando.
+
 ### Cliente (Vercel)
 
 Importá el repo y agregá la variable de entorno:

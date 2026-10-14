@@ -395,6 +395,9 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
     p.vy = 0;
     equipFresh(state, p);
     if (state.skydive) p.airTicks = AIR_TICKS;
+    // El cliente vuelve a numerar sus inputs desde 1: con el seq de la partida
+    // anterior, la predicción daría por confirmados inputs que no lo están.
+    p.lastSeq = 0;
     p.kills = 0;
     p.longestKill = 0;
     p.healed = 0;
@@ -940,6 +943,14 @@ function land(p: PlayerState, arena: ArenaMap): void {
     p.y += by;
   }
   resolveObstacles(p, arena);
+}
+
+/**
+ * Un tick de caída sin input (se cortó, o no llegó nada a tiempo). Si no, el
+ * que se desconecta en el aire quedaría colgado e invulnerable.
+ */
+function fallWithoutInput(p: PlayerState, arena: ArenaMap): void {
+  stepPlayerMovement(p, { ...emptyInput(p.lastSeq), aim: p.aim }, arena);
 }
 
 /**
@@ -2532,6 +2543,9 @@ export function step(
 
     if (input) {
       const list: readonly PlayerInput[] = isInputList(input) ? input : [input];
+      // El servidor manda una lista por jugador en cada tick, vacía si no llegó
+      // nada: en el aire, igual se cae.
+      if (list.length === 0 && p.airTicks > 0) fallWithoutInput(p, arena);
       for (const one of list) {
         // En el aire sólo se planea: ni tiros, ni granadas, ni curarse.
         const flying = p.airTicks > 0;
@@ -2558,9 +2572,7 @@ export function step(
         }
       }
     } else if (p.airTicks > 0) {
-      // Sin input (se cortó, o un tick sin nada) igual se sigue cayendo: si no,
-      // el que se desconecta en el aire quedaría colgado para siempre.
-      stepPlayerMovement(p, { ...emptyInput(p.lastSeq), aim: p.aim }, arena);
+      fallWithoutInput(p, arena);
     } else {
       p.vx = 0;
       p.vy = 0;

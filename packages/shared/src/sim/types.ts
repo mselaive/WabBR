@@ -511,8 +511,9 @@ export type SimEvent =
   | { t: "radar"; byId: number; team: number; pings: [number, number][] }
   /**
    * Un tiro que no se ve pero se oye: lo arma el servidor (no la simulación)
-   * a partir de un "shot" detrás de una pared, con el lugar redondeado a
-   * HEARD_GRID. Dice "por allá", no "acá".
+   * a partir de un "shot" detrás de una pared. El punto está en el rumbo
+   * redondeado (32 posibles) y a la distancia redondeada a HEARD_GRID: dice
+   * "por allá", no "acá".
    */
   | { t: "heard"; x: number; y: number; weapon: number }
   /** Quedó una mina en el piso (suena el clic de armarla). */

@@ -580,8 +580,9 @@ function nearestEnemy(state: GameState, me: PlayerState, arena: ArenaMap): Playe
   let best: PlayerState | null = null;
   let bestScore = Infinity;
   for (const p of state.players) {
-    // En dúos, al compañero no se le tira.
-    if (!p.alive || p.team === me.team) continue;
+    // En dúos, al compañero no se le tira; al que viene en paracaídas, tampoco
+    // (no le pasa nada: sería gastar balas y delatarse).
+    if (!p.alive || p.team === me.team || p.airTicks > 0) continue;
     const d2 = (p.x - me.x) ** 2 + (p.y - me.y) ** 2;
     const sight = state.night ? NIGHT_SIGHT : SIGHT;
     if (d2 >= sight * sight) continue;

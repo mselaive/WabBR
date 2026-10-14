@@ -150,8 +150,9 @@ export const CHICKEN_WALK_SPEED = 55;
 export const CHICKEN_FEAR_RADIUS = 280;
 
 /**
- * Los tiros que no se ven se oyen hasta esta distancia, con el lugar
- * redondeado a una grilla de este tamaño: dan la dirección, no la posición.
+ * Los tiros que no se ven se oyen hasta esta distancia, con la distancia
+ * redondeada de a HEARD_GRID (y el rumbo, a 32 posibles): dan la dirección,
+ * no la posición.
  */
 export const HEARING_RANGE = 1100;
 export const HEARD_GRID = 160;

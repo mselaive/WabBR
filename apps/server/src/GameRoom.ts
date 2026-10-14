@@ -546,7 +546,8 @@ export class GameRoom extends Server<Env> {
         if (typeof msg.id !== "number") return;
         const me = findPlayer(this.state, seat.playerId);
         const on = findPlayer(this.state, msg.id);
-        if (!me || me.alive || me.respawnTick >= 0 || !on?.alive) return;
+        // Por el compañero no: sería cobrar el acierto de la pareja propia.
+        if (!me || me.alive || me.respawnTick >= 0 || !on?.alive || on.team === me.team) return;
         seat.bet = on.id;
         this.broadcast(encodeServer({ t: "bet", by: me.id, on: on.id }));
         return;
@@ -745,8 +746,10 @@ export class GameRoom extends Server<Env> {
     if (viewer.id === target.id) return true;
     // Al compañero se lo ve siempre, detrás de una pared o en un arbusto.
     if (viewer.team === target.team) return true;
-    // El paracaídas se ve desde todos lados, y desde allá arriba se ve todo.
-    if (target.airTicks > 0 || viewer.airTicks > 0) return true;
+    // El paracaídas se ve desde todos lados. (Desde allá arriba se ve como
+    // desde el piso: si no, el que vuelve con la segunda oportunidad vería a
+    // todos, también a los escondidos, y caería al lado.)
+    if (target.airTicks > 0) return true;
     // Los muertos no se dibujan igual, y mandarlos no filtra nada.
     if (!target.alive) return true;
 
@@ -924,12 +927,20 @@ export class GameRoom extends Server<Env> {
         continue;
       }
       // El tiro que no se ve igual se oye: llega como "se oyó por allá", con el
-      // lugar redondeado. El silencioso (la ballesta), ni eso.
-      if (e.t === "shot" && !e.silent && Math.hypot(e.x - viewer.x, e.y - viewer.y) <= HEARING_RANGE) {
+      // rumbo y la distancia aproximados. El silencioso (la ballesta), ni eso.
+      if (e.t !== "shot" || e.silent) continue;
+      const d = Math.hypot(e.x - viewer.x, e.y - viewer.y);
+      if (d <= HEARING_RANGE) {
+        // Un rumbo de 32 posibles y la distancia de a HEARD_GRID: "por allá, más
+        // o menos así de lejos". Redondear el punto en una grilla, en cambio,
+        // lo ubicaba a 80 px: un cliente modificado lo dibujaría como un radar.
+        const step = (Math.PI * 2) / 32;
+        const bearing = Math.round(Math.atan2(e.y - viewer.y, e.x - viewer.x) / step) * step;
+        const dist = Math.max(HEARD_GRID, Math.round(d / HEARD_GRID) * HEARD_GRID);
         out.push({
           t: "heard",
-          x: Math.round(e.x / HEARD_GRID) * HEARD_GRID,
-          y: Math.round(e.y / HEARD_GRID) * HEARD_GRID,
+          x: Math.round(viewer.x + Math.cos(bearing) * dist),
+          y: Math.round(viewer.y + Math.sin(bearing) * dist),
           weapon: e.weapon ?? 0,
         });
       }
@@ -941,6 +952,8 @@ export class GameRoom extends Server<Env> {
     // El disparo silencioso sólo le sirve al que tiró (para emparejar su
     // bala): a los demás les diría dónde está, y la ballesta no delata.
     if (e.t === "shot" && e.silent && e.byId !== viewer.id) return false;
+    // El propio tiro siempre: aunque ya hayas doblado la esquina, es tuyo.
+    if (e.t === "shot" && e.byId === viewer.id) return true;
     if (e.t !== "shot" && e.t !== "hit" && e.t !== "impact" && e.t !== "explosion") return true;
     return hasLineOfSight(viewer.x, viewer.y, e.x, e.y, this.arena);
   }

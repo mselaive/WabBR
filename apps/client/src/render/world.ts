@@ -204,10 +204,12 @@ export class WorldView {
   /** Tiros oídos detrás de paredes, en radianes. */
   private readonly soundArcs: { dir: number; life: number }[] = [];
   /**
-   * Dónde está el jugador en la pantalla: las marcas de daño y de tiros oídos
-   * se dibujan alrededor suyo. No es el centro: la cámara se adelanta hacia la mira.
+   * Dónde está el jugador (en el mundo): las marcas de daño y de tiros oídos
+   * se dibujan alrededor suyo, no del centro de la pantalla, porque la cámara
+   * se adelanta hacia la mira. La capa se ubica al aplicar la cámara, que es
+   * después de dibujarlas: así no van un cuadro atrasadas.
    */
-  private arcCenter: { x: number; y: number } | null = null;
+  private arcWorld: { x: number; y: number } | null = null;
   private readonly markerLayer = new Graphics();
   /** Marcas de la pareja, en pantalla: un rombo encima del lugar o una flecha en el borde. */
   private readonly markLayer = new Graphics();
@@ -982,8 +984,9 @@ export class WorldView {
 
     // Flechas de dirección del daño, en un anillo alrededor del centro.
     this.arcLayer.clear();
-    const cx = this.arcCenter?.x ?? this.app.screen.width / 2;
-    const cy = this.arcCenter?.y ?? this.app.screen.height / 2;
+    // Alrededor de (0, 0): applyCamera pone la capa sobre el jugador.
+    const cx = 0;
+    const cy = 0;
     for (let i = this.damageArcs.length - 1; i >= 0; i--) {
       const arc = this.damageArcs[i]!;
       arc.life -= dt;
@@ -1288,7 +1291,7 @@ export class WorldView {
 
     this.updateBullets(frame);
     this.updateGrenades(frame);
-    this.arcCenter = localOverride ? this.worldToScreen(localOverride.x, localOverride.y) : null;
+    this.arcWorld = localOverride ? { x: localOverride.x, y: localOverride.y } : null;
     this.updateSmokes(frame, localOverride);
     this.updateAirdrops(frame);
     this.updateStrikes(frame);
@@ -1814,6 +1817,8 @@ export class WorldView {
       -cx * this.scale + w / 2 + jitterX,
       -cy * this.scale + h / 2 + jitterY,
     );
+    const arcs = this.arcWorld ? this.worldToScreen(this.arcWorld.x, this.arcWorld.y) : { x: w / 2, y: h / 2 };
+    this.arcLayer.position.set(arcs.x, arcs.y);
   }
 
   worldToScreen(wx: number, wy: number): { x: number; y: number } {

@@ -1095,8 +1095,9 @@ export class Game {
     // Tus balas chocan contra los demás tal como los ves, que es contra lo que
     // apuntaste. A tu compañero lo atraviesan, igual que en el servidor.
     const mates = this.mates();
+    // Al que viene en paracaídas las balas no le pegan: tampoco las propias.
     const targets: { id: number; x: number; y: number }[] = frame.players.filter(
-      (p) => p.alive && p.id !== this.localId && !mates.has(p.id),
+      (p) => p.alive && p.id !== this.localId && !mates.has(p.id) && p.airTicks === 0,
     );
     // La gallina también frena las balas propias, como en el servidor.
     if (frame.chicken) targets.push({ id: -1, x: frame.chicken.x, y: frame.chicken.y });
@@ -1119,12 +1120,16 @@ export class Game {
     // sin haber disparado hace poco, o adentro del humo (ahí disparar no te
     // delata). Que alguien muy cerca te vea igual no se puede saber desde acá,
     // y no hace falta: lo vas a tener encima.
+    // En paracaídas no: allá arriba te ven todos.
+    const flying = (this.predictor?.state.airTicks ?? 0) > 0;
     const inBush =
       localPredicted !== null &&
+      !flying &&
       bushAt(this.arena, localPredicted.x, localPredicted.y) &&
       now - this.lastShotAt > BUSH_SHOT_REVEAL_TICKS * MS_PER_TICK;
     const inSmoke =
       localPredicted !== null &&
+      !flying &&
       frame.smokes.some((s) => Math.hypot(localPredicted.x - s.x, localPredicted.y - s.y) < smokeRadius(s) * 0.9);
     const hidden = inBush || inSmoke;
     this.ui.setHidden(inSmoke ? "en el humo" : inBush ? "en el arbusto" : null);
@@ -1767,8 +1772,10 @@ export class Game {
   private betChoice(): BetChoice | undefined {
     if (this.phase !== "playing" || this.lastLocal?.alive || this.respawnAt > 0) return undefined;
     if (this.myBet >= 0) return { chosen: this.everyone.get(this.myBet)?.name ?? "?" };
+    const myTeam = this.standings.get(this.localId)?.team;
     const alive = [...this.standings]
-      .filter(([, s]) => s.alive)
+      // Por tu pareja no se puede (el servidor tampoco lo acepta).
+      .filter(([, s]) => s.alive && s.team !== myTeam)
       .sort((a, b) => b[1].kills - a[1].kills || a[0] - b[0])
       .slice(0, 8)
       .sort((a, b) => a[0] - b[0]);

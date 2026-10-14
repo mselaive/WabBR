@@ -759,8 +759,10 @@ para los demás.
 
 **Los tiros que no se ven se oyen.** Antes el servidor filtraba el disparo detrás de una pared
 igual que la bala, así que ni sonaba. Ahora llega como "se oyó un tiro por allá": el servidor lo
-convierte en un evento `heard` con el lugar redondeado a una grilla de 160 px (da la dirección,
-no la posición exacta) y sólo hasta 1100 px. Suena apagado (más bajo y con menos agudos) y en el
+convierte en un evento `heard` con el rumbo redondeado (32 posibles) y la distancia de a 160 px
+—da la dirección, no la posición: un punto redondeado en una grilla lo ubicaba a 80 px, y un
+cliente modificado lo habría dibujado como un radar— y sólo hasta 1100 px. El tiro propio nunca
+se vuelve "oído", aunque ya hayas doblado la esquina. Suena apagado (más bajo y con menos agudos) y en el
 borde de un anillo alrededor tuyo aparece una marca blanca hacia ese lado, como las rojas de
 "te pegaron desde acá"; una ráfaga refresca la misma marca en vez de apilar veinte. Copiado de
 los sonidos visualizados de Fortnite: el que pelea detrás de una casa ya no es invisible.

@@ -118,6 +118,30 @@ describe("el paracaídas", () => {
     const state = falling();
     for (let t = 0; t < AIR_TICKS; t++) step(state, new Map(), [], WALLED);
     expect(state.players[0]!.airTicks).toBe(0);
+    // Y como lo manda el servidor: una lista vacía por jugador.
+    const server = falling();
+    for (let t = 0; t < AIR_TICKS; t++) step(server, new Map([[1, []], [2, []]]), [], WALLED);
+    expect(server.players.every((p) => p.airTicks === 0)).toBe(true);
+  });
+
+  it("un bot en el piso no le tira al que viene en paracaídas", () => {
+    const state = falling();
+    const [glider, bot] = state.players;
+    bot!.airTicks = 0;
+    glider!.x = bot!.x + 200;
+    glider!.y = bot!.y;
+    const memory = createBotMemory(3);
+    for (let i = 0; i < 20; i++) expect(botInput(state, bot!, memory, WALLED).shoot).toBe(false);
+    expect(memory.targetId).toBe(-1);
+  });
+
+  it("cada partida arranca con el seq de los inputs en cero, como el cliente", () => {
+    const state = createGameState(3);
+    state.skydive = true;
+    state.players.push(createPlayer(1), createPlayer(2));
+    state.players[0]!.lastSeq = 4000;
+    startMatch(state, 99, WALLED);
+    expect(state.players[0]!.lastSeq).toBe(0);
   });
 
   it("los bots eligen una caja, caen cerca y la partida se juega igual", () => {

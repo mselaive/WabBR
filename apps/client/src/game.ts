@@ -912,6 +912,14 @@ export class Game {
           }
           break;
         }
+        case "flare": {
+          const by = this.everyone.get(ev.byId)?.name ?? "Alguien";
+          this.ui.addNotice(
+            ev.byId === this.localId ? "¡Bengala! Cae un paquete acá al lado: todos lo ven venir" : `${by} prendió una bengala: cae un paquete`,
+          );
+          this.sound.airdrop();
+          break;
+        }
         case "mine":
           // Sólo te llega la tuya o la de tu pareja: el clic de dejarla armándose.
           this.sound.reload();

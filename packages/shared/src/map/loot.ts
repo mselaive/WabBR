@@ -5,6 +5,7 @@ import {
   ITEM_CONSUMABLE,
   ITEM_GRENADE,
   ITEM_BACKPACK,
+  ITEM_FLARE,
   ITEM_RADAR,
   ITEM_WEAPON,
   RARITIES,
@@ -79,6 +80,7 @@ const CRATE_TABLE: readonly Entry[] = [
   // El radar y la mochila le sacan lugar a la curación: por eso las vendas pesan un poco más.
   { kind: ITEM_RADAR, ref: 0, weight: 3, min: 1, max: 1, tier: 3 }, // radar
   { kind: ITEM_BACKPACK, ref: 0, weight: 5, min: 1, max: 1, tier: 2 }, // mochila
+  { kind: ITEM_FLARE, ref: 0, weight: 2, min: 1, max: 1, tier: 4 }, // bengala (pide un paquete)
 ];
 
 /** Sólo armas: garantiza que abrir una caja siempre valga la pena. */

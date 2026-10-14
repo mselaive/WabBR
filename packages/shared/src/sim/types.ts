@@ -516,6 +516,8 @@ export type SimEvent =
    * "por allá", no "acá".
    */
   | { t: "heard"; x: number; y: number; weapon: number }
+  /** Alguien prendió una bengala: viene un paquete a (x, y). */
+  | { t: "flare"; byId: number; x: number; y: number }
   /** Quedó una mina en el piso (suena el clic de armarla). */
   | { t: "mine"; x: number; y: number; byId: number }
   /** De noche, un relámpago: ilumina todo un instante (ver stepStorm). */

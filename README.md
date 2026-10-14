@@ -512,6 +512,14 @@ ve sobre el muñeco —el bulto asoma a los costados y las tiras cruzan la remer
 viene cargado. Al morir se suelta, como todo. Una alcanza: la segunda queda en el piso. Los límites
 salen de un solo lugar (`carryLimit`), que usan el recoger con E, el recoger al pasar y los bots.
 
+## La bengala
+
+Copiada de los pedidos de suministros de Warzone y de Apex. Es el objeto más raro de las cajas
+(borde naranja): al levantarla **pide un paquete aéreo** al lado tuyo, en el primer lugar libre,
+con el botín de siempre y los diez segundos de caída de siempre. Todos lo ven venir —el aviso, el
+anillo en el piso y el paquete bajando—, así que es un faro: o lo defendés o te lo sacan. Los bots
+también la levantan (y se arma lío).
+
 ## El radar
 
 Copiado del UAV de Warzone. Es un objeto raro (en las cajas, y muy de vez en cuando en el piso,

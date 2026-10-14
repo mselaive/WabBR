@@ -17,6 +17,7 @@ import {
   ITEM_ARMOR,
   ITEM_RADAR,
   ITEM_BACKPACK,
+  ITEM_FLARE,
   GRENADE_MOLOTOV,
   GRENADE_MINE,
   GRENADE_SMOKE,
@@ -1359,6 +1360,7 @@ export class WorldView {
     }
     if (item.kind === ITEM_RADAR) return this.tex.itemRadar;
     if (item.kind === ITEM_BACKPACK) return this.tex.itemBackpack;
+    if (item.kind === ITEM_FLARE) return this.tex.itemFlare;
     return item.ref === 0
       ? this.tex.itemBandage
       : item.ref === 1

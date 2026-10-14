@@ -622,6 +622,7 @@ export interface TexturePack {
   /** La mina: tirada y en el piso es la misma, con la luz aparte. */
   mine: Texture;
   itemMine: Texture;
+  itemFlare: Texture;
   /** El paracaídas, blanco: se tiñe con el color de cada jugador. */
   parachute: Texture;
   smokePuff: Texture;
@@ -697,6 +698,15 @@ export function getTextures(): TexturePack {
       ctx.translate(2, 4);
       drawMine(ctx);
       ctx.translate(-2, -4);
+    }),
+    itemFlare: plate((ctx) => {
+      // Un cartucho rojo con la llama prendida arriba.
+      rect(ctx, 6, 7, 4, 6, "#1b1410");
+      rect(ctx, 7, 7, 2, 5, "#d9302a");
+      rect(ctx, 7, 9, 2, 1, "#f4efe6");
+      rect(ctx, 7, 4, 2, 3, "#ffb03a");
+      rect(ctx, 7, 3, 1, 1, "#fff3b0");
+      rect(ctx, 9, 5, 1, 1, "#ff6a4a");
     }),
     parachute: make(30, 26, (ctx) => {
       // Las cuerdas, del borde de la tela a los hombros (abajo al medio).

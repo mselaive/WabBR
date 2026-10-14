@@ -85,6 +85,7 @@ import {
   ARMORS,
   ITEM_ARMOR,
   ITEM_BACKPACK,
+  ITEM_FLARE,
   ITEM_RADAR,
   BACKPACK_MULT,
   ITEM_CONSUMABLE,
@@ -1031,6 +1032,7 @@ function takeItem(
   p: PlayerState,
   item: GroundItem,
   events: SimEvent[],
+  arena: ArenaMap,
 ): boolean {
   if (item.kind === ITEM_WEAPON) {
     const def = weaponStats(item.ref, item.tier);
@@ -1097,6 +1099,12 @@ function takeItem(
     // Sólo vale la pena si aguanta más que lo que ya tenés puesto.
     if (!def || def.shield <= p.shield) return false;
     p.shield = def.shield;
+    return true;
+  }
+
+  // La bengala pide un paquete acá mismo (en un lugar libre de al lado).
+  if (item.kind === ITEM_FLARE) {
+    callAirdrop(state, p, arena, events);
     return true;
   }
 
@@ -1249,7 +1257,7 @@ function tryPickup(
 
   if (bestIndex < 0) return;
   const item = state.items[bestIndex]!;
-  if (!takeItem(state, p, item, events)) return;
+  if (!takeItem(state, p, item, events, arena)) return;
 
   state.items.splice(bestIndex, 1);
   events.push({ t: "pickup", itemId: item.id, byId: p.id });
@@ -1265,7 +1273,7 @@ const AUTO_PICKUP_RADIUS = 26;
  * querer. Si no entran enteras, tampoco: E las junta igual, perdiendo lo que
  * sobra, pero eso tiene que ser una decisión.
  */
-function autoPickup(state: GameState, p: PlayerState, events: SimEvent[]): void {
+function autoPickup(state: GameState, p: PlayerState, events: SimEvent[], arena: ArenaMap): void {
   for (let i = state.items.length - 1; i >= 0; i--) {
     const item = state.items[i]!;
     if (item.kind !== ITEM_CONSUMABLE && item.kind !== ITEM_GRENADE) continue;
@@ -1273,7 +1281,7 @@ function autoPickup(state: GameState, p: PlayerState, events: SimEvent[]): void 
     const dy = item.y - p.y;
     if (dx * dx + dy * dy > AUTO_PICKUP_RADIUS * AUTO_PICKUP_RADIUS) continue;
     if (!fitsWhole(p, item)) continue;
-    if (!takeItem(state, p, item, events)) continue;
+    if (!takeItem(state, p, item, events, arena)) continue;
     state.items.splice(i, 1);
     events.push({ t: "pickup", itemId: item.id, byId: p.id });
   }
@@ -2385,6 +2393,30 @@ function airdropClear(x: number, y: number, arena: ArenaMap): boolean {
  * cruzar el mapa: un arma épica o legendaria (hasta el techo de cada una), el
  * chaleco pesado, un botiquín y dos granadas.
  */
+/**
+ * Un paquete pedido con bengala: cae al lado del que la prendió, en el primer
+ * lugar libre (anillos de 30 px, ocho direcciones, orden fijo), con el mismo
+ * botín y el mismo tiempo de caída que los de la zona.
+ */
+function callAirdrop(state: GameState, p: PlayerState, arena: ArenaMap, events: SimEvent[]): void {
+  let x = p.x;
+  let y = p.y;
+  search: for (let r = 40; r <= 400; r += 30) {
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2;
+      const cx = p.x + Math.cos(a) * r;
+      const cy = p.y + Math.sin(a) * r;
+      if (insideArena(cx, cy, 60) && airdropClear(cx, cy, arena)) {
+        x = cx;
+        y = cy;
+        break search;
+      }
+    }
+  }
+  state.airdrops.push({ id: state.nextAirdropId++, x, y, landTick: state.tick + AIRDROP_FALL_TICKS });
+  events.push({ t: "flare", byId: p.id, x, y });
+}
+
 function stepAirdrops(state: GameState, events: SimEvent[]): void {
   if (state.airdrops.length === 0) return;
   const pending = [];
@@ -2594,7 +2626,7 @@ export function step(
   // tramo más reciente es el de ahora.
   for (const p of state.players) {
     if (!p.alive) continue;
-    if (!p.downed && p.airTicks === 0) autoPickup(state, p, events);
+    if (!p.downed && p.airTicks === 0) autoPickup(state, p, events, arena);
     recordTrail(p, state.tick);
     p.inBush = p.airTicks === 0 && bushAt(arena, p.x, p.y);
   }

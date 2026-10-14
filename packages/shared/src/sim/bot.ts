@@ -20,6 +20,7 @@ import {
   CRATE_REACH,
   ITEM_ARMOR,
   ITEM_BACKPACK,
+  ITEM_FLARE,
   ITEM_RADAR,
   ITEM_CONSUMABLE,
   ITEM_GRENADE,
@@ -643,6 +644,7 @@ export function wants(me: PlayerState, item: GroundItem): boolean {
   if (item.kind === ITEM_GRENADE && item.ref === GRENADE_MOLOTOV) return me.molotovs < limit;
   if (item.kind === ITEM_GRENADE) return me.grenades < limit;
   if (item.kind === ITEM_BACKPACK) return !me.backpack;
+  if (item.kind === ITEM_FLARE) return true;
   if (item.kind === ITEM_ARMOR) return (ARMORS[item.ref]?.shield ?? 0) > me.shield;
   if (item.kind === ITEM_RADAR) return me.radarTicks === 0;
   return false;

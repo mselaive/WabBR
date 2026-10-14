@@ -400,6 +400,11 @@ export const ITEM_GRENADE = 3;
 export const ITEM_RADAR = 4;
 /** La mochila: se lleva puesta y carga la mitad más de curaciones y granadas. */
 export const ITEM_BACKPACK = 5;
+/**
+ * La bengala (los pedidos de suministros de Warzone): al levantarla, pide un
+ * paquete aéreo a donde estás. Todos ven caer el paquete: es un faro.
+ */
+export const ITEM_FLARE = 6;
 /** Cuánto más se carga con mochila. */
 export const BACKPACK_MULT = 1.5;
 
@@ -440,6 +445,7 @@ export function itemName(item: GroundItem): string {
   if (item.kind === ITEM_ARMOR) return ARMORS[item.ref]?.name ?? "Chaleco";
   if (item.kind === ITEM_RADAR) return "Radar";
   if (item.kind === ITEM_BACKPACK) return "Mochila";
+  if (item.kind === ITEM_FLARE) return "Bengala";
   if (item.kind === ITEM_GRENADE && item.ref === 1) {
     return item.count > 1 ? `Humo x${item.count}` : "Granada de humo";
   }

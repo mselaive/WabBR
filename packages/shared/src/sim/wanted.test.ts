@@ -36,27 +36,27 @@ const tick = (state: GameState, events: SimEvent[] = []): SimEvent[] => {
 };
 
 describe("el más buscado", () => {
-  it("con 3 kills y primero solo, pasa a ser el más buscado y se lo ve en el mapa", () => {
-    const state = match(3);
+  it("con 4 kills y 2 de ventaja, pasa a ser el más buscado y se lo ve en el mapa", () => {
+    const state = match(4);
     const events = tick(state);
     expect(events.some((e) => e.t === "wanted" && e.id === 1)).toBe(true);
     expect(state.wanted?.id).toBe(1);
     expect(state.wanted?.x).toBe(state.players[0]!.x);
   });
 
-  it("con menos de 3, o empatado arriba, no hay", () => {
-    const few = match(2);
+  it("si no domina de verdad, no hay: menos de 4, o menos de 2 de ventaja", () => {
+    const few = match(3);
     tick(few);
     expect(few.wanted).toBeNull();
 
-    const tied = match(3);
-    tied.players[1]!.kills = 3;
-    tick(tied);
-    expect(tied.wanted).toBeNull();
+    const close = match(4);
+    close.players[1]!.kills = 3;
+    tick(close);
+    expect(close.wanted).toBeNull();
   });
 
   it("la posición es una pista: se refresca cada tanto, no en cada tick", () => {
-    const state = match(3);
+    const state = match(4);
     tick(state);
     const leader = state.players[0]!;
     const seenX = leader.x;
@@ -68,20 +68,23 @@ describe("el más buscado", () => {
     expect(state.wanted?.x).toBe(leader.x);
   });
 
-  it("alcanzarlo no le saca el puesto: hay que pasarlo", () => {
-    const state = match(3);
+  it("lo sigue siendo mientras vaya primero solo; si lo alcanzan, deja de serlo", () => {
+    const state = match(4);
     tick(state);
     state.players[1]!.kills = 3;
     tick(state);
     expect(state.wanted?.id).toBe(1);
     state.players[1]!.kills = 4;
+    tick(state);
+    expect(state.wanted).toBeNull();
+    state.players[1]!.kills = 6;
     const events = tick(state);
     expect(state.wanted?.id).toBe(2);
     expect(events.some((e) => e.t === "wanted" && e.id === 2)).toBe(true);
   });
 
   it("el que lo mata cobra la recompensa: vida llena", () => {
-    const state = match(3);
+    const state = match(4);
     tick(state);
     const [leader, hunter] = state.players;
     hunter!.hp = 20;
@@ -96,7 +99,7 @@ describe("el más buscado", () => {
   });
 
   it("los bots armados van a buscarlo; con la pistola de arranque, no", () => {
-    const state = match(3);
+    const state = match(4);
     tick(state);
     const bot = state.players[3]!;
     // Lejos de todos los demás para que no haya pelea a la vista: sólo la pista.

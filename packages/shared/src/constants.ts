@@ -121,19 +121,20 @@ export const STRIKE_TICKS = 6 * TICK_RATE;
 export const STRIKE_BOMB_EVERY = 10;
 
 /**
- * El más buscado (de Warzone): el que va primero en kills, con al menos
- * WANTED_MIN_KILLS y sin empate, aparece en el mapa de todos cada
- * WANTED_REVEAL_TICKS. El que lo mata se cura entero. Le da un objetivo a
- * todos y un precio a ir ganando.
+ * El más buscado (de Warzone): sólo el que domina de verdad —al menos
+ * WANTED_MIN_KILLS y WANTED_LEAD más que el que le sigue— aparece en el mapa
+ * de todos cada WANTED_REVEAL_TICKS. Lo sigue siendo mientras vaya primero
+ * solo; si lo alcanzan, deja de serlo. El que lo mata se cura entero.
  */
-export const WANTED_MIN_KILLS = 3;
+export const WANTED_MIN_KILLS = 4;
+export const WANTED_LEAD = 2;
 
 /**
- * Cajas doradas: en cada partida unas pocas cajas, distintas cada vez, traen
- * botín de paquete aéreo (arma épica o legendaria, chaleco pesado, botiquín).
- * Brillan de lejos: son una razón para ir a un lugar y no a otro.
+ * La caja dorada: en cada partida una caja, distinta cada vez, trae botín de
+ * paquete aéreo (arma épica o legendaria, chaleco pesado, botiquín). No sale
+ * en el minimapa: brilla, pero hay que encontrarla.
  */
-export const GOLDEN_CRATES = 3;
+export const GOLDEN_CRATES = 1;
 
 /**
  * Fogatas (de Fortnite): a menos de CAMPFIRE_RADIUS de una, y sin haber

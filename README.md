@@ -182,8 +182,8 @@ amigos. Vive en la sala, en el asiento de cada uno: sobrevive a un corte de cone
 de la sala, y no se guarda en ningún lado. Es lo que daría un perfil sin tener cuentas (ver
 `IDEAS.md`). El que entra a mirar con la partida empezada no suma una partida jugada.
 
-**El campeón de la sala.** El que más partidas ganó en la sala (sin empate arriba) arranca cada
-partida con una desventaja: **todos lo ven siempre en el minimapa**, con una corona roja que lo
+**El campeón de la sala.** El que viene dominando la noche —al menos 3 partidas ganadas en la
+sala y 2 más que el que le sigue— arranca cada partida con una desventaja: **todos lo ven siempre en el minimapa**, con una corona roja que lo
 sigue, y su nombre lleva ♛. Al empezar, un aviso le dice a todos quién es. Es para que el que
 viene ganando toda la noche no gane siempre: le da a todos un objetivo. Lo decide el servidor con
 el marcador de la sala (`roomChampion`), y su posición viaja en el snapshot (`ch`).
@@ -333,13 +333,12 @@ Lento a propósito: es para el respiro entre peleas, no para curarte en medio de
 "Al calor de la fogata". Los bots heridos y sin curaciones van a la más cercana. Se ubican al
 final del generador del mapa y con su propio azar, así el resto del mapa queda idéntico.
 
-## Cajas doradas
+## La caja dorada
 
-En cada partida se sortean **3 cajas doradas** entre todas las del mapa (distintas cada vez, con
-su propio azar, así no cambia nada más del reparto). Son de oro, largan destellos y aparecen
-como un cuadradito dorado en el minimapa mientras sigan cerradas. Traen botín de paquete aéreo:
-un arma épica o legendaria (nunca el lanzacohetes), el chaleco pesado y un botiquín. Son una
-razón para ir a un lugar y no a otro, y donde hay una dorada suele haber pelea.
+En cada partida se sortea **una caja dorada** entre todas las del mapa (distinta cada vez, con
+su propio azar, así no cambia nada más del reparto). Es de oro y larga destellos, pero **no sale
+en el minimapa**: hay que encontrarla. Trae botín de paquete aéreo:
+un arma épica o legendaria (nunca el lanzacohetes), el chaleco pesado y un botiquín.
 
 ## Paquetes aéreos
 
@@ -373,16 +372,15 @@ El servidor te manda a los que tenés en línea de vista hasta 1150 px, también
 fuera de la pantalla (para que aparezcan sin saltos al entrar en ella). El minimapa los dibujaba
 a todos, y eso era un radar: desde un arbusto se veían puntitos de gente que en la pantalla no
 estaba. Ahora, jugando, el minimapa muestra sólo a vos y a tu compañero, más lo que es público a
-propósito: el más buscado, el campeón de la sala, los bombardeos, los paquetes, las cajas doradas
-y las fogatas. Muerto o mirando, sí se ve a todos.
+propósito: el más buscado, el campeón de la sala, los bombardeos, los paquetes y las fogatas. Muerto o mirando, sí se ve a todos.
 
 ## El más buscado
 
-Copiado de Warzone. El que va primero en kills —con al menos 3 y sin empate— es **el más
-buscado**: le aparece a todos una estrella dorada en el minimapa donde se lo vio, que se
+Copiado de Warzone. Sólo el que domina de verdad —al menos 4 kills y 2 más que el que le sigue—
+es **el más buscado**: le aparece a todos una estrella dorada en el minimapa donde se lo vio, que se
 refresca cada 5 segundos (es una pista, no un radar), y su nombre va en dorado con una ★. El
-que lo mata **cobra la recompensa: vida llena**, y todos se enteran por el aviso. Para dejar de
-serlo hay que pasarlo: alcanzarlo en kills no alcanza. Le da a todos un objetivo y un precio
+que lo mata **cobra la recompensa: vida llena**, y todos se enteran por el aviso. Lo sigue siendo
+mientras vaya primero solo; si alguien lo alcanza, deja de serlo. Le da a todos un objetivo y un precio
 a ir ganando. Los bots que ya tienen algo mejor que la pistola van a buscarlo si está cerca;
 con la pistola de arranque, no: sería regalarle otra kill.
 

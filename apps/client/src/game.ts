@@ -959,13 +959,8 @@ export class Game {
     this.marks = this.marks.filter((m) => m.until > now);
     this.world.drawMarks(this.marks);
     // Al espectear, el punto destacado del minimapa es el que estás mirando.
-    const gold = this.goldenCrates
-      .filter((id) => !this.openedCrates.has(id))
-      .map((id) => this.crates[id])
-      .filter((c) => c !== undefined)
-      .map((c) => ({ x: c.x + c.w / 2, y: c.y + c.h / 2 }));
     const playing = this.lastLocal?.alive === true;
-    this.minimap.draw(frame, this.roster, this.watched?.id ?? this.localId, mates, this.marks, this.wanted, gold, !playing, this.champion);
+    this.minimap.draw(frame, this.roster, this.watched?.id ?? this.localId, mates, this.marks, this.wanted, !playing, this.champion);
     this.updateHud(frame, localPredicted);
 
     this.world.setCrosshair(this.input.mouseX, this.input.mouseY, this.phase === "playing");

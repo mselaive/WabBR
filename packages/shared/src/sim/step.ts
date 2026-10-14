@@ -31,6 +31,7 @@ import {
   CAMPFIRE_CALM_TICKS,
   CAMPFIRE_HEAL_PER_S,
   CAMPFIRE_RADIUS,
+  WANTED_LEAD,
   WANTED_MIN_KILLS,
   WANTED_REVEAL_TICKS,
   SMOKE_TICKS,
@@ -1578,32 +1579,31 @@ function launchStrike(state: GameState, events: SimEvent[]): void {
  */
 function stepWanted(state: GameState, events: SimEvent[]): void {
   let best = -1;
+  let second = -1;
   let leader: PlayerState | null = null;
-  let tie = false;
   for (const p of state.players) {
     if (!p.alive) continue;
     if (p.kills > best) {
+      second = best;
       best = p.kills;
       leader = p;
-      tie = false;
-    } else if (p.kills === best) {
-      tie = true;
+    } else if (p.kills > second) {
+      second = p.kills;
     }
   }
-  if (!leader || tie || best < WANTED_MIN_KILLS) {
-    // Con un empate sigue el que ya era, si sigue empatado arriba: no se lo
-    // saca por alcanzarlo, hay que pasarlo.
-    const current = state.wanted ? findPlayer(state, state.wanted.id) : undefined;
-    if (!current?.alive || current.kills < best || best < WANTED_MIN_KILLS) state.wanted = null;
-    else if (state.tick - state.wanted!.seenTick >= WANTED_REVEAL_TICKS) reveal(state, current);
+  const current = state.wanted ? findPlayer(state, state.wanted.id) : undefined;
+  // El que ya era lo sigue siendo mientras vaya primero solo.
+  if (current?.alive && current === leader && best > second) {
+    if (state.tick - state.wanted!.seenTick >= WANTED_REVEAL_TICKS) reveal(state, current);
     return;
   }
-  if (state.wanted?.id !== leader.id) {
+  // Uno nuevo, sólo si domina de verdad.
+  if (leader && best >= WANTED_MIN_KILLS && best - Math.max(0, second) >= WANTED_LEAD) {
     events.push({ t: "wanted", id: leader.id });
     reveal(state, leader);
     return;
   }
-  if (state.tick - state.wanted.seenTick >= WANTED_REVEAL_TICKS) reveal(state, leader);
+  state.wanted = null;
 }
 
 function reveal(state: GameState, p: PlayerState): void {

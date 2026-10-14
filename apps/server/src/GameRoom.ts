@@ -98,6 +98,9 @@ const SIGHT_GRACE_TICKS = 6;
 const MARK_INTERVAL_MS = 500;
 /** Entre una frase rápida y la siguiente. */
 const EMOTE_INTERVAL_MS = 1000;
+/** Para ser el campeón de la sala (y que todos te vean): ganadas, y ventaja sobre el segundo. */
+const CHAMPION_MIN_WINS = 3;
+const CHAMPION_LEAD = 2;
 
 /** Nombres para los bots: cortos, para que entren en la tabla. */
 const BOT_NAMES = [
@@ -751,24 +754,25 @@ export class GameRoom extends Server<Env> {
   // ------------------------------------------------------------ sala
 
   /**
-   * El que más partidas ganó en la sala, si es uno solo: es su desventaja, todos
-   * lo ven en el minimapa durante la partida. Con un empate arriba, nadie.
+   * El que viene dominando la sala: al menos CHAMPION_MIN_WINS ganadas y
+   * CHAMPION_LEAD más que el que le sigue. Es su desventaja: todos lo ven en el
+   * minimapa durante la partida. Si la noche viene pareja, nadie.
    */
   private roomChampion(): number {
     let best = 0;
+    let second = 0;
     let champion = -1;
-    let tie = false;
     for (const seat of this.seats.values()) {
       const wins = seat.meta.wins ?? 0;
       if (wins > best) {
+        second = best;
         best = wins;
         champion = seat.playerId;
-        tie = false;
-      } else if (wins === best && wins > 0) {
-        tie = true;
+      } else if (wins > second) {
+        second = wins;
       }
     }
-    return tie ? -1 : champion;
+    return best >= CHAMPION_MIN_WINS && best - second >= CHAMPION_LEAD ? champion : -1;
   }
 
   /** Dónde está el campeón de la sala, para el snapshot de todos. */

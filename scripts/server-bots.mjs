@@ -73,14 +73,15 @@ check(
 const killsSala = estado.roster.reduce((n, p) => n + (p.totalKills ?? 0), 0);
 check(killsSala === estado.kills, `y suma las kills (${killsSala} de ${estado.kills})`);
 
-// La partida siguiente: el que ganó la primera es el campeón de la sala y
-// todos lo ven en el mapa (si ganó alguien y sigue vivo al empezar).
+// La partida siguiente: con una sola ganada nadie domina la sala todavía, así
+// que no hay campeón a la vista (hacen falta 3 y 2 de ventaja).
 if (estado.winner >= 0) {
   await hasta(() => estado.phase === "lobby", 20000);
   estado.campeon = null;
   enviar({ t: "start" });
-  await hasta(() => estado.campeon !== null, 20000);
-  check(estado.campeon === estado.winner, "en la partida siguiente, el ganador es el campeón y todos lo ven");
+  await hasta(() => estado.phase === "playing", 20000);
+  await esperar(1500);
+  check(estado.campeon === null, "con una sola ganada no hay campeón de la sala");
 }
 
 ws.close();

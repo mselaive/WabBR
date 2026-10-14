@@ -59,13 +59,13 @@ está en `main`.
 |---|---|---|
 | Bombardeo | La "zona roja" de PUBG: círculo marcado, aviso con sirena y bombas 5 s después; bajo techo no te alcanza | 5 tests + captura del círculo |
 | Lanzacohetes | Arma rara, sólo legendaria y sólo en ~1 de cada 8 paquetes; estalla donde pega, nunca mata de un tiro | 7 tests + capturas del cohete con su estela |
-| El más buscado | (De Warzone) El primero en kills (3+, sin empate) aparece en el mapa de todos cada 5 s; matarlo te cura entero | 6 tests |
+| El más buscado | (De Warzone) Sólo si domina (4+ kills y 2 de ventaja) aparece en el mapa de todos cada 5 s; matarlo te cura entero | 6 tests |
 | Recoger al pasar | Curaciones y granadas se juntan solas si entran enteras | 3 tests |
 | Récords | En el navegador: partidas, ganadas, récord de kills, tiro más largo; "¡Récord personal!" en el resultado | 4 tests + capturas |
 | Títulos para todos | Cada jugador se lleva uno: "Carnicero", "Ciego: no dio una bala", "Pacifista", "Turista"... | 5 tests + partida real |
-| Cajas doradas | 3 por partida, con botín de paquete aéreo, brillan y salen en el minimapa | 3 tests + captura |
+| Caja dorada | 1 por partida, con botín de paquete aéreo; brilla pero no sale en el minimapa | 3 tests + captura |
 | Fogatas | 6 en el mapa, curan de a poco al que está tranquilo | 4 tests + captura |
-| Campeón de la sala | El que más partidas ganó en la sala aparece siempre en el minimapa de todos | `scripts/server-bots.mjs` |
+| Campeón de la sala | El que domina la noche (3+ ganadas y 2 de ventaja) aparece siempre en el minimapa de todos | `scripts/server-bots.mjs` |
 | Minimapa sin radar | Ya no muestra rivales fuera de la pantalla (lo de los puntitos desde el arbusto) | Captura |
 | Rachas | "¡Doble kill!", "¡Triple kill!", "¡Imparable!" | Captura del cartel |
 | Frases rápidas | 6-9: ¡GG!, Jajaja, ¡Cuidado!, Perdón, sólo para los que te ven | `scripts/marks.mjs` + captura |

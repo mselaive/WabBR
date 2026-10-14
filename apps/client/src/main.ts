@@ -18,8 +18,9 @@ const ui = new UI({
   onCreate: (name) => enterRoom(generateRoomCode(), name),
   // Una sala propia con cinco bots, que arranca sola: para el que llega antes.
   onPractice: (name) => {
-    game.practiceOnJoin();
+    // Después de conectar: conectar arranca desconectando, y eso la limpia.
     enterRoom(generateRoomCode(), name);
+    game.practiceOnJoin();
   },
 
   onJoin: (name, code) => {

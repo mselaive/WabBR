@@ -428,6 +428,8 @@ export class Game {
   }
 
   disconnect(): void {
+    // Si no se llegó a entrar, la práctica pendiente no pasa a la próxima sala.
+    this.practice = false;
     this.stopReconnecting();
     this.net?.close();
     this.net = null;

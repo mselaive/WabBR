@@ -156,6 +156,11 @@ están todos en una llamada. Sólo fuera de partida, hasta 80 caracteres, de a u
 un segundo; el servidor saca los caracteres invisibles (los que sirven para hacerse pasar por otro
 o mandar mensajes vacíos) y se ven los últimos seis.
 
+En partida está **el chat de los muertos**: el que cayó (y no tiene segunda oportunidad por
+delante) puede escribir abajo a la izquierda, y lo leen sólo los otros muertos. A los vivos no les
+llega nada, así que no se les pasa información. Escribiendo, las teclas son letras: no mueven la
+cámara ni saltean la repetición.
+
 **Tu color.** En tu fila, el cuadradito de color es un botón: tocarlo te pasa al siguiente color
 que nadie tenga. Se recuerda en el navegador y se pide al entrar a otra sala (si está libre).
 

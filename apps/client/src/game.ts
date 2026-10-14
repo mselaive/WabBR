@@ -1170,6 +1170,9 @@ export class Game {
       this.sound.heartbeat();
     }
 
+    // El chat de los muertos: muerto de verdad (sin segunda oportunidad por delante).
+    this.ui.setDeadChat(this.phase === "playing" && this.lastLocal !== null && !this.lastLocal.alive && this.respawnAt === 0);
+
     // La cuenta para la próxima partida, en el lobby.
     const left = this.nextMatchAt - performance.now();
     this.ui.setNextMatch(

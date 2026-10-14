@@ -1538,6 +1538,32 @@ body.touch #consumables .consumable.empty {
   }
 }
 
+/* El chat de los muertos, abajo a la izquierda mientras mirás. */
+.dead-chat {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  width: min(320px, 40vw);
+  display: grid;
+  gap: 6px;
+  pointer-events: auto;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+.dead-chat[hidden] {
+  display: none;
+}
+
+.dead-chat .chat-log li {
+  text-shadow: 0 1px 2px #000;
+}
+
+.dead-chat input {
+  padding: 7px 10px;
+  font-size: 13px;
+  background: rgba(13, 16, 20, 0.82);
+}
+
 /* El chat del lobby: los últimos mensajes y una línea para escribir. */
 .lobby-chat {
   display: grid;

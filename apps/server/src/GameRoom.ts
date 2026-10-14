@@ -559,14 +559,26 @@ export class GameRoom extends Server<Env> {
       }
 
       case "chat": {
-        // Fuera de partida (en el lobby y en el resultado), de a uno cada tanto.
-        if (this.state.phase === "playing" || this.state.phase === "countdown") return;
+        // Fuera de partida (en el lobby y en el resultado) para todos; en
+        // partida, sólo los muertos entre ellos (el chat de los muertos): a los
+        // vivos no les llega nada, así no se les pasa información.
+        if (this.state.phase === "countdown") return;
         const now = Date.now();
         if (now - seat.lastChatAt < CHAT_INTERVAL_MS) return;
         const text = sanitizeChat(msg.text);
         if (!text) return;
+        const out = encodeServer({ t: "chat", by: seat.playerId, text });
+        if (this.state.phase !== "playing") {
+          seat.lastChatAt = now;
+          this.broadcast(out);
+          return;
+        }
+        const dead = (p: PlayerState | undefined): boolean => p !== undefined && !p.alive && p.respawnTick < 0;
+        if (!dead(findPlayer(this.state, seat.playerId))) return;
         seat.lastChatAt = now;
-        this.broadcast(encodeServer({ t: "chat", by: seat.playerId, text }));
+        for (const c of this.getConnections<ConnState>()) {
+          if (c.state && dead(findPlayer(this.state, c.state.playerId))) c.send(out);
+        }
         return;
       }
 

@@ -113,7 +113,7 @@ está en `main`. Protocolo **v3** (producción está en v2): al desplegar, prime
 |---|---|---|
 | Opciones en una fila | Mapa nuevo, segunda oportunidad, noche y paracaídas como interruptores | Capturas en PC y teléfono |
 | Lo mejor de la noche + resumen | Quién ganó más, mató más y apostó mejor; "Copiar resumen" para el grupo | Tests + capturas |
-| Chat del lobby | Una línea para escribirle a la sala, fuera de partida | Test del filtro + dos navegadores |
+| Chat del lobby y de los muertos | Una línea para la sala fuera de partida; en partida, los muertos entre ellos | Test del filtro + dos navegadores + muerto escribiendo |
 | Elegir tu color | Tocar tu cuadradito pasa al siguiente color libre; se recuerda | Prueba en el navegador |
 | Dificultad de los bots | Fácil / Normal / Difícil | Test + captura |
 | Tríos | Equipos de tres, por sorteo | 2 tests + partida de tríos por socket |

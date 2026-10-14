@@ -200,6 +200,13 @@ export class UI {
       if (text) this.cb.onChat(text);
       input.value = "";
     });
+    el("deadChat").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const input = el("deadChatInput") as HTMLInputElement;
+      const text = input.value.trim();
+      if (text) this.cb.onChat(text);
+      input.value = "";
+    });
     this.btnPractice.addEventListener("click", () => {
       this.hideError();
       this.cb.onPractice(this.playerName());
@@ -596,18 +603,34 @@ export class UI {
 
   /** Un mensaje del chat del lobby. Quedan los últimos seis. */
   addChat(name: string, color: string, text: string): void {
-    const log = el("chatLog");
-    const li = document.createElement("li");
-    const who = document.createElement("b");
-    who.textContent = `${name}: `;
-    who.style.color = color;
-    li.append(who, document.createTextNode(text));
-    log.append(li);
-    while (log.children.length > 6) log.firstElementChild?.remove();
+    // En el lobby y en el chat de los muertos: es la misma conversación.
+    for (const id of ["chatLog", "deadChatLog"]) {
+      const log = el(id);
+      const li = document.createElement("li");
+      const who = document.createElement("b");
+      who.textContent = `${name}: `;
+      who.style.color = color;
+      li.append(who, document.createTextNode(text));
+      log.append(li);
+      while (log.children.length > 6) log.firstElementChild?.remove();
+    }
   }
 
   clearChat(): void {
     el("chatLog").replaceChildren();
+    el("deadChatLog").replaceChildren();
+  }
+
+  /** El chat de los muertos: se ve muerto (sin vuelta por delante) y en partida. */
+  setDeadChat(visible: boolean): void {
+    const form = el("deadChat");
+    if (form.hidden === !visible) return;
+    form.hidden = !visible;
+    if (!visible) {
+      const input = el("deadChatInput") as HTMLInputElement;
+      input.value = "";
+      input.blur();
+    }
   }
 
   /** El volumen guardado, para que el control arranque donde quedó. */

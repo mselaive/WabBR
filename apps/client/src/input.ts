@@ -125,6 +125,8 @@ export class InputController {
   attach(target: HTMLElement): () => void {
     const onKeyDown = (e: KeyboardEvent) => {
       if (!this.enabled && !this.watching) return;
+      // Escribiendo en un chat, las teclas son letras: ni cámara, ni marcas.
+      if (e.target instanceof HTMLInputElement) return;
       if (this.watching) {
         const intent = SPECTATE_KEYS[e.code];
         if (intent && !e.repeat) this.spectateIntents.push(intent);

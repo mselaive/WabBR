@@ -152,6 +152,7 @@ export class UI {
   private readonly resultTitle = el("resultTitle");
   private readonly resultSubtitle = el("resultSubtitle");
   private readonly resultRecords = el("resultRecords");
+  private readonly roomBest = el("roomBest");
   private readonly resultBets = el("resultBets");
   private readonly myStats = el("myStats");
   private readonly podium = el("podium");
@@ -347,6 +348,7 @@ export class UI {
   }
 
   setRoster(roster: PlayerMeta[], hostId: number, localId: number, teamSize = 1): void {
+    this.setRoomBest(roster);
     const byId = new Map(roster.map((p) => [p.id, p]));
     const me = byId.get(localId);
     /** Con quién está emparejado (los dos se eligieron), o undefined. */
@@ -496,6 +498,29 @@ export class UI {
       button.disabled = !isHost;
     }
     this.modeDuos.title = "Las parejas se sortean al empezar";
+  }
+
+  /**
+   * Lo mejor de la noche en esta sala, arriba de la lista: quién ganó más, quién
+   * mató más y quién apuesta mejor. Sólo el que va primero solo: empatados, nadie.
+   */
+  private setRoomBest(roster: PlayerMeta[]): void {
+    const leader = (score: (p: PlayerMeta) => number): PlayerMeta | undefined => {
+      const sorted = [...roster].sort((a, b) => score(b) - score(a));
+      const top = sorted[0];
+      if (!top || score(top) <= 0) return undefined;
+      return sorted[1] && score(sorted[1]) === score(top) ? undefined : top;
+    };
+    const parts: string[] = [];
+    const wins = leader((p) => p.wins ?? 0);
+    if (wins) parts.push(`Más ganadas: ${wins.name} (${wins.wins})`);
+    const kills = leader((p) => p.totalKills ?? 0);
+    if (kills) parts.push(`Más kills: ${kills.name} (${kills.totalKills})`);
+    const bets = leader((p) => p.betsWon ?? 0);
+    if (bets) parts.push(`Mejor apostador: ${bets.name} (${bets.betsWon})`);
+    const el = this.roomBest;
+    el.hidden = parts.length === 0;
+    el.textContent = parts.length > 0 ? `La noche · ${parts.join(" · ")}` : "";
   }
 
   /** Las reglas especiales. Las cambia el host. */

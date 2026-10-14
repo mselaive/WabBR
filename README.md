@@ -136,6 +136,9 @@ crear una sala nueva queda chico abajo: con "Crear sala" en grande, la gente lo 
 terminaba sola en una sala aparte. El menú y el lobby entran en un teléfono parado (antes el
 panel medía 471 px en una pantalla de 390 y se cortaba a la derecha).
 
+Arriba de la lista, **lo mejor de la noche** en la sala: quién ganó más partidas, quién hizo más
+kills y quién acertó más apuestas (sólo el que va primero solo; empatados, nadie).
+
 El que crea la sala es el host: puede forzar el arranque sin esperar a que todos marquen listo, y
 puede **echar a cualquiera** con la ✕ de su fila. Si el host se va, el puesto pasa al siguiente.
 

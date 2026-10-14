@@ -152,7 +152,9 @@ la siguiente lo dejaría afuera sin saberlo).
 que nadie tenga. Se recuerda en el navegador y se pide al entrar a otra sala (si está libre).
 
 Arriba de la lista, **lo mejor de la noche** en la sala: quién ganó más partidas, quién hizo más
-kills y quién acertó más apuestas (sólo el que va primero solo; empatados, nadie).
+kills y quién acertó más apuestas (sólo el que va primero solo; empatados, nadie). Abajo, **Copiar
+resumen de la noche** copia la tabla en texto ("1. Juan — 3 ganadas, 12 kills…") con el link de
+la sala, para pegarla en el grupo.
 
 El que crea la sala es el host: puede forzar el arranque sin esperar a que todos marquen listo, y
 puede **echar a cualquiera** con la ✕ de su fila. Si el host se va, el puesto pasa al siguiente.

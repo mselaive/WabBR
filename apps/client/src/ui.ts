@@ -1,6 +1,7 @@
 import { MAX_PLAYERS, MIN_PLAYERS, playerColor, type PlayerMeta } from "@wabbr/shared";
 import { playerPortraitUrl } from "./render/textures.js";
 import { ACHIEVEMENTS, hatUnlocked, selectHat, selectedHat, unlockedAchievements } from "./achievements.js";
+import { nightSummary } from "./summary.js";
 
 export type ScreenName = "menu" | "lobby" | "result" | "connecting" | null;
 
@@ -157,6 +158,9 @@ export class UI {
   private readonly resultSubtitle = el("resultSubtitle");
   private readonly resultRecords = el("resultRecords");
   private readonly roomBest = el("roomBest");
+  private readonly btnSummary = el<HTMLButtonElement>("btnSummary");
+  /** El resumen de la noche, listo para copiar (null si todavía no se jugó). */
+  private summary: string | null = null;
   private readonly resultBets = el("resultBets");
   private readonly myStats = el("myStats");
   private readonly podium = el("podium");
@@ -225,6 +229,7 @@ export class UI {
     el("btnLeave").addEventListener("click", () => this.cb.onLeave());
 
     this.roomCode.addEventListener("click", () => this.copyInvite());
+    this.btnSummary.addEventListener("click", () => void this.copySummary());
   }
 
   /**
@@ -258,6 +263,17 @@ export class UI {
     const name = this.nameInput.value.trim() || "Jugador";
     localStorage.setItem(NAME_KEY, name);
     return name;
+  }
+
+  private async copySummary(): Promise<void> {
+    if (!this.summary) return;
+    try {
+      await navigator.clipboard.writeText(this.summary);
+      this.btnSummary.textContent = "¡Copiado! Pegalo en el grupo";
+    } catch {
+      this.btnSummary.textContent = "No se pudo copiar";
+    }
+    setTimeout(() => (this.btnSummary.textContent = "Copiar resumen de la noche"), 1800);
   }
 
   private async copyInvite(): Promise<void> {
@@ -538,6 +554,10 @@ export class UI {
    * mató más y quién apuesta mejor. Sólo el que va primero solo: empatados, nadie.
    */
   private setRoomBest(roster: PlayerMeta[]): void {
+    const link = new URL(location.href);
+    link.searchParams.set("room", this.roomCode.textContent ?? "");
+    this.summary = nightSummary(roster, this.roomCode.textContent ?? "", link.toString());
+    this.btnSummary.hidden = this.summary === null;
     const leader = (score: (p: PlayerMeta) => number): PlayerMeta | undefined => {
       const sorted = [...roster].sort((a, b) => score(b) - score(a));
       const top = sorted[0];

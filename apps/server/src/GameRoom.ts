@@ -86,6 +86,8 @@ interface Seat {
   lastMarkAt: number;
   /** Cuándo dijo su última frase rápida. */
   lastEmoteAt: number;
+  /** Por quién apostó en esta partida (id), o -1. */
+  bet: number;
 }
 
 /** Cada cuánto se le da una oportunidad de correr al loop (no es el ritmo del tick). */
@@ -216,6 +218,7 @@ export class GameRoom extends Server<Env> {
       inputs: new InputQueue(),
       lastMarkAt: 0,
       lastEmoteAt: 0,
+      bet: -1,
       bot: null,
     };
     this.seats.set(playerId, seat);
@@ -516,6 +519,19 @@ export class GameRoom extends Server<Env> {
         return;
       }
 
+      case "bet": {
+        // Muerto para siempre (no esperando la segunda oportunidad), una vez
+        // por partida y por alguien que siga en pie.
+        if (this.state.phase !== "playing" || seat.bet >= 0) return;
+        if (typeof msg.id !== "number") return;
+        const me = findPlayer(this.state, seat.playerId);
+        const on = findPlayer(this.state, msg.id);
+        if (!me || me.alive || me.respawnTick >= 0 || !on?.alive) return;
+        seat.bet = on.id;
+        this.broadcast(encodeServer({ t: "bet", by: me.id, on: on.id }));
+        return;
+      }
+
       case "mark": {
         // Sólo en partida y a lo sumo dos por segundo: una marca es un aviso,
         // no un dibujo.
@@ -655,6 +671,7 @@ export class GameRoom extends Server<Env> {
       for (const seat of this.seats.values()) {
         if (seat.bot) seat.bot = { ...createBotMemory((Date.now() ^ (seat.playerId * 7919)) | 0), skill: seat.bot.skill };
       }
+      for (const seat of this.seats.values()) seat.bet = -1;
       startMatch(s, (Date.now() ^ (this.seats.size << 16)) | 1, this.arena);
       this.broadcast(encodeServer({ t: "start", seed: s.rng }));
       this.broadcastItems();
@@ -754,7 +771,7 @@ export class GameRoom extends Server<Env> {
           gr: s.grenades.map(packGrenade),
           ...(this.events.length > 0 ? { ev: this.events } : {}),
           // El resultado completo, mientras se muestra la pantalla final.
-          ...(s.phase === "ended" ? { res: packResults(s) } : {}),
+          ...(s.phase === "ended" ? { res: packResults(s), bt: this.bets() } : {}),
         }),
       );
       this.events = [];
@@ -798,6 +815,11 @@ export class GameRoom extends Server<Env> {
     }
 
     this.events = [];
+  }
+
+  /** Las apuestas de esta partida: [quién apostó, por quién]. */
+  private bets(): [number, number][] {
+    return [...this.seats.values()].filter((s) => s.bet >= 0).map((s) => [s.playerId, s.bet] as [number, number]);
   }
 
   /** Una frase rápida, sólo para los que ven al que la dice: si no, un "¡Cuidado!" diría dónde está. */
@@ -904,6 +926,12 @@ export class GameRoom extends Server<Env> {
       // ganó aunque los últimos compartan el primer puesto.
       if (s.winnerId >= 0 && p.place === 1) m.wins = (m.wins ?? 0) + 1;
     }
+    // Las apuestas: acertó el que apostó por alguien del equipo que ganó.
+    const winnerTeam = s.winnerId >= 0 ? findPlayer(s, s.winnerId)?.team : undefined;
+    for (const seat of this.seats.values()) {
+      if (seat.bet < 0 || winnerTeam === undefined) continue;
+      if (findPlayer(s, seat.bet)?.team === winnerTeam) seat.meta.betsWon = (seat.meta.betsWon ?? 0) + 1;
+    }
     this.broadcastRoster();
   }
 
@@ -1003,6 +1031,7 @@ export class GameRoom extends Server<Env> {
       inputs: new InputQueue(),
       lastMarkAt: 0,
       lastEmoteAt: 0,
+      bet: -1,
       bot: { ...createBotMemory((Date.now() ^ (playerId * 7919)) | 0), skill: this.botSkill },
     });
     this.state.players.push(createPlayer(playerId));

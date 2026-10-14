@@ -445,6 +445,16 @@ bombardeo (nadie suma la kill) y los bots se van del círculo. Todo es de la sim
 compartida con el azar de la partida (`launchStrike`, `stepStrikes`); el cliente sólo dibuja
 lo que llega en el snapshot (`rz`).
 
+## Apuestas de espectador
+
+Muerto (y sin segunda oportunidad por delante), arriba aparece **"¿Quién gana?"** con un botón por
+cada uno de los que siguen en pie (los ocho con más kills, en orden fijo). Se apuesta una vez y
+no se cambia; todos se enteran ("Mati apuesta por Juan"). Al final, debajo del resultado, quién
+apostó por quién con ✓ o ✗; el que acertó suma en el marcador de la sala ("2 apuestas") y, si no
+ganó otro título, se lleva **Adivino: apostó por el que ganó**. Le da algo que hacer al que cayó
+primero mientras mira. El servidor valida todo (que estés muerto de verdad, que el otro esté
+vivo, una por partida) y cuenta los aciertos (`addToTally`).
+
 ## El radar
 
 Copiado del UAV de Warzone. Es un objeto raro (en las cajas, y muy de vez en cuando en el piso,

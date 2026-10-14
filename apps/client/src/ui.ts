@@ -19,6 +19,13 @@ export interface UICallbacks {
   onRules: (rules: number) => void;
   onMapMode: (mode: number) => void;
   onSecondChance: (on: boolean) => void;
+  onBet: (id: number) => void;
+}
+
+/** La apuesta del espectador: por quién se puede apostar, o por quién apostaste. */
+export interface BetChoice {
+  options?: { id: number; name: string; color: string }[];
+  chosen?: string;
 }
 
 const NAME_KEY = "wabbr:name";
@@ -145,6 +152,7 @@ export class UI {
   private readonly resultTitle = el("resultTitle");
   private readonly resultSubtitle = el("resultSubtitle");
   private readonly resultRecords = el("resultRecords");
+  private readonly resultBets = el("resultBets");
   private readonly myStats = el("myStats");
   private readonly podium = el("podium");
   private readonly awards = el("awards");
@@ -365,7 +373,9 @@ export class UI {
         if ((p.played ?? 0) > 0) {
           const tally = document.createElement("span");
           tally.className = "tally";
-          tally.textContent = `${p.wins ?? 0}/${p.played} ganadas · ${p.totalKills ?? 0} kills`;
+          tally.textContent =
+            `${p.wins ?? 0}/${p.played} ganadas · ${p.totalKills ?? 0} kills` +
+            (p.betsWon ? ` · ${p.betsWon} ${p.betsWon === 1 ? "apuesta" : "apuestas"}` : "");
           tally.title = `En esta sala: ganó ${p.wins ?? 0} de ${p.played} partidas e hizo ${p.totalKills ?? 0} kills`;
           li.append(tally);
         }
@@ -696,11 +706,12 @@ export class UI {
   }
 
   /** A quién estás mirando después de morir y cómo cambiar. null lo esconde. */
-  setSpectating(view: { title: string; hint: string; note?: string } | null): void {
+  setSpectating(view: { title: string; hint: string; note?: string; bet?: BetChoice } | null): void {
     this.spectating.hidden = view === null;
     if (view === null) return;
     // Se reescribe sólo si cambió: esto corre en cada cuadro.
-    const signature = `${view.title}|${view.hint}|${view.note ?? ""}`;
+    const bet = view.bet?.chosen ?? view.bet?.options?.map((o) => o.id).join(",") ?? "";
+    const signature = `${view.title}|${view.hint}|${view.note ?? ""}|${bet}`;
     if (this.spectatingSignature === signature) return;
     this.spectatingSignature = signature;
     const title = document.createElement("span");
@@ -715,6 +726,26 @@ export class UI {
       note.className = "spectating-note";
       note.textContent = view.note;
       this.spectating.prepend(note);
+    }
+    if (view.bet?.chosen) {
+      this.spectating.append(cell(`Apostaste por ${view.bet.chosen}`, "spectating-bet-done"));
+    } else if (view.bet?.options) {
+      const row = document.createElement("div");
+      row.className = "spectating-bets";
+      row.append(cell("¿Quién gana?", "spectating-bet-label"));
+      for (const o of view.bet.options) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "bet-btn";
+        b.textContent = o.name;
+        b.style.borderColor = o.color;
+        b.addEventListener("click", (e) => {
+          e.stopPropagation();
+          this.cb.onBet(o.id);
+        });
+        row.append(b);
+      }
+      this.spectating.append(row);
     }
   }
 
@@ -824,11 +855,20 @@ export class UI {
    * Pantalla final: un podio con los tres primeros y abajo la tabla completa.
    * `rows` viene ordenada por puesto y, dentro del mismo puesto, por kills.
    */
-  showResult(title: string, subtitle: string, rows: ResultRow[], awards: Award[], records: string[] = []): void {
+  showResult(
+    title: string,
+    subtitle: string,
+    rows: ResultRow[],
+    awards: Award[],
+    records: string[] = [],
+    bets: string[] = [],
+  ): void {
     this.resultTitle.textContent = title;
     this.resultSubtitle.textContent = subtitle;
     this.resultRecords.hidden = records.length === 0;
     this.resultRecords.textContent = records.length > 0 ? `¡Récord personal! ${records.join(" · ")}` : "";
+    this.resultBets.hidden = bets.length === 0;
+    this.resultBets.textContent = bets.length > 0 ? `Apuestas: ${bets.join(" · ")}` : "";
 
     // Segundo, primero, tercero: el ganador en el medio y más alto.
     const top = rows.slice(0, 3);

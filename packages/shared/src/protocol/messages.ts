@@ -84,6 +84,15 @@ export interface SecondChanceMsg {
   on: boolean;
 }
 
+/**
+ * Muerto (y sin vuelta), apuesta quién gana entre los que siguen en pie. Una
+ * por partida: no se cambia.
+ */
+export interface BetMsg {
+  t: "bet";
+  id: number;
+}
+
 /** El host elige si la próxima partida es de noche. */
 export interface NightMsg {
   t: "night";
@@ -135,6 +144,7 @@ export type ClientMsg =
   | RulesMsg
   | MapModeMsg
   | SecondChanceMsg
+  | BetMsg
   | PartnerMsg
   | EmoteMsg
   | MarkMsg;
@@ -305,6 +315,8 @@ export interface SnapshotMsg {
   ev?: SimEvent[];
   /** Estadísticas finales. Sólo con la partida terminada (fase "ended"). */
   res?: SnapResult[];
+  /** Las apuestas de la partida, con la pantalla final: [quién apostó, por quién]. */
+  bt?: [number, number][];
   /** Paquetes aéreos cayendo. Sólo cuando hay alguno. */
   ad?: SnapAirdrop[];
   /** Nubes de humo. Sólo cuando hay alguna. */
@@ -355,6 +367,13 @@ export interface EmotedMsg {
   id: number;
 }
 
+/** Alguien apostó: va a todos, que es parte de la gracia. */
+export interface BetPlacedMsg {
+  t: "bet";
+  by: number;
+  on: number;
+}
+
 /** Una marca de alguien de tu equipo (o tuya). Sólo le llega a la pareja. */
 export interface MarkedMsg {
   t: "mark";
@@ -378,4 +397,5 @@ export type ServerMsg =
   | PongMsg
   | MarkedMsg
   | EmotedMsg
+  | BetPlacedMsg
   | ErrorMsg;

@@ -82,6 +82,7 @@ está en `main`.
 | Gallina dorada | (Llama de Fortnite) Aparece con la primera zona, escapa corriendo, cazada suelta botín de caja dorada; pista en el minimapa; los bots la cazan | 7 tests + captura en partida |
 | Radar | (UAV de Warzone) Objeto raro: al levantarlo, 10 s marcando cada 2 s a los rivales cercanos en el minimapa de tu equipo; avisa al detectado | 5 tests + capturas del ícono y del minimapa |
 | Bots que festejan | Después de una kill, a veces "¡GG!" o "Jajaja" (sólo lo ve quien los ve) | Partida de bots por socket |
+| Apuestas de espectador | Muerto, apostás quién gana; al final ✓/✗, aciertos en el marcador de la sala y título "Adivino" | Test del título + partida en el navegador (apuesta y resultado) |
 
 ## Ideas que quedaron, en el orden en que las haría
 

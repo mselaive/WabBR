@@ -28,6 +28,8 @@ export interface TitleStats {
   thrown: number;
   /** Volvió con la segunda oportunidad. */
   cameBack?: boolean;
+  /** Muerto, apostó por el que ganó. */
+  guessed?: boolean;
 }
 
 export interface Title {
@@ -81,6 +83,7 @@ export function titlesFor(rows: readonly TitleStats[]): Map<number, Title> {
     else if (r.shots >= 5 && r.hits === 0) give(r, "Ciego", "no dio una bala");
     else if (r.shots === 0 && r.survived >= 30) give(r, "Pacifista", "no disparó ni una vez");
     else if (r.cameBack) give(r, "Gato", "volvió de la muerte");
+    else if (r.guessed) give(r, "Adivino", "apostó por el que ganó");
   }
 
   // Más "el que más", ahora entre los que quedaron sin título.

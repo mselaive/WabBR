@@ -70,7 +70,7 @@ import { selectedHat, unlock, type Achievement } from "./achievements.js";
 import { WorldView } from "./render/world.js";
 import { Minimap, type Mark } from "./render/minimap.js";
 import { causeIconUrl } from "./render/textures.js";
-import { UI, type Award, type ResultRow } from "./ui.js";
+import { UI, type Award, type BetChoice, type ResultRow } from "./ui.js";
 import { Sound, type Spot } from "./audio.js";
 
 /** Cuánto tira la cámara hacia el cursor (0 = centrada en el jugador). */
@@ -160,6 +160,10 @@ export class Game {
   private deathNote = "";
   /** Cuándo volvés con la segunda oportunidad (performance.now()), o 0 si no. */
   private respawnAt = 0;
+  /** Por quién apostaste en esta partida, o -1. */
+  private myBet = -1;
+  /** Las apuestas de la partida que terminó: [quién, por quién]. */
+  private finalBets: [number, number][] = [];
   /** El campeón de la sala (el que más partidas ganó) y dónde está, o null. */
   private champion: { id: number; x: number; y: number } | null = null;
   /** De qué campeón ya se avisó en esta partida. */
@@ -439,6 +443,7 @@ export class Game {
     this.input.releaseAll();
     this.spectateId = -1;
     this.respawnAt = 0;
+    this.myBet = -1;
     this.freeCam = null;
     this.watched = null;
     this.spawned = false;
@@ -500,6 +505,8 @@ export class Game {
         this.sawStart = true;
         this.recorded = false;
         this.respawnAt = 0;
+        this.myBet = -1;
+        this.finalBets = [];
         this.streaks.clear();
         if (this.rules !== 0) this.ui.addNotice(`Reglas de esta partida: ${RULES[this.rules] ?? ""}`);
         if (this.mapMode === 1) this.ui.addNotice(`Mapa: ${MAPS[this.mapIndex]?.name ?? ""}`);
@@ -539,6 +546,14 @@ export class Game {
         this.sound.pickup();
         return;
 
+      case "bet": {
+        const by = this.everyone.get(msg.by)?.name ?? "Alguien";
+        const on = this.everyone.get(msg.on)?.name ?? "alguien";
+        if (msg.by === this.localId) this.myBet = msg.on;
+        this.ui.addNotice(msg.by === this.localId ? `Apostaste por ${on}` : `${by} apuesta por ${on}`);
+        return;
+      }
+
       case "mark": {
         const now = performance.now();
         const color = playerColor(this.everyone.get(msg.by)?.colorIndex ?? 0);
@@ -569,6 +584,7 @@ export class Game {
 
   private onSnapshot(msg: SnapshotMsg): void {
     this.snapshots.push(msg, performance.now());
+    if (msg.bt) this.finalBets = msg.bt;
     this.aliveCount = msg.alive;
     this.wanted = msg.mw ? { id: msg.mw[0], x: msg.mw[1], y: msg.mw[2] } : null;
     this.champion = msg.ch ? { id: msg.ch[0], x: msg.ch[1], y: msg.ch[2] } : null;
@@ -657,6 +673,7 @@ export class Game {
       this.spectateId = -1;
       this.deathNote = "";
       this.respawnAt = 0;
+      this.myBet = -1;
       this.recorded = false;
       this.announcedChampion = -1;
       this.announcedChicken = false;
@@ -665,8 +682,6 @@ export class Game {
       this.streaks.clear();
       this.freeCam = null;
       this.watched = null;
-    this.freeCam = null;
-    this.watched = null;
     }
   }
 
@@ -676,6 +691,8 @@ export class Game {
    */
   private showResult(msg: SnapshotMsg): void {
     const results = new Map((msg.res ?? []).map(unpackResult).map((r) => [r.id, r]));
+    // En dúos gana la pareja: el equipo del ganador (para los nombres y las apuestas).
+    const winnerTeam = msg.winner >= 0 ? this.standings.get(msg.winner)?.team : undefined;
     const rows: (ResultRow & { id: number })[] = [];
     for (const [id, kills, , place = 0] of msg.st) {
       // Sin puesto es que no jugó esta partida: entró a mirar.
@@ -718,6 +735,9 @@ export class Game {
           traveled: Math.round((res?.traveled ?? 0) / PX_PER_METER),
           thrown: res?.thrown ?? 0,
           cameBack: res?.cameBack ?? false,
+          guessed: this.finalBets.some(
+            ([by, on]) => by === r.id && winnerTeam !== undefined && this.standings.get(on)?.team === winnerTeam,
+          ),
         };
       }),
     );
@@ -733,8 +753,7 @@ export class Game {
           ? "¡Ganaron!"
           : "¡Ganaste!"
         : `${paired ? "Quedaron" : "Quedaste"} en el puesto ${mine.place}`;
-    // En dúos gana la pareja: los dos nombres, también el que cayó antes.
-    const winnerTeam = this.standings.get(msg.winner)?.team;
+    // Los dos nombres de la pareja, también el que cayó antes.
     const winners =
       msg.winner < 0
         ? []
@@ -763,7 +782,12 @@ export class Game {
       if (mine.longestKill >= 40) this.achieve("longShot");
       if (loadRecords().played >= 10) this.achieve("veteran");
     }
-    this.ui.showResult(title, subtitle, rows, awardsFor(rows), records);
+    // Las apuestas: quién apostó por quién, con un ✓ si acertó.
+    const bets = this.finalBets.map(([by, on]) => {
+      const right = winnerTeam !== undefined && this.standings.get(on)?.team === winnerTeam;
+      return `${this.everyone.get(by)?.name ?? "?"} → ${this.everyone.get(on)?.name ?? "?"} ${right ? "✓" : "✗"}`;
+    });
+    this.ui.showResult(title, subtitle, rows, awardsFor(rows), records, bets);
   }
 
   private handleEvents(events: SimEvent[]): void {
@@ -1294,6 +1318,7 @@ export class Game {
         title: "Cámara libre",
         hint: "WASD para moverte · Shift más rápido · Espacio o click para volver",
         note: this.spectateNote(),
+        bet: this.betChoice(),
       });
       return;
     }
@@ -1315,6 +1340,7 @@ export class Game {
                   ? "Click o ← → para cambiar · Espacio: cámara libre"
                   : "Espacio: cámara libre",
               note: this.spectateNote(),
+              bet: this.betChoice(),
             }
           : null,
       );
@@ -1656,6 +1682,36 @@ export class Game {
       this.ui.addNotice("¡Un rival prendió un radar cerca! Te ve en su minimapa");
       this.sound.zoneWarning();
     }
+  }
+
+  /**
+   * La apuesta del espectador: muerto (y sin segunda oportunidad por delante),
+   * elegís quién gana entre los que siguen en pie. Una sola vez. Los primeros
+   * ocho por kills (con dieciséis en pie, una fila de botones no entra), pero
+   * en orden fijo: si se reordenaran con cada kill, el botón se movería justo
+   * cuando lo vas a tocar.
+   */
+  private betChoice(): BetChoice | undefined {
+    if (this.phase !== "playing" || this.lastLocal?.alive || this.respawnAt > 0) return undefined;
+    if (this.myBet >= 0) return { chosen: this.everyone.get(this.myBet)?.name ?? "?" };
+    const alive = [...this.standings]
+      .filter(([, s]) => s.alive)
+      .sort((a, b) => b[1].kills - a[1].kills || a[0] - b[0])
+      .slice(0, 8)
+      .sort((a, b) => a[0] - b[0]);
+    if (alive.length < 2) return undefined;
+    return {
+      options: alive.map(([id]) => ({
+        id,
+        name: this.everyone.get(id)?.name ?? "?",
+        color: cssColor(playerColor(this.everyone.get(id)?.colorIndex ?? 0)),
+      })),
+    };
+  }
+
+  /** Apostar por alguien. El servidor comprueba que puedas. */
+  bet(id: number): void {
+    this.net?.send({ t: "bet", id });
   }
 
   /** Lo que se lee abajo al espectear: cómo te mataron y, si volvés, en cuánto. */

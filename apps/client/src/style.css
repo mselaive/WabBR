@@ -289,6 +289,44 @@ body.paired .hud-tr {
   color: #ffb4a8;
 }
 
+/* La apuesta: lo único clickeable del HUD de espectador. */
+.spectating-bets {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  max-width: min(560px, 92vw);
+  white-space: normal;
+  pointer-events: auto;
+}
+
+.spectating-bet-label {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 12px;
+  color: var(--gold);
+}
+
+.bet-btn {
+  padding: 4px 9px;
+  border: 2px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel-2);
+  color: var(--ink);
+  font: 12px ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.bet-btn:hover {
+  background: var(--panel);
+}
+
+.spectating-bet-done {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 12px;
+  color: var(--gold);
+}
+
 .spectating-hint {
   font-family: ui-sans-serif, system-ui, sans-serif;
   font-size: 12px;
@@ -1428,8 +1466,17 @@ body.touch #consumables .consumable {
 }
 
 .my-stats[hidden],
-.result-records[hidden] {
+.result-records[hidden],
+.result-bets[hidden] {
   display: none;
+}
+
+/* Las apuestas de los espectadores, debajo de los récords. */
+.result-bets {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .result-records {

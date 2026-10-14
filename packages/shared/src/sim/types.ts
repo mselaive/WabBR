@@ -196,6 +196,8 @@ export interface PlayerMeta {
   played?: number;
   wins?: number;
   totalKills?: number;
+  /** Apuestas de espectador acertadas (muerto, apostó por el que terminó ganando). */
+  betsWon?: number;
   /** Con quién quiere jugar en dúos (id), si eligió. La pareja es mutua. */
   partner?: number;
   /** El gorro que lleva (0 la gorra de siempre). Se desbloquean con logros. */

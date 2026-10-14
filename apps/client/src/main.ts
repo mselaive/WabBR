@@ -37,6 +37,7 @@ const ui = new UI({
   onRules: (rules) => game.setRules(rules),
   onMapMode: (mode) => game.setMapMode(mode),
   onSecondChance: (on) => game.setSecondChance(on),
+  onBet: (id) => game.bet(id),
   onLeave: () => {
     game.disconnect();
     ui.showScreen("menu");

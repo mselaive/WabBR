@@ -72,4 +72,13 @@ describe("un título para cada uno", () => {
     expect(titles.get(2)).toEqual({ label: "Gato", detail: "volvió de la muerte" });
     expect(titles.get(3)?.label).not.toBe("Gato");
   });
+
+  it("el que apostó bien desde afuera es adivino", () => {
+    const titles = titlesFor([
+      row(1, 1, { kills: 2, damage: 150, shots: 20, hits: 8 }),
+      row(2, 2, { damage: 40, shots: 8, hits: 2 }),
+      row(3, 3, { guessed: true, damage: 10, shots: 6, hits: 1 }),
+    ]);
+    expect(titles.get(3)).toEqual({ label: "Adivino", detail: "apostó por el que ganó" });
+  });
 });

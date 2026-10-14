@@ -24,6 +24,8 @@ import {
   REVIVE_RANGE,
   REVIVE_TICKS,
   RESPAWN_TICKS,
+  RADAR_RANGE,
+  ITEM_RADAR,
   bushAt,
   segmentBoxT,
   smokeRadius,
@@ -164,6 +166,8 @@ export class Game {
   private announcedChampion = -1;
   /** Ya se avisó que anda suelta la gallina dorada. */
   private announcedChicken = false;
+  /** Las marcas de la última pasada del radar de tu equipo. */
+  private radarPings: { x: number; y: number; at: number }[] = [];
   /** Dónde se la oyó por última vez, para el minimapa: se refresca cada tanto. */
   private chickenHint: { x: number; y: number; at: number } | null = null;
   /** El más buscado y dónde se lo vio por última vez, o null. */
@@ -283,6 +287,10 @@ export class Game {
         cortar: () => this.net?.simulateDrop(),
         paquetes: () => [...(this.snapshots.latest?.airdrops.values() ?? [])],
         gallina: () => this.snapshots.latest?.chicken ?? null,
+        // Una pasada de radar de mentira, para ver cómo se dibuja.
+        radar: (pings: [number, number][]) => {
+          this.radarPings = pings.map(([x, y]) => ({ x, y, at: performance.now() }));
+        },
         // El centro del follaje del arbusto más cercano, para probar el escondite.
         arbusto: () => {
           const me = this.lastLocal;
@@ -653,6 +661,7 @@ export class Game {
       this.announcedChampion = -1;
       this.announcedChicken = false;
       this.chickenHint = null;
+      this.radarPings = [];
       this.streaks.clear();
       this.freeCam = null;
       this.watched = null;
@@ -905,9 +914,17 @@ export class Game {
         case "reload":
           if (ev.byId === this.localId) this.sound.reload();
           break;
-        case "pickup":
+        case "pickup": {
+          const item = this.items.get(ev.itemId);
           this.items.delete(ev.itemId);
           if (ev.byId === this.localId) this.sound.pickup();
+          if (item?.kind === ITEM_RADAR) this.onRadarTaken(ev.byId, item);
+          break;
+        }
+        case "radar":
+          // Sólo llegan las de tu equipo: el servidor filtra las de los demás.
+          this.radarPings = ev.pings.map(([x, y]) => ({ x, y, at: performance.now() }));
+          this.sound.radar();
           break;
         case "drop":
           this.items.set(ev.item.id, ev.item);
@@ -1087,6 +1104,7 @@ export class Game {
       showAll,
       this.champion,
       this.chickenHint,
+      this.radarPings,
     );
     this.updateHud(frame, localPredicted);
 
@@ -1619,6 +1637,25 @@ export class Game {
   /** Siempre el mismo mapa (0) o uno nuevo cada partida (1). El servidor comprueba que seas el host. */
   setMapMode(mode: number): void {
     this.net?.send({ t: "mapMode", mode });
+  }
+
+  /**
+   * Alguien levantó un radar. Si fuiste vos (o tu pareja), se avisa; si fue un
+   * rival y estás a tiro, también: saber que te están viendo es la mitad de la
+   * gracia, y te da para moverte antes de la próxima pasada.
+   */
+  private onRadarTaken(byId: number, item: GroundItem): void {
+    const mine = byId === this.localId || this.mates().has(byId);
+    if (mine) {
+      const who = byId === this.localId ? "Radar prendido" : `${this.everyone.get(byId)?.name ?? "Tu pareja"} prendió un radar`;
+      this.ui.addNotice(`${who}: 10 s viendo a los rivales cercanos en el minimapa`);
+      return;
+    }
+    const me = this.lastLocal;
+    if (me?.alive && Math.hypot(me.x - item.x, me.y - item.y) <= RADAR_RANGE) {
+      this.ui.addNotice("¡Un rival prendió un radar cerca! Te ve en su minimapa");
+      this.sound.zoneWarning();
+    }
   }
 
   /** Lo que se lee abajo al espectear: cómo te mataron y, si volvés, en cuánto. */

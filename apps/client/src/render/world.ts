@@ -15,6 +15,7 @@ import {
   WORLD_RADIUS,
   AIRDROP_FALL_TICKS,
   ITEM_ARMOR,
+  ITEM_RADAR,
   GRENADE_MOLOTOV,
   GRENADE_SMOKE,
   ITEM_GRENADE,
@@ -1228,6 +1229,7 @@ export class WorldView {
     if (item.kind === ITEM_GRENADE) {
       return item.ref === GRENADE_SMOKE ? this.tex.itemSmoke : item.ref === GRENADE_MOLOTOV ? this.tex.itemMolotov : this.tex.itemGrenade;
     }
+    if (item.kind === ITEM_RADAR) return this.tex.itemRadar;
     return item.ref === 0
       ? this.tex.itemBandage
       : item.ref === 1

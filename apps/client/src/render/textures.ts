@@ -600,6 +600,7 @@ export interface TexturePack {
   itemSmoke: Texture;
   molotov: Texture;
   itemMolotov: Texture;
+  itemRadar: Texture;
   smokePuff: Texture;
   pump: Texture;
   campfire: Texture;
@@ -660,6 +661,7 @@ export function getTextures(): TexturePack {
     itemSmoke: smokeIcon(),
     molotov: molotov(),
     itemMolotov: molotovIcon(),
+    itemRadar: radarIcon(),
     smokePuff: smokePuff(),
     pump: pump(),
     campfire: campfireLogs(),
@@ -779,6 +781,22 @@ function adrenalineIcon(): Texture {
     rect(ctx, 6, 10, 3, 1, "#ffc94a");
     rect(ctx, 9, 5, 1, 5, "#c3c8ce"); // aguja
     rect(ctx, 4, 10, 1, 1, "#c3c8ce");
+  });
+}
+
+/** Una pantalla de radar: el barrido y dos puntos rojos. */
+function radarIcon(): Texture {
+  return plate((ctx) => {
+    ellipse(ctx, 8, 8, 5.5, 5.5, "#3fbf6a");
+    ellipse(ctx, 8, 8, 4.5, 4.5, "#0f3320");
+    ellipse(ctx, 8, 8, 2, 2, "#1c5a36");
+    // El barrido, del centro hacia arriba a la derecha.
+    rect(ctx, 8, 7, 1, 1, "#7dffa0");
+    rect(ctx, 9, 6, 1, 1, "#7dffa0");
+    rect(ctx, 10, 5, 1, 1, "#7dffa0");
+    rect(ctx, 11, 4, 1, 1, "#5fd585");
+    rect(ctx, 6, 5, 1, 1, "#ff5c5c");
+    rect(ctx, 10, 10, 1, 1, "#ff5c5c");
   });
 }
 

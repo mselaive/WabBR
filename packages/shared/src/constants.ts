@@ -139,6 +139,11 @@ export const CHICKEN_WALK_SPEED = 55;
 /** A cuánto se asusta de alguien. */
 export const CHICKEN_FEAR_RADIUS = 280;
 
+/** El radar: 10 s activo, una marca cada 2 s, hasta 1500 px. */
+export const RADAR_TICKS = 200;
+export const RADAR_PING_EVERY = 40;
+export const RADAR_RANGE = 1500;
+
 /** Cuánto se espera para volver con la segunda oportunidad: 8 s. */
 export const RESPAWN_TICKS = 160;
 

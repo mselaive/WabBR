@@ -4,6 +4,7 @@ import {
   ITEM_ARMOR,
   ITEM_CONSUMABLE,
   ITEM_GRENADE,
+  ITEM_RADAR,
   ITEM_WEAPON,
   RARITIES,
   clampTier,
@@ -51,6 +52,7 @@ const GROUND_TABLE: readonly Entry[] = [
   { kind: ITEM_GRENADE, ref: 0, weight: 6, min: 1, max: 1, tier: 2 }, // granadas
   { kind: ITEM_GRENADE, ref: 1, weight: 4, min: 1, max: 1, tier: 1 }, // humo
   { kind: ITEM_GRENADE, ref: 2, weight: 3, min: 1, max: 1, tier: 2 }, // molotov
+  { kind: ITEM_RADAR, ref: 0, weight: 1, min: 1, max: 1, tier: 3 }, // radar
 ];
 
 /** Lo que sale de abrir una caja: armas, chalecos y curación buena. */
@@ -70,6 +72,7 @@ const CRATE_TABLE: readonly Entry[] = [
   { kind: ITEM_GRENADE, ref: 0, weight: 11, min: 1, max: 2, tier: 2 }, // granadas
   { kind: ITEM_GRENADE, ref: 1, weight: 7, min: 1, max: 2, tier: 1 }, // humo
   { kind: ITEM_GRENADE, ref: 2, weight: 5, min: 1, max: 1, tier: 2 }, // molotov
+  { kind: ITEM_RADAR, ref: 0, weight: 4, min: 1, max: 1, tier: 3 }, // radar
 ];
 
 /** Sólo armas: garantiza que abrir una caja siempre valga la pena. */

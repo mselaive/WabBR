@@ -139,6 +139,8 @@ export interface PlayerState {
   lastSeq: number;
   /** Tick en que murió, para el kill feed y la cámara de espectador. -1 si vive. */
   diedAtTick: number;
+  /** Ticks de radar que le quedan (0: apagado). */
+  radarTicks: number;
   /** Tick en que vuelve con la segunda oportunidad, o -1 si no está esperando. */
   respawnTick: number;
   /** Ya usó la segunda oportunidad de esta partida. */
@@ -466,6 +468,11 @@ export type SimEvent =
   | { t: "bounty"; byId: number; targetId: number }
   /** Volvió con la segunda oportunidad. */
   | { t: "respawn"; id: number; x: number; y: number }
+  /**
+   * Una pasada del radar de alguien: dónde estaban los rivales cercanos. Sólo
+   * le llega a su equipo (el servidor lo filtra).
+   */
+  | { t: "radar"; byId: number; team: number; pings: [number, number][] }
   /** Le pegaron a la gallina dorada. */
   | { t: "cluck"; x: number; y: number; byId: number }
   /** Cazaron a la gallina dorada: el botín ya está en el piso. */

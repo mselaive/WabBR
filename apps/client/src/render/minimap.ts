@@ -86,6 +86,8 @@ export class Minimap {
     champion: { id: number; x: number; y: number } | null = null,
     /** Dónde se oyó a la gallina dorada hace poco: una pista, no su lugar exacto. */
     chicken: { x: number; y: number } | null = null,
+    /** La última pasada del radar de tu equipo: se apagan solas en 2 s. */
+    radar: readonly { x: number; y: number; at: number }[] = [],
   ): void {
     const ctx = this.ctx;
     const cx = this.tx(WORLD_CENTER_X);
@@ -315,6 +317,28 @@ export class Minimap {
       }
       ctx.closePath();
       ctx.fill();
+      ctx.stroke();
+    }
+
+    // El radar: puntos rojos que se apagan hasta la próxima pasada.
+    for (const ping of radar) {
+      const age = (performance.now() - ping.at) / 2000;
+      if (age >= 1) continue;
+      const x = this.tx(ping.x);
+      const y = this.ty(ping.y);
+      // Más grandes que los hongos (también rojos) y con borde blanco: no se confunden.
+      const alpha = (1 - age).toFixed(2);
+      ctx.fillStyle = `rgba(255, 59, 59, ${alpha})`;
+      ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(x, y, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.strokeStyle = `rgba(255, 59, 59, ${(0.9 * (1 - age)).toFixed(2)})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x, y, 5 + age * 12, 0, Math.PI * 2);
       ctx.stroke();
     }
 

@@ -80,6 +80,7 @@ está en `main`.
 | Segunda oportunidad | (De Warzone) Opción del host: el que muere temprano vuelve una vez a los 8 s, lejos de los rivales; título "Gato" | 9 tests (mutaciones incluidas) + partida en el navegador |
 | Opciones en una fila | Mapa nuevo, segunda oportunidad y noche como interruptores: el lobby entra en el teléfono | Capturas en PC y teléfono |
 | Gallina dorada | (Llama de Fortnite) Aparece con la primera zona, escapa corriendo, cazada suelta botín de caja dorada; pista en el minimapa; los bots la cazan | 7 tests + captura en partida |
+| Radar | (UAV de Warzone) Objeto raro: al levantarlo, 10 s marcando cada 2 s a los rivales cercanos en el minimapa de tu equipo; avisa al detectado | 5 tests + capturas del ícono y del minimapa |
 
 ## Ideas que quedaron, en el orden en que las haría
 

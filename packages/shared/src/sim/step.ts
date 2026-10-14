@@ -17,6 +17,9 @@ import {
   REVIVE_RANGE,
   REVIVE_TICKS,
   RESPAWN_TICKS,
+  RADAR_PING_EVERY,
+  RADAR_RANGE,
+  RADAR_TICKS,
   CHICKEN_FEAR_RADIUS,
   CHICKEN_FLEE_SPEED,
   CHICKEN_HP,
@@ -73,6 +76,7 @@ import { lerp, makeRng, nextRandom } from "../math.js";
 import {
   ARMORS,
   ITEM_ARMOR,
+  ITEM_RADAR,
   ITEM_CONSUMABLE,
   ITEM_GRENADE,
   ITEM_WEAPON,
@@ -178,6 +182,7 @@ export function createPlayer(id: number, x = 0, y = 0): PlayerState {
     reloadCd: 0,
     lastSeq: 0,
     diedAtTick: -1,
+    radarTicks: 0,
     respawnTick: -1,
     usedSecondChance: false,
     killerId: -1,
@@ -431,6 +436,7 @@ function equipFresh(state: GameState, p: PlayerState): void {
   p.reviveTicks = 0;
   p.fireCd = 0;
   p.reloadCd = 0;
+  p.radarTicks = 0;
 }
 
 /**
@@ -977,7 +983,40 @@ function takeItem(
     return true;
   }
 
+  // El radar se prende al levantarlo. Con uno andando, el segundo espera en el piso.
+  if (item.kind === ITEM_RADAR) {
+    if (p.radarTicks > 0) return false;
+    p.radarTicks = RADAR_TICKS;
+    return true;
+  }
+
   return false;
+}
+
+/**
+ * Los radares prendidos: una pasada cada RADAR_PING_EVERY ticks, la primera
+ * en cuanto se prende. Marca dónde están los rivales cercanos en ese momento
+ * —también los que están en un arbusto: para eso sirve— y nada más: entre
+ * pasada y pasada no se los sigue.
+ */
+function stepRadars(state: GameState, events: SimEvent[]): void {
+  for (const p of state.players) {
+    if (p.radarTicks <= 0) continue;
+    if (!p.alive) {
+      p.radarTicks = 0;
+      continue;
+    }
+    if ((RADAR_TICKS - p.radarTicks) % RADAR_PING_EVERY === 0) {
+      const pings: [number, number][] = [];
+      for (const o of state.players) {
+        if (!o.alive || o.team === p.team) continue;
+        if (Math.hypot(o.x - p.x, o.y - p.y) > RADAR_RANGE) continue;
+        pings.push([Math.round(o.x), Math.round(o.y)]);
+      }
+      events.push({ t: "radar", byId: p.id, team: p.team, pings });
+    }
+    p.radarTicks--;
+  }
 }
 
 /**
@@ -2341,6 +2380,7 @@ export function step(
   stepWanted(state, events);
   stepAirdrops(state, events);
   stepRespawns(state, arena, events);
+  stepRadars(state, events);
 
   // Una pareja con los dos caídos ya no tiene quién la levante: se terminan.
   const standing = new Set(state.players.filter((p) => p.alive && !p.downed).map((p) => p.team));

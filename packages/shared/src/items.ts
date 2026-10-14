@@ -392,6 +392,12 @@ export const ITEM_ARMOR = 2;
  * Mismos números que GRENADE_FRAG, GRENADE_SMOKE y GRENADE_MOLOTOV.
  */
 export const ITEM_GRENADE = 3;
+/**
+ * El radar (el UAV de Warzone): se activa al levantarlo y durante RADAR_TICKS
+ * marca en el minimapa de tu equipo a los rivales cercanos, cada tanto. No se
+ * guarda: es para usarlo ya.
+ */
+export const ITEM_RADAR = 4;
 
 export interface GroundItem {
   id: number;
@@ -428,6 +434,7 @@ export function itemName(item: GroundItem): string {
     return `${weaponAt(item.ref).name} ${rarityAt(item.tier).name.toLowerCase()}`;
   }
   if (item.kind === ITEM_ARMOR) return ARMORS[item.ref]?.name ?? "Chaleco";
+  if (item.kind === ITEM_RADAR) return "Radar";
   if (item.kind === ITEM_GRENADE && item.ref === 1) {
     return item.count > 1 ? `Humo x${item.count}` : "Granada de humo";
   }

@@ -443,6 +443,20 @@ bombardeo (nadie suma la kill) y los bots se van del círculo. Todo es de la sim
 compartida con el azar de la partida (`launchStrike`, `stepStrikes`); el cliente sólo dibuja
 lo que llega en el snapshot (`rz`).
 
+## El radar
+
+Copiado del UAV de Warzone. Es un objeto raro (en las cajas, y muy de vez en cuando en el piso,
+con borde violeta) que **se prende al levantarlo**: durante 10 segundos, cada 2, marca en el
+minimapa de tu equipo dónde están los rivales a menos de 1500 px —también los que están en un
+arbusto: es la respuesta al que se queda escondido—. Entre pasada y pasada no se los sigue: cada
+marca es dónde estaban, y se apaga sola. Si un rival prende uno cerca tuyo, te avisa ("¡Un rival
+prendió un radar cerca!") y tenés hasta la próxima pasada para moverte. Con uno andando, el
+segundo queda en el piso.
+
+Las pasadas son eventos de la simulación (`stepRadars`) y el servidor se las manda sólo al
+equipo del que lo levantó: a nadie más le llega dónde estaban los demás. Los bots lo levantan
+(si lo ven) pero no lo usan.
+
 ## El minimapa no es un radar
 
 El servidor te manda a los que tenés en línea de vista hasta 1150 px, también los que quedan

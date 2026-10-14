@@ -807,8 +807,10 @@ export class GameRoom extends Server<Env> {
    * faltara un "se cayó esto", su lista de objetos quedaría desincronizada.
    */
   private visibleEvents(viewer: PlayerState | undefined): SimEvent[] {
-    if (!viewer?.alive) return this.events;
-    return this.events.filter((e) => {
+    // Las pasadas del radar son del equipo que lo levantó: a nadie más.
+    const events = this.events.filter((e) => e.t !== "radar" || e.team === viewer?.team);
+    if (!viewer?.alive) return events;
+    return events.filter((e) => {
       // El disparo silencioso sólo le sirve al que tiró (para emparejar su
       // bala): a los demás les diría dónde está, y la ballesta no delata.
       if (e.t === "shot" && e.silent && e.byId !== viewer.id) return false;

@@ -140,6 +140,12 @@ export class Sound {
     this.tone(out, { freq: 70, endFreq: 35, decay: 0.5, gain: 1, type: "sine" });
   }
 
+  /** Una pasada del radar: un "bip" de sonar. */
+  radar(): void {
+    const out = this.voice(undefined, 0.25);
+    if (out) this.tone(out, { freq: 1500, endFreq: 1100, decay: 0.25, gain: 0.8, type: "sine" });
+  }
+
   /** La gallina dorada: un cacareo (dos notas cortas y chillonas). Cazada, uno largo. */
   cluck(at?: Spot, caught = false): void {
     const out = this.voice(at, 0.45);

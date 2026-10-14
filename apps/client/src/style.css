@@ -1148,6 +1148,15 @@ body.playing {
   overflow-y: auto;
 }
 
+/* En un teléfono acostado ese 40% eran dos filas, adentro de una pantalla que
+   igual se desplaza: ahí, la tabla entera y se desplaza la pantalla. */
+@media (max-height: 500px) {
+  #standings {
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
 .standing .place {
   flex: none;
   width: 4ch;

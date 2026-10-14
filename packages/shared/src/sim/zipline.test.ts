@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { PLAYER_RADIUS, WORLD_CENTER_X, WORLD_CENTER_Y } from "../constants.js";
 import type { ArenaMap } from "../map/arena.js";
 import { ObstacleGrid, circleHitsBox } from "./collision.js";
-import { createPlayer, stepPlayerMovement } from "./step.js";
+import { botInput, createBotMemory } from "./bot.js";
+import { createGameState, createPlayer, step, stepPlayerMovement, zipRide } from "./step.js";
 import { emptyInput, type PlayerInput } from "./types.js";
 
 /** Una tirolesa de 600 px hacia la derecha, con una pared en el medio. */
@@ -55,5 +56,43 @@ describe("las tirolesas", () => {
     stepPlayerMovement(p, move(t++, -1), map);
     expect(p.zip).toBe(true);
     expect(p.jumpVx).toBeLessThan(0);
+  });
+
+  it("sin inputs (se cortó, o la pestaña quedó de fondo) igual llega al otro poste", () => {
+    const state = createGameState(1);
+    state.phase = "playing";
+    const p = createPlayer(1, a.x, a.y);
+    p.alive = true;
+    p.place = 0;
+    const other = createPlayer(2, WORLD_CENTER_X, WORLD_CENTER_Y + 900);
+    other.alive = true;
+    other.place = 0;
+    state.players.push(p, other);
+    step(state, new Map([[1, [move(1, 1)]]]), [], map);
+    expect(p.zip).toBe(true);
+    for (let t = 0; t < 40; t++) step(state, new Map(), [], map);
+    expect(p.jumpTicks).toBe(0);
+    expect(Math.hypot(p.x - b.x, p.y - b.y)).toBeLessThan(40);
+    // Y lo volado no cuenta como caminado.
+    expect(p.traveled).toBeLessThan(30);
+  });
+
+  it("un bot en un poste no se sube al cable sin querer", () => {
+    const state = createGameState(1);
+    state.phase = "playing";
+    const bot = createPlayer(1, a.x + 4, a.y);
+    bot.alive = true;
+    bot.place = 0;
+    state.players.push(bot);
+    // Algo que quiere justo del otro lado del cable.
+    state.items.push({ id: 1, kind: 2, ref: 1, tier: 3, x: b.x - 40, y: b.y, count: 1 });
+    const memory = createBotMemory(2);
+    for (let t = 0; t < 20; t++) {
+      const input = botInput(state, bot, memory, map);
+      const len = Math.hypot(input.moveX, input.moveY);
+      if (len > 0) expect(zipRide(map, bot.x, bot.y, input.moveX / len, input.moveY / len)).toBeNull();
+      step(state, new Map([[1, [input]]]), [], map);
+      expect(bot.zip).toBe(false);
+    }
   });
 });

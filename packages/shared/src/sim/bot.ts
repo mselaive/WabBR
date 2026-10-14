@@ -35,7 +35,7 @@ import { makeRng } from "../math.js";
 import { segmentBoxT } from "./collision.js";
 import { findPath, navGridFor, walkableLine } from "./nav.js";
 import { concealedFrom, hasLineOfSight } from "./sight.js";
-import { advanceGrenade, canThrow, carryLimit, grenadeLaunch, nearCampfire } from "./step.js";
+import { advanceGrenade, canThrow, carryLimit, grenadeLaunch, nearCampfire, zipRide } from "./step.js";
 import {
   ACT_NONE,
   ACT_PICKUP,
@@ -223,7 +223,7 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
     if (state.players.some((p) => p.reviving === me.id)) return input;
     const mate = state.players.find((p) => p !== me && p.team === me.team && p.alive && !p.downed);
     const away = target ? { x: me.x * 2 - target.x, y: me.y * 2 - target.y } : mate ? { x: mate.x, y: mate.y } : null;
-    steer(me, mem, away, input, target ? null : arena, state);
+    steer(me, mem, away, input, target ? null : arena, state, arena);
     input.sprint = false;
     return input;
   }
@@ -246,7 +246,7 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
         input.act = ACT_PICKUP;
         return input;
       }
-      steer(me, mem, { x: fallen.x, y: fallen.y }, input, arena, state);
+      steer(me, mem, { x: fallen.x, y: fallen.y }, input, arena, state, arena);
       return input;
     }
   }
@@ -380,7 +380,7 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
 
   // Peleando se mueve de costado a pocos pasos: eso va directo. Para todo lo
   // demás —una caja, la zona, pasear— se busca el camino.
-  steer(me, mem, goal, input, target !== null && zoneGoal === null ? null : arena, state);
+  steer(me, mem, goal, input, target !== null && zoneGoal === null ? null : arena, state, arena);
   return input;
 }
 
@@ -518,6 +518,30 @@ function avoidMines(state: GameState, me: PlayerState, angle: number, arena: Are
     dy += (oy / d) * push;
   }
   return Math.atan2(dy, dx);
+}
+
+/**
+ * Los bots no usan las tirolesas: no saben adónde llevan, y subirse sin querer
+ * los hacía ir y venir entre los dos postes (a veces hasta la zona). Si el
+ * paso de ahora los subiría a un cable, el más parecido que no.
+ */
+function offTheZipline(map: ArenaMap, me: PlayerState, angle: number, input: PlayerInput): void {
+  const len = Math.hypot(input.moveX, input.moveY);
+  if (len === 0 || !zipRide(map, me.x, me.y, input.moveX / len, input.moveY / len)) return;
+  const options: [number, number][] = [];
+  for (const mx of [-1, 0, 1]) for (const my of [-1, 0, 1]) if (mx !== 0 || my !== 0) options.push([mx, my]);
+  options.sort((a, b) => angleOff(Math.atan2(a[1], a[0]), angle) - angleOff(Math.atan2(b[1], b[0]), angle));
+  for (const [mx, my] of options) {
+    const l = Math.hypot(mx, my);
+    if (zipRide(map, me.x, me.y, mx / l, my / l)) continue;
+    input.moveX = mx;
+    input.moveY = my;
+    return;
+  }
+}
+
+function angleOff(a: number, b: number): number {
+  return Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
 }
 
 /** A cuánto esquiva una mina que ve: menos que lo que la ve (MINE_SPOT). */
@@ -777,6 +801,8 @@ function steer(
   /** Con el mapa, busca el camino; sin él, va en línea recta. */
   arena: ArenaMap | null,
   state: GameState,
+  /** El mapa siempre (aunque peleando no se busque camino): las tirolesas. */
+  map: ArenaMap,
 ): void {
   let angle: number | null = null;
   const next = goal && arena ? nextStep(me, mem, goal, arena, state) : goal;
@@ -794,6 +820,7 @@ function steer(
   const sin = Math.sin(angle);
   input.moveX = Math.abs(cos) > 0.38 ? Math.sign(cos) : 0;
   input.moveY = Math.abs(sin) > 0.38 ? Math.sign(sin) : 0;
+  offTheZipline(map, me, angle, input);
   if (!input.sprint && goal && Math.hypot(goal.x - me.x, goal.y - me.y) > 350 && me.stamina > 50) {
     input.sprint = true;
   }

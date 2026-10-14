@@ -130,4 +130,20 @@ describe("los bots y las minas", () => {
     // Y el chaleco lo agarró igual, por el costado.
     expect(bot.shield).toBeGreaterThan(0);
   });
+
+  it("el que pasa volando (hongo o tirolesa) por encima no la pisa", () => {
+    const state = scene();
+    plant(state);
+    const mine = state.mines[0]!;
+    run(state, MINE_ARM_TICKS);
+    const rival = state.players[1]!;
+    rival.x = mine.x;
+    rival.y = mine.y;
+    rival.jumpTicks = 5;
+    rival.jumpVx = 0;
+    rival.jumpVy = 0;
+    const events = run(state, 1);
+    expect(events.some((e) => e.t === "explosion")).toBe(false);
+    expect(state.mines).toHaveLength(1);
+  });
 });

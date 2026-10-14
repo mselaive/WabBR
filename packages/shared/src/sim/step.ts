@@ -977,8 +977,10 @@ function land(p: PlayerState, arena: ArenaMap): void {
 }
 
 /**
- * Un tick de caída sin input (se cortó, o no llegó nada a tiempo). Si no, el
- * que se desconecta en el aire quedaría colgado e invulnerable.
+ * Un tick de vuelo sin input (paracaídas, hongo o tirolesa): se cortó la
+ * conexión, o hace rato que no llega nada (el servidor deja de mandar la lista;
+ * ver GameRoom). Si no, el que deja de mandar quedaría colgado en el aire, y
+ * en paracaídas, invulnerable.
  */
 function fallWithoutInput(p: PlayerState, arena: ArenaMap): void {
   stepPlayerMovement(p, { ...emptyInput(p.lastSeq), aim: p.aim }, arena);
@@ -2090,6 +2092,7 @@ function stepMines(state: GameState, arena: ArenaMap, events: SimEvent[]): void 
         (p) =>
           p.alive &&
           p.airTicks === 0 &&
+          p.jumpTicks === 0 &&
           p.team !== m.team &&
           (p.x - m.x) * (p.x - m.x) + (p.y - m.y) * (p.y - m.y) <= MINE_TRIGGER * MINE_TRIGGER,
       );
@@ -2622,7 +2625,7 @@ export function step(
     const input = inputs.get(p.id);
     const fromX = p.x;
     const fromY = p.y;
-    const flyingAtStart = p.airTicks > 0;
+    const flyingAtStart = p.airTicks > 0 || p.jumpTicks > 0;
 
     if (p.boostTicks > 0) {
       p.boostTicks--;
@@ -2659,7 +2662,7 @@ export function step(
           p.reviving = -1;
         }
       }
-    } else if (p.airTicks > 0) {
+    } else if (p.airTicks > 0 || p.jumpTicks > 0) {
       fallWithoutInput(p, arena);
     } else {
       p.vx = 0;
@@ -2674,7 +2677,8 @@ export function step(
         }
       }
     }
-    // Lo planeado no cuenta como caminado (el título de "Maratonista" es a pie).
+    // Lo volado (paracaídas, hongo, tirolesa) no cuenta como caminado: el
+    // título de "Maratonista" es a pie.
     if (!flyingAtStart) p.traveled += Math.hypot(p.x - fromX, p.y - fromY);
   }
 

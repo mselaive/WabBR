@@ -123,12 +123,14 @@ está en `main`. Protocolo **v3** (producción está en v2): al desplegar, prime
 
 ### Revisiones
 
-Seis revisiones independientes (subagentes que leen el diff y prueban en una copia aparte). Lo
+Siete revisiones independientes (subagentes que leen el diff y prueban en una copia aparte). Lo
 más importante que encontraron y quedó arreglado: el que esperaba la segunda oportunidad veía a
 todos; los bots le tiraban al que caía en paracaídas y se volaban con la gallina a cohetazos; el
 tiro oído ubicaba al tirador a 80 px; el seq de la partida anterior hacía saltar la predicción al
 empezar; un tick sin input en el aire adelantaba la caída; "¡Quedan dos!" salía al empezar un 2
-contra 2; los que se iban en partida aparecían en los resultados siguientes. Cada arreglo tiene su
+contra 2; los que se iban en partida aparecían en los resultados siguientes; el que dejaba de
+mandar inputs (la pestaña de fondo) quedaba colgado en el paracaídas, invulnerable, y podía ganar
+así; los bots iban y venían por las tirolesas sin querer. Cada arreglo tiene su
 test, y la mayoría se probó a la inversa (romper el arreglo y ver que el test falla).
 
 ## Ideas que quedaron, en el orden en que las haría

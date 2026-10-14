@@ -93,6 +93,8 @@ interface Seat {
   lastEmoteAt: number;
   /** Por quién apostó en esta partida (id), o -1. */
   bet: number;
+  /** Ticks seguidos sin inputs mientras vuela (ver tick()). */
+  starved: number;
 }
 
 /** Cada cuánto se le da una oportunidad de correr al loop (no es el ritmo del tick). */
@@ -113,6 +115,8 @@ const EMOTE_INTERVAL_MS = 1000;
 const BOT_EMOTE_CHANCE = 0.3;
 /** Cuánto se espera después de una partida antes de arrancar la siguiente sola. */
 const NEXT_MATCH_MS = 12_000;
+/** Volando, cuántos ticks sin inputs se esperan antes de seguir la caída sin él. */
+const STARVED_FLYING_TICKS = 10;
 /** Para ser el campeón de la sala (y que todos te vean): ganadas, y ventaja sobre el segundo. */
 const CHAMPION_MIN_WINS = 3;
 const CHAMPION_LEAD = 2;
@@ -157,6 +161,8 @@ export class GameRoom extends Server<Env> {
    * resultado, cambiar algo o desmarcarse.
    */
   private nextMatchAt = 0;
+  /** El último tick en que se mandaron pasos. */
+  private lastStepsTick = 0;
   /** Último tick en que cada observador vio a cada objetivo, para el margen de gracia. */
   private lastSeen = new Map<number, Map<number, number>>();
   private lastPumpAt = 0;
@@ -235,6 +241,7 @@ export class GameRoom extends Server<Env> {
       lastMarkAt: 0,
       lastEmoteAt: 0,
       bet: -1,
+      starved: 0,
       bot: null,
     };
     this.seats.set(playerId, seat);
@@ -695,10 +702,17 @@ export class GameRoom extends Server<Env> {
         continue;
       }
       // Con la conexión cortada, sin lista: así la simulación lo sigue haciendo
-      // caer si estaba en paracaídas. Conectado y sin nada a tiempo, lista vacía:
-      // espera su input, igual que la predicción.
+      // volar (paracaídas, hongo, tirolesa) hasta caer. Conectado y sin nada a
+      // tiempo, lista vacía: espera su input, igual que la predicción... salvo
+      // que lleve medio segundo sin mandar nada volando (la pestaña de fondo,
+      // o un cliente que se guarda el paracaídas para cuando le convenga).
       if (seat.goneAt > 0) continue;
-      inputs.set(seat.playerId, seat.inputs.take());
+      const batch = seat.inputs.take();
+      const me = findPlayer(s, seat.playerId);
+      const flying = me !== undefined && me.alive && (me.airTicks > 0 || me.jumpTicks > 0);
+      seat.starved = batch.length === 0 && flying ? seat.starved + 1 : 0;
+      if (seat.starved > STARVED_FLYING_TICKS) continue;
+      inputs.set(seat.playerId, batch);
     }
 
     // El que espera su segunda oportunidad con la conexión cortada no vuelve
@@ -846,6 +860,11 @@ export class GameRoom extends Server<Env> {
       return;
     }
 
+    // Los pasos, cada medio segundo de simulación (aunque este envío junte
+    // varios ticks: con "tick % 10" se perdían las tandas del medio).
+    const stepsNow = s.tick - this.lastStepsTick >= 10 || s.tick < this.lastStepsTick;
+    if (stepsNow) this.lastStepsTick = s.tick;
+
     for (const conn of this.getConnections<ConnState>()) {
       const viewerId = conn.state?.playerId;
       const viewer = this.eyesOf(viewerId === undefined ? undefined : findPlayer(s, viewerId));
@@ -883,7 +902,7 @@ export class GameRoom extends Server<Env> {
       }
 
       const ev = this.visibleEvents(viewer);
-      ev.push(...this.footsteps(viewer, new Set(players.map((p) => p[0]!))));
+      ev.push(...this.footsteps(viewer, new Set(players.map((p) => p[0]!)), stepsNow));
 
       conn.send(
         encodeServer({
@@ -977,12 +996,13 @@ export class GameRoom extends Server<Env> {
    * Los pasos que se oyen: los de los rivales que corren cerca y no se ven
    * (cada medio segundo). Caminando no hacen ruido: correr es una decisión.
    */
-  private footsteps(viewer: PlayerState | undefined, sent: ReadonlySet<number>): SimEvent[] {
-    if (!viewer?.alive || this.state.tick % 10 !== 0) return [];
+  private footsteps(viewer: PlayerState | undefined, sent: ReadonlySet<number>, now: boolean): SimEvent[] {
+    if (!now || !viewer?.alive) return [];
     const out: SimEvent[] = [];
     for (const p of this.state.players) {
-      if (!p.alive || p.team === viewer.team || p.airTicks > 0 || sent.has(p.id)) continue;
-      if (Math.hypot(p.vx, p.vy) < PLAYER_SPEED * 1.2) continue;
+      if (!p.alive || p.team === viewer.team || p.airTicks > 0 || p.jumpTicks > 0 || sent.has(p.id)) continue;
+      // Corriendo: más rápido que caminar con adrenalina (258), que no hace ruido.
+      if (Math.hypot(p.vx, p.vy) < PLAYER_SPEED * 1.3) continue;
       if (Math.hypot(p.x - viewer.x, p.y - viewer.y) > STEPS_RANGE) continue;
       out.push({ t: "steps", ...this.roughly(viewer, p.x, p.y) });
     }
@@ -1132,7 +1152,7 @@ export class GameRoom extends Server<Env> {
       // En partida el cuerpo desaparece; en lobby se saca de la lista.
       player.alive = false;
     }
-    if (this.state.phase === "lobby" || this.state.phase === "ended") {
+    if (this.state.phase !== "playing") {
       this.state.players = this.state.players.filter((p) => p.id !== playerId);
     }
 
@@ -1175,6 +1195,7 @@ export class GameRoom extends Server<Env> {
       lastMarkAt: 0,
       lastEmoteAt: 0,
       bet: -1,
+      starved: 0,
       bot: { ...createBotMemory((Date.now() ^ (playerId * 7919)) | 0), skill: this.botSkill },
     });
     this.state.players.push(createPlayer(playerId));

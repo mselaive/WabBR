@@ -170,8 +170,13 @@ export class Game {
   private assistTargets: { x: number; y: number }[] = [];
   /** Al entrar, agregar bots y marcarse listo (el botón "Practicar con bots"). */
   private practice = false;
-  /** Cambiaste de color en esta sala: el que te toque se guarda. */
-  private colorChosen = false;
+  /**
+   * Cambios de color pedidos que todavía no llegaron, y tu color de ahora. Se
+   * guarda sólo el que llega por un pedido tuyo: si al entrar a otra sala tu
+   * color estaba ocupado, el que te dieron no reemplaza tu preferencia.
+   */
+  private colorPending = 0;
+  private myColor = -1;
   /** El último latido de poca vida (performance.now()). */
   private lastHeartbeat = 0;
   /**
@@ -385,6 +390,8 @@ export class Game {
 
   connect(room: string, name: string): void {
     this.disconnect();
+    this.colorPending = 0;
+    this.myColor = -1;
     this.ui.showScreen("connecting");
 
     this.net = new Net({
@@ -523,7 +530,13 @@ export class Game {
       case "roster": {
         this.nextMatchAt = msg.nextIn ? performance.now() + msg.nextIn : 0;
         const mine = msg.roster.find((p) => p.id === this.localId);
-        if (mine && this.colorChosen) storeColor(mine.colorIndex);
+        if (mine) {
+          if (this.colorPending > 0 && this.myColor >= 0 && mine.colorIndex !== this.myColor) {
+            storeColor(mine.colorIndex);
+            this.colorPending--;
+          }
+          this.myColor = mine.colorIndex;
+        }
         if ((msg.map ?? 0) !== this.mapIndex) this.changeMap(msg.map ?? 0);
         this.ui.setMap(msg.mapMode ?? 0, MAPS[this.mapIndex]?.name ?? "", msg.hostId === this.localId);
         this.mapMode = msg.mapMode ?? 0;
@@ -1817,7 +1830,7 @@ export class Game {
   /** El siguiente color libre. Se recuerda para la próxima sala. */
   nextColor(): void {
     this.net?.send({ t: "color" });
-    this.colorChosen = true;
+    this.colorPending++;
   }
 
   /** Empezar en paracaídas. El servidor comprueba que seas el host. */

@@ -1511,6 +1511,37 @@ body.touch #consumables .consumable {
   flex: 1 1 40%;
 }
 
+/* Con lugar, de a tres: dos filas en vez de tres. */
+@media (min-width: 560px) {
+  .rules-row .mode-btn {
+    flex-basis: 30%;
+  }
+}
+
+/*
+ * Las opciones de sí o no, en una sola fila: cada una se prende y se apaga
+ * sola. La bolita dice que es un interruptor y no una elección entre tres.
+ */
+.options-row .mode-btn {
+  padding: 8px 6px;
+  line-height: 1.2;
+}
+
+.options-row .mode-btn::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  vertical-align: 1px;
+}
+
+.options-row .mode-btn.on::before {
+  background: currentColor;
+}
+
 /* El selector de gorros del menú. */
 .hat-picker {
   display: flex;

@@ -26,6 +26,8 @@ export interface TitleStats {
   /** En metros. */
   traveled: number;
   thrown: number;
+  /** Volvió con la segunda oportunidad. */
+  cameBack?: boolean;
 }
 
 export interface Title {
@@ -78,6 +80,7 @@ export function titlesFor(rows: readonly TitleStats[]): Map<number, Title> {
     if (r.selfDamage >= 30) give(r, "Kamikaze", `se sacó ${Math.round(r.selfDamage)} de vida solo`);
     else if (r.shots >= 5 && r.hits === 0) give(r, "Ciego", "no dio una bala");
     else if (r.shots === 0 && r.survived >= 30) give(r, "Pacifista", "no disparó ni una vez");
+    else if (r.cameBack) give(r, "Gato", "volvió de la muerte");
   }
 
   // Más "el que más", ahora entre los que quedaron sin título.

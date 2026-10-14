@@ -16,6 +16,7 @@ import {
   REVIVE_HP,
   REVIVE_RANGE,
   REVIVE_TICKS,
+  RESPAWN_TICKS,
   RULES_BLITZ,
   RULES_CHAOS,
   RULES_LEGENDARY,
@@ -172,6 +173,8 @@ export function createPlayer(id: number, x = 0, y = 0): PlayerState {
     reloadCd: 0,
     lastSeq: 0,
     diedAtTick: -1,
+    respawnTick: -1,
+    usedSecondChance: false,
     killerId: -1,
     inBush: false,
     lastShotTick: -1000,
@@ -226,6 +229,7 @@ export function createGameState(seed = 1): GameState {
     championId: -1,
     night: false,
     rules: 0,
+    secondChance: false,
     airdrops: [],
     nextAirdropId: 1,
     strikes: [],
@@ -355,43 +359,16 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
     p.y = sp.y;
     p.vx = 0;
     p.vy = 0;
-    p.hp = PLAYER_MAX_HP;
-    p.alive = true;
+    equipFresh(state, p);
     p.kills = 0;
-    const first = startingWeapon(state.rules);
-    p.slots = [first, -1];
-    p.slotTier = [clampTier(first, state.rules === RULES_LEGENDARY ? 4 : 0), 0];
-    p.slotAmmo = [weaponStats(first, p.slotTier[0]!).magSize, 0];
-    p.activeSlot = 0;
-    // Relámpago: con chaleco, para que las peleas apuradas no se terminen al primer tiro.
-    p.shield = state.rules === RULES_BLITZ ? ARMORS[0]!.shield : 0;
-    p.consumables = new Array<number>(CONSUMABLE_KINDS).fill(0);
-    p.useCd = 0;
-    p.useIndex = -1;
-    p.boostTicks = 0;
-    p.stamina = STAMINA_MAX;
-    p.staminaDelay = 0;
-    // Caos: con granadas y molotovs de entrada.
-    p.grenades = state.rules === RULES_CHAOS ? 2 : 0;
-    p.smokes = 0;
-    p.molotovs = state.rules === RULES_CHAOS ? 2 : 0;
-    p.downed = false;
-    p.downedBy = -1;
-    p.downedCause = 0;
     p.longestKill = 0;
-    p.jumpTicks = 0;
-    p.jumpVx = 0;
-    p.jumpVy = 0;
-    p.lastHurtTick = -1000;
     p.healed = 0;
     p.selfDamage = 0;
     p.traveled = 0;
     p.thrown = 0;
-    p.reviving = -1;
-    p.reviveTicks = 0;
-    p.fireCd = 0;
-    p.reloadCd = 0;
     p.diedAtTick = -1;
+    p.respawnTick = -1;
+    p.usedSecondChance = false;
     p.killerId = -1;
     p.place = 0;
     p.inBush = false;
@@ -408,6 +385,122 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
     // Mirando al centro de la arena.
     p.aim = Math.atan2(WORLD_CENTER_Y - sp.y, WORLD_CENTER_X - sp.x);
   });
+}
+
+/**
+ * Vivo, con la vida llena y lo de arranque: al empezar la partida y al volver
+ * con la segunda oportunidad. Las estadísticas (kills, daño) no se tocan acá.
+ */
+function equipFresh(state: GameState, p: PlayerState): void {
+  p.hp = PLAYER_MAX_HP;
+  p.alive = true;
+  const first = startingWeapon(state.rules);
+  p.slots = [first, -1];
+  p.slotTier = [clampTier(first, state.rules === RULES_LEGENDARY ? 4 : 0), 0];
+  p.slotAmmo = [weaponStats(first, p.slotTier[0]!).magSize, 0];
+  p.activeSlot = 0;
+  // Relámpago: con chaleco, para que las peleas apuradas no se terminen al primer tiro.
+  p.shield = state.rules === RULES_BLITZ ? ARMORS[0]!.shield : 0;
+  p.consumables = new Array<number>(CONSUMABLE_KINDS).fill(0);
+  p.useCd = 0;
+  p.useIndex = -1;
+  p.boostTicks = 0;
+  p.stamina = STAMINA_MAX;
+  p.staminaDelay = 0;
+  // Caos: con granadas y molotovs de entrada.
+  p.grenades = state.rules === RULES_CHAOS ? 2 : 0;
+  p.smokes = 0;
+  p.molotovs = state.rules === RULES_CHAOS ? 2 : 0;
+  p.downed = false;
+  p.downedBy = -1;
+  p.downedCause = 0;
+  p.jumpTicks = 0;
+  p.jumpVx = 0;
+  p.jumpVy = 0;
+  p.lastHurtTick = -1000;
+  p.reviving = -1;
+  p.reviveTicks = 0;
+  p.fireCd = 0;
+  p.reloadCd = 0;
+}
+
+/**
+ * ¿Todavía vale la segunda oportunidad? Hasta que la zona empieza a cerrarse
+ * por segunda vez: el que cae en el primer tiroteo no se pasa la partida
+ * mirando, pero tampoco se vuelve del final.
+ */
+export function secondChanceOpen(state: GameState): boolean {
+  return state.secondChance && (state.zone.phase === 0 || (state.zone.phase === 1 && !state.zone.shrinking));
+}
+
+/**
+ * Los que esperan su segunda oportunidad vuelven a los RESPAWN_TICKS, adentro
+ * de la zona (de la próxima, si se está cerrando) y lo más lejos posible de
+ * los rivales: de seis lugares libres al azar, el que tenga al más cercano
+ * más lejos. El que se desconectó mientras esperaba la pierde.
+ */
+function stepRespawns(state: GameState, arena: ArenaMap, events: SimEvent[]): void {
+  for (const p of state.players) {
+    if (p.alive || p.respawnTick < 0) continue;
+    if (!p.connected) {
+      p.respawnTick = -1;
+      continue;
+    }
+    if (state.tick < p.respawnTick) continue;
+    p.respawnTick = -1;
+
+    const z = state.zone;
+    const cx = z.shrinking ? z.targetX : z.x;
+    const cy = z.shrinking ? z.targetY : z.y;
+    const radius = z.shrinking ? z.targetRadius : z.radius;
+    const random = (): number => {
+      const r = nextRandom(state.rng);
+      state.rng = r.state;
+      return r.value;
+    };
+    let best = { x: cx, y: cy };
+    let bestScore = -1;
+    for (let found = 0, attempt = 0; found < 6 && attempt < 60; attempt++) {
+      const angle = random() * Math.PI * 2;
+      const d = (0.3 + random() * 0.5) * radius;
+      const x = cx + Math.cos(angle) * d;
+      const y = cy + Math.sin(angle) * d;
+      if (!respawnClear(x, y, arena)) continue;
+      found++;
+      let nearest = Infinity;
+      for (const o of state.players) {
+        if (o.alive && o.team !== p.team) nearest = Math.min(nearest, Math.hypot(o.x - x, o.y - y));
+      }
+      if (nearest > bestScore) {
+        bestScore = nearest;
+        best = { x, y };
+      }
+    }
+
+    equipFresh(state, p);
+    p.x = best.x;
+    p.y = best.y;
+    p.vx = 0;
+    p.vy = 0;
+    p.diedAtTick = -1;
+    p.killerId = -1;
+    // Sin historia: rebobinarlo tiene que dar donde apareció, no donde murió.
+    for (let i = 0; i < TRAIL_LENGTH; i++) {
+      p.trail[i * 2] = p.x;
+      p.trail[i * 2 + 1] = p.y;
+    }
+    events.push({ t: "respawn", id: p.id, x: p.x, y: p.y });
+  }
+}
+
+/** Un lugar donde aparecer: adentro de la arena y sin nada encima, con margen. */
+function respawnClear(x: number, y: number, arena: ArenaMap): boolean {
+  if (!insideArena(x, y, PLAYER_RADIUS + 40)) return false;
+  arena.grid.query(x, y, PLAYER_RADIUS + 8, nearby);
+  for (let i = 0; i < nearby.length; i++) {
+    if (circleHitsBox(x, y, PLAYER_RADIUS + 8, arena.obstacles[nearby[i]!]!)) return false;
+  }
+  return true;
 }
 
 export function findPlayer(state: GameState, id: number): PlayerState | undefined {
@@ -1267,6 +1360,13 @@ function killPlayer(
     }
   }
 
+  // Segunda oportunidad: si murió temprano, vuelve una vez.
+  const respawn = secondChanceOpen(state) && !victim.usedSecondChance && victim.connected;
+  if (respawn) {
+    victim.usedSecondChance = true;
+    victim.respawnTick = state.tick + RESPAWN_TICKS;
+  }
+
   // La recompensa por el más buscado: el que lo mata se cura entero.
   if (state.wanted?.id === victim.id) {
     state.wanted = null;
@@ -1284,6 +1384,7 @@ function killPlayer(
     ...(killer && killer.id !== victim.id && killer.alive
       ? { killerHp: Math.max(1, Math.ceil(killer.hp)), killerShield: Math.ceil(killer.shield) }
       : {}),
+    ...(respawn ? { respawn: true } : {}),
   });
 }
 
@@ -2037,6 +2138,7 @@ export function step(
   stepStrikes(state, arena, events);
   stepWanted(state, events);
   stepAirdrops(state, events);
+  stepRespawns(state, arena, events);
 
   // Una pareja con los dos caídos ya no tiene quién la levante: se terminan.
   const standing = new Set(state.players.filter((p) => p.alive && !p.downed).map((p) => p.team));
@@ -2046,6 +2148,10 @@ export function step(
 
   const alive = state.players.filter((p) => p.alive);
   const aliveTeams = new Set(alive.map((p) => p.team));
+  // El que espera su segunda oportunidad sigue en carrera: su equipo no quedó
+  // afuera, y la partida no termina mientras tanto.
+  const waiting = state.players.filter((p) => !p.alive && p.respawnTick >= 0);
+  for (const p of waiting) aliveTeams.add(p.team);
 
   // Puestos: el que cae queda detrás de todos los que siguen en pie. Se mira
   // acá y no al morir para cubrir también al que se desconecta, y para que dos
@@ -2058,7 +2164,8 @@ export function step(
     if (!aliveTeams.has(p.team)) p.place = aliveTeams.size + 1;
   }
 
-  if (aliveTeams.size <= 1) {
+  // Si los únicos que quedan están esperando para volver, se los espera.
+  if (aliveTeams.size <= 1 && !(alive.length === 0 && waiting.length > 0)) {
     state.phase = "ended";
     state.phaseTicksLeft = ENDED_TICKS;
     state.winnerId = alive.length > 0 ? alive[0]!.id : -1;

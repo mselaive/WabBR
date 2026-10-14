@@ -139,6 +139,10 @@ export interface PlayerState {
   lastSeq: number;
   /** Tick en que murió, para el kill feed y la cámara de espectador. -1 si vive. */
   diedAtTick: number;
+  /** Tick en que vuelve con la segunda oportunidad, o -1 si no está esperando. */
+  respawnTick: number;
+  /** Ya usó la segunda oportunidad de esta partida. */
+  usedSecondChance: boolean;
   killerId: number;
   /** Metido en un arbusto: ver `concealedFrom`. Se calcula en cada tick. */
   inBush: boolean;
@@ -319,6 +323,11 @@ export interface GameState {
   night: boolean;
   /** Reglas especiales (ver RULES). */
   rules: number;
+  /**
+   * Segunda oportunidad: el que muere temprano (antes de que la zona se cierre
+   * por segunda vez) vuelve una vez, con lo de arranque. Lo elige el host.
+   */
+  secondChance: boolean;
   /** Parejas elegidas en el lobby (ids). Los demás se emparejan por sorteo. */
   pairs: [number, number][];
   airdrops: AirdropState[];
@@ -377,6 +386,8 @@ export type SimEvent =
        */
       killerHp?: number;
       killerShield?: number;
+      /** Vuelve con la segunda oportunidad: no quedó afuera. */
+      respawn?: boolean;
     }
   | {
       t: "shot";
@@ -431,4 +442,6 @@ export type SimEvent =
   /** Hay un nuevo más buscado. */
   | { t: "wanted"; id: number }
   /** Alguien mató al más buscado y cobró la recompensa. */
-  | { t: "bounty"; byId: number; targetId: number };
+  | { t: "bounty"; byId: number; targetId: number }
+  /** Volvió con la segunda oportunidad. */
+  | { t: "respawn"; id: number; x: number; y: number };

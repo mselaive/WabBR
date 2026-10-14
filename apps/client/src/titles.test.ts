@@ -62,4 +62,14 @@ describe("un título para cada uno", () => {
     expect(titles.get(5)?.label).toBe("Primero en caer");
     expect(titles.get(4)?.label).toBe("Turista");
   });
+
+  it("el que volvió con la segunda oportunidad es un gato", () => {
+    const titles = titlesFor([
+      row(1, 1, { kills: 2, damage: 150, shots: 20, hits: 8 }),
+      row(2, 2, { cameBack: true, damage: 40, shots: 8, hits: 2 }),
+      row(3, 3, { damage: 30, shots: 9, hits: 2 }),
+    ]);
+    expect(titles.get(2)).toEqual({ label: "Gato", detail: "volvió de la muerte" });
+    expect(titles.get(3)?.label).not.toBe("Gato");
+  });
 });

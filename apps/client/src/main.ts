@@ -36,6 +36,7 @@ const ui = new UI({
   onNight: (on) => game.setNight(on),
   onRules: (rules) => game.setRules(rules),
   onMapMode: (mode) => game.setMapMode(mode),
+  onSecondChance: (on) => game.setSecondChance(on),
   onLeave: () => {
     game.disconnect();
     ui.showScreen("menu");

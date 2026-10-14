@@ -126,6 +126,9 @@ export const STRIKE_BOMB_EVERY = 10;
  * de todos cada WANTED_REVEAL_TICKS. Lo sigue siendo mientras vaya primero
  * solo; si lo alcanzan, deja de serlo. El que lo mata se cura entero.
  */
+/** Cuánto se espera para volver con la segunda oportunidad: 8 s. */
+export const RESPAWN_TICKS = 160;
+
 export const WANTED_MIN_KILLS = 4;
 export const WANTED_LEAD = 2;
 

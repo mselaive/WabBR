@@ -23,6 +23,7 @@ import {
   DOWNED_HP,
   REVIVE_RANGE,
   REVIVE_TICKS,
+  RESPAWN_TICKS,
   bushAt,
   segmentBoxT,
   smokeRadius,
@@ -155,6 +156,8 @@ export class Game {
   private recorded = false;
   /** Cómo te mataron, para mostrarlo mientras mirás el resto de la partida. */
   private deathNote = "";
+  /** Cuándo volvés con la segunda oportunidad (performance.now()), o 0 si no. */
+  private respawnAt = 0;
   /** El campeón de la sala (el que más partidas ganó) y dónde está, o null. */
   private champion: { id: number; x: number; y: number } | null = null;
   /** De qué campeón ya se avisó en esta partida. */
@@ -422,6 +425,7 @@ export class Game {
     this.input.enabled = false;
     this.input.releaseAll();
     this.spectateId = -1;
+    this.respawnAt = 0;
     this.freeCam = null;
     this.watched = null;
     this.spawned = false;
@@ -471,6 +475,7 @@ export class Game {
         this.ui.setMode(this.teamSize, this.hostId === this.localId);
         this.ui.setBotSkill(msg.botSkill ?? 1, this.hostId === this.localId, msg.roster.some((p) => p.bot));
         this.ui.setNight(msg.night === true, this.hostId === this.localId);
+        this.ui.setSecondChance(msg.secondChance === true, this.hostId === this.localId);
         this.ui.setRules(msg.rules ?? 0, this.hostId === this.localId);
         this.rules = msg.rules ?? 0;
         this.night = msg.night === true;
@@ -481,6 +486,7 @@ export class Game {
         // Arranca la ronda: el predictor se re-sincroniza con el primer snapshot.
         this.sawStart = true;
         this.recorded = false;
+        this.respawnAt = 0;
         this.streaks.clear();
         if (this.rules !== 0) this.ui.addNotice(`Reglas de esta partida: ${RULES[this.rules] ?? ""}`);
         if (this.mapMode === 1) this.ui.addNotice(`Mapa: ${MAPS[this.mapIndex]?.name ?? ""}`);
@@ -627,6 +633,7 @@ export class Game {
       this.spawned = false;
       this.spectateId = -1;
       this.deathNote = "";
+      this.respawnAt = 0;
       this.recorded = false;
       this.announcedChampion = -1;
       this.streaks.clear();
@@ -684,6 +691,7 @@ export class Game {
           selfDamage: res?.selfDamage ?? 0,
           traveled: Math.round((res?.traveled ?? 0) / PX_PER_METER),
           thrown: res?.thrown ?? 0,
+          cameBack: res?.cameBack ?? false,
         };
       }),
     );
@@ -797,6 +805,23 @@ export class Game {
           if (ev.byId === this.localId) this.sound.pickup();
           break;
         }
+        case "respawn": {
+          if (ev.id === this.localId) {
+            // De vuelta: a jugar. El predictor se planta donde apareció con el
+            // próximo snapshot, como al empezar.
+            this.respawnAt = 0;
+            this.deathNote = "";
+            this.spectateId = -1;
+            this.freeCam = null;
+            this.spawned = false;
+            this.ui.setSpectating(null);
+            this.ui.addNotice("¡Segunda oportunidad! Volviste con lo de arranque");
+            this.sound.airdrop();
+          } else {
+            this.ui.addNotice(`${this.everyone.get(ev.id)?.name ?? "Alguien"} volvió con su segunda oportunidad`);
+          }
+          break;
+        }
         case "strike":
           this.ui.addNotice("¡Bombardeo! Salí de la zona roja o metete en una casa");
           this.sound.siren();
@@ -907,6 +932,7 @@ export class Game {
           }
           if (ev.targetId === this.localId) {
             this.deathNote = deathNote(ev, killer?.name);
+            this.respawnAt = ev.respawn ? performance.now() + RESPAWN_TICKS * MS_PER_TICK : 0;
             // En dúos se sigue mirando al compañero, que sigue jugando por los dos.
             const mate = [...this.mates()].find((id) => this.standings.get(id)?.alive);
             this.spectateId = mate ?? ev.byId;
@@ -1011,7 +1037,10 @@ export class Game {
     this.world.drawMarks(this.marks);
     // Al espectear, el punto destacado del minimapa es el que estás mirando.
     const playing = this.lastLocal?.alive === true;
-    this.minimap.draw(frame, this.roster, this.watched?.id ?? this.localId, mates, this.marks, this.wanted, !playing, this.champion);
+    // Esperando para volver se ve lo mismo que vivo: si no, volverías sabiendo
+    // dónde está cada uno.
+    const showAll = !playing && this.respawnAt === 0;
+    this.minimap.draw(frame, this.roster, this.watched?.id ?? this.localId, mates, this.marks, this.wanted, showAll, this.champion);
     this.updateHud(frame, localPredicted);
 
     this.world.setCrosshair(this.input.mouseX, this.input.mouseY, this.phase === "playing");
@@ -1199,7 +1228,7 @@ export class Game {
       this.ui.setSpectating({
         title: "Cámara libre",
         hint: "WASD para moverte · Shift más rápido · Espacio o click para volver",
-        note: this.deathNote,
+        note: this.spectateNote(),
       });
       return;
     }
@@ -1220,7 +1249,7 @@ export class Game {
                 : alive.length > 1
                   ? "Click o ← → para cambiar · Espacio: cámara libre"
                   : "Espacio: cámara libre",
-              note: this.deathNote,
+              note: this.spectateNote(),
             }
           : null,
       );
@@ -1535,9 +1564,21 @@ export class Game {
     this.net?.send({ t: "rules", rules });
   }
 
+  /** Segunda oportunidad para el que muere temprano. El servidor comprueba que seas el host. */
+  setSecondChance(on: boolean): void {
+    this.net?.send({ t: "secondChance", on });
+  }
+
   /** Siempre el mismo mapa (0) o uno nuevo cada partida (1). El servidor comprueba que seas el host. */
   setMapMode(mode: number): void {
     this.net?.send({ t: "mapMode", mode });
+  }
+
+  /** Lo que se lee abajo al espectear: cómo te mataron y, si volvés, en cuánto. */
+  private spectateNote(): string {
+    if (this.respawnAt === 0) return this.deathNote;
+    const seconds = Math.max(1, Math.ceil((this.respawnAt - performance.now()) / 1000));
+    return `${this.deathNote} · Segunda oportunidad: volvés en ${seconds} s`;
   }
 
   /**

@@ -400,6 +400,15 @@ export class GameRoom extends Server<Env> {
         return;
       }
 
+      case "secondChance": {
+        if (seat.playerId !== this.hostId) return;
+        if (this.state.phase !== "lobby") return;
+        if (typeof msg.on !== "boolean") return;
+        this.state.secondChance = msg.on;
+        this.broadcastRoster();
+        return;
+      }
+
       case "night": {
         if (seat.playerId !== this.hostId) return;
         if (this.state.phase !== "lobby") return;
@@ -1008,6 +1017,7 @@ export class GameRoom extends Server<Env> {
         rules: this.state.rules,
         map: this.mapIndex,
         mapMode: this.mapMode,
+        secondChance: this.state.secondChance,
       }),
     );
   }

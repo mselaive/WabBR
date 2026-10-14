@@ -142,14 +142,10 @@
           <button class="mode-btn" type="button" role="radio" data-rules="4">Caos</button>
         </div>
 
-        <div id="mapRow" class="mode-row" role="radiogroup" aria-label="Mapa">
-          <button id="mapSame" class="mode-btn" type="button" role="radio">Mapa de siempre</button>
-          <button id="mapNew" class="mode-btn" type="button" role="radio">Uno nuevo cada partida</button>
-        </div>
-
-        <div id="timeRow" class="mode-row" role="radiogroup" aria-label="Hora">
-          <button id="timeDay" class="mode-btn" type="button" role="radio">De día</button>
-          <button id="timeNight" class="mode-btn" type="button" role="radio">De noche</button>
+        <div id="optionsRow" class="mode-row options-row" aria-label="Opciones">
+          <button id="optMap" class="mode-btn" type="button" role="switch" aria-checked="false" title="Un mapa distinto en cada partida">Mapa nuevo</button>
+          <button id="optChance" class="mode-btn" type="button" role="switch" aria-checked="false" title="El que muere antes de que la zona se cierre por segunda vez vuelve una vez">Segunda oportunidad</button>
+          <button id="optNight" class="mode-btn" type="button" role="switch" aria-checked="false" title="Se ve poco alrededor; el fuego y las explosiones iluminan">De noche</button>
         </div>
 
         <div id="botSkillRow" class="mode-row bot-skill-row" role="radiogroup" aria-label="Bots" hidden>

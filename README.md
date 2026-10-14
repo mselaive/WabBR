@@ -150,7 +150,11 @@ subfusil y chaleco ligero) y *Caos* (todos arrancan con lanzacohetes, dos granad
 molotovs: partidas cortas y ruidosas para cuando son muchos). Se aplican en la simulación (`ruledLoot`, `startingWeapon`), así que
 valen igual para el botín, las cajas y los paquetes.
 
-**De noche.** El host elige *De día* o *De noche*. De noche ves unos 230 px alrededor tuyo y el
+**Opciones de sí o no.** Abajo de las reglas, una sola fila con tres interruptores que el host
+prende y apaga: *Mapa nuevo* (ver El mapa), *Segunda oportunidad* (ver más abajo) y *De noche*.
+Antes eran tres filas de "esto o aquello" y el lobby no entraba en un teléfono.
+
+**De noche.** De noche ves unos 230 px alrededor tuyo y el
 resto queda en penumbra azul; iluminan las fogatas, el fuego de las molotov, las explosiones y
 los fogonazos, así que **disparar de noche te delata**. Los bots también ven menos (330 px en vez
 de 700). Es sólo de cómo se dibuja (`updateNight`: un lienzo a un cuarto de la resolución con
@@ -437,6 +441,25 @@ que lo mata **cobra la recompensa: vida llena**, y todos se enteran por el aviso
 mientras vaya primero solo; si alguien lo alcanza, deja de serlo. Le da a todos un objetivo y un precio
 a ir ganando. Los bots que ya tienen algo mejor que la pistola van a buscarlo si está cerca;
 con la pistola de arranque, no: sería regalarle otra kill.
+
+## Segunda oportunidad
+
+Copiado de Warzone (Resurgimiento), y opcional: lo prende el host. El que muere temprano —antes de
+que la zona empiece a cerrarse por segunda vez— **vuelve una vez**, a los 8 segundos, con lo de
+arranque. Mientras espera mira al que lo mató con una cuenta regresiva ("Segunda oportunidad: volvés
+en 6 s"), pero su minimapa sigue siendo el de un vivo: si no, volvería sabiendo dónde está cada uno.
+
+- Suelta todo al morir, como cualquiera: matarlo sigue valiendo la pena, y quien lo mató se anota
+  la kill. Las suyas, el daño y el resto de sus números siguen contando.
+- Vuelve adentro de la zona (de la próxima, si se está cerrando) y lejos de los rivales: de seis
+  lugares libres al azar, el que tenga al rival más cercano más lejos.
+- La partida no termina mientras alguien espera para volver, y su equipo no queda afuera. El que
+  se desconecta mientras espera la pierde.
+- Todos se enteran ("X volvió con su segunda oportunidad"), y al final se lleva el título **Gato:
+  volvió de la muerte** si no ganó otro.
+
+Vive en la simulación compartida (`secondChanceOpen`, `stepRespawns`): el cliente no predice nada
+especial, al volver el predictor se planta donde apareció como al empezar la partida.
 
 ## Correr y granadas
 

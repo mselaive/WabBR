@@ -401,6 +401,7 @@ export function packResults(state: GameState): SnapResult[] {
       Math.round(p.selfDamage),
       Math.round(p.traveled),
       p.thrown,
+      p.usedSecondChance ? 1 : 0,
     ]);
 }
 
@@ -419,6 +420,8 @@ export interface UnpackedResult {
   /** Px caminados. */
   traveled: number;
   thrown: number;
+  /** Volvió con la segunda oportunidad. */
+  cameBack: boolean;
 }
 
 export function unpackResult(s: SnapResult): UnpackedResult {
@@ -434,6 +437,7 @@ export function unpackResult(s: SnapResult): UnpackedResult {
     selfDamage: s[8] ?? 0,
     traveled: s[9] ?? 0,
     thrown: s[10] ?? 0,
+    cameBack: s[11] === 1,
   };
 }
 

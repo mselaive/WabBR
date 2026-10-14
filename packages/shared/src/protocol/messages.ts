@@ -78,6 +78,12 @@ export interface MapModeMsg {
   mode: number;
 }
 
+/** El host prende o apaga la segunda oportunidad (ver GameState.secondChance). */
+export interface SecondChanceMsg {
+  t: "secondChance";
+  on: boolean;
+}
+
 /** El host elige si la próxima partida es de noche. */
 export interface NightMsg {
   t: "night";
@@ -128,6 +134,7 @@ export type ClientMsg =
   | NightMsg
   | RulesMsg
   | MapModeMsg
+  | SecondChanceMsg
   | PartnerMsg
   | EmoteMsg
   | MarkMsg;
@@ -168,7 +175,7 @@ export type SnapStanding = [number, number, number, number, number];
  * jugó la partida. Sólo viaja con la partida terminada: mientras se juega no le
  * sirve a nadie y el daño de los demás sería información de más.
  */
-export type SnapResult = [number, number, number, number, number, number, number, number, number, number, number];
+export type SnapResult = [number, number, number, number, number, number, number, number, number, number, number, number];
 
 /**
  * [id, x, y, ticksParaAterrizar] de cada paquete aéreo cayendo. Va a todos, no
@@ -272,6 +279,8 @@ export interface RosterMsg {
   map?: number;
   /** 0 siempre el mismo mapa, 1 uno nuevo cada partida. */
   mapMode?: number;
+  /** Si el que muere temprano vuelve una vez. */
+  secondChance?: boolean;
 }
 
 export interface SnapshotMsg {

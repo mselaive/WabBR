@@ -35,6 +35,10 @@ import {
   RULES_SNIPERS,
   SMOKE_MAX_STACK,
   MOLOTOV_MAX_STACK,
+  MINE_ARM_TICKS,
+  MINE_MAX_STACK,
+  MINE_TICKS,
+  MINE_TRIGGER,
   FIRE_DPS,
   FIRE_RADIUS,
   FIRE_TICKS,
@@ -115,11 +119,14 @@ import {
   ACT_THROW,
   ACT_SMOKE,
   ACT_MOLOTOV,
+  ACT_MINE,
   ACT_SLOT_1,
   CAUSE_EXPLOSION,
   CAUSE_STRIKE,
   CAUSE_FIRE,
   GRENADE_MOLOTOV,
+  GRENADE_MINE,
+  type MineState,
   CAUSE_ZONE,
   ACT_USE_BASE,
   GRENADE_FRAG,
@@ -171,6 +178,7 @@ export function createPlayer(id: number, x = 0, y = 0): PlayerState {
     grenades: 0,
     smokes: 0,
     molotovs: 0,
+    mines: 0,
     downed: false,
     downedBy: -1,
     downedCause: 0,
@@ -243,6 +251,7 @@ export function createGameState(seed = 1): GameState {
     nextGrenadeId: 1,
     smokes: [],
     fires: [],
+    mines: [],
     teamSize: 1,
     pairs: [],
     championId: -1,
@@ -306,6 +315,7 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
   state.smokes = [];
   state.fires = [];
   state.airdrops = [];
+  state.mines = [];
   state.chicken = null;
   state.chickenSpawned = false;
   state.nextAirdropId = 1;
@@ -436,6 +446,7 @@ function equipFresh(state: GameState, p: PlayerState): void {
   p.grenades = state.rules === RULES_CHAOS ? 2 : 0;
   p.smokes = 0;
   p.molotovs = state.rules === RULES_CHAOS ? 2 : 0;
+  p.mines = 0;
   p.downed = false;
   p.downedBy = -1;
   p.downedCause = 0;
@@ -461,7 +472,14 @@ export function carryLimit(p: PlayerState, kind: number, ref: number): number {
   let base = 0;
   if (kind === ITEM_CONSUMABLE) base = consumableAt(ref)?.maxStack ?? 0;
   else if (kind === ITEM_GRENADE) {
-    base = ref === GRENADE_SMOKE ? SMOKE_MAX_STACK : ref === GRENADE_MOLOTOV ? MOLOTOV_MAX_STACK : GRENADE_MAX_STACK;
+    base =
+      ref === GRENADE_SMOKE
+        ? SMOKE_MAX_STACK
+        : ref === GRENADE_MOLOTOV
+          ? MOLOTOV_MAX_STACK
+          : ref === GRENADE_MINE
+            ? MINE_MAX_STACK
+            : GRENADE_MAX_STACK;
   }
   return p.backpack ? Math.ceil(base * BACKPACK_MULT) : base;
 }
@@ -1049,6 +1067,13 @@ function takeItem(
     return true;
   }
 
+  if (item.kind === ITEM_GRENADE && item.ref === GRENADE_MINE) {
+    const limit = carryLimit(p, item.kind, item.ref);
+    if (p.mines >= limit) return false;
+    p.mines = Math.min(limit, p.mines + item.count);
+    return true;
+  }
+
   if (item.kind === ITEM_GRENADE) {
     const limit = carryLimit(p, item.kind, item.ref);
     if (p.grenades >= limit) return false;
@@ -1249,6 +1274,7 @@ function fitsWhole(p: PlayerState, item: GroundItem): boolean {
     const limit = carryLimit(p, item.kind, item.ref);
     if (item.ref === GRENADE_SMOKE) return p.smokes + item.count <= limit;
     if (item.ref === GRENADE_MOLOTOV) return p.molotovs + item.count <= limit;
+    if (item.ref === GRENADE_MINE) return p.mines + item.count <= limit;
     return p.grenades + item.count <= limit;
   }
   const def = consumableAt(item.ref);
@@ -1282,12 +1308,10 @@ function handleAction(
     return;
   }
 
-  if (act === ACT_THROW || act === ACT_SMOKE || act === ACT_MOLOTOV) {
+  if (act === ACT_THROW || act === ACT_SMOKE || act === ACT_MOLOTOV || act === ACT_MINE) {
     const kind = throwKind(act);
     if (!canThrow(p, kind)) return;
-    if (kind === GRENADE_SMOKE) p.smokes--;
-    else if (kind === GRENADE_MOLOTOV) p.molotovs--;
-    else p.grenades--;
+    spendThrowable(p, kind);
     p.thrown++;
     state.grenades.push({ id: state.nextGrenadeId++, ownerId: p.id, kind, ...grenadeLaunch(p) });
     return;
@@ -1661,6 +1685,10 @@ function killPlayer(
     dropItem(state, victim, ITEM_GRENADE, GRENADE_MOLOTOV, 0, victim.molotovs, events);
     victim.molotovs = 0;
   }
+  if (victim.mines > 0) {
+    dropItem(state, victim, ITEM_GRENADE, GRENADE_MINE, 2, victim.mines, events);
+    victim.mines = 0;
+  }
   for (let i = 0; i < victim.consumables.length; i++) {
     const count = victim.consumables[i] ?? 0;
     if (count > 0) dropItem(state, victim, ITEM_CONSUMABLE, i, i, count, events);
@@ -1833,15 +1861,33 @@ function grenadeBlocked(x: number, y: number, arena: ArenaMap): boolean {
 }
 
 /** ¿Puede tirar una granada (o una de humo)? Curándose no: tiene las manos ocupadas. */
+/** Cuántos de ese arrojable lleva. */
+function throwables(p: PlayerState, kind: number): number {
+  if (kind === GRENADE_SMOKE) return p.smokes;
+  if (kind === GRENADE_MOLOTOV) return p.molotovs;
+  if (kind === GRENADE_MINE) return p.mines;
+  return p.grenades;
+}
+
 export function canThrow(p: PlayerState, kind: number = GRENADE_FRAG): boolean {
   // Caído tampoco: el servidor ni llega acá, pero la predicción del cliente sí.
-  const have = kind === GRENADE_SMOKE ? p.smokes : kind === GRENADE_MOLOTOV ? p.molotovs : p.grenades;
-  return have > 0 && p.useCd === 0 && !p.downed;
+  return throwables(p, kind) > 0 && p.useCd === 0 && !p.downed;
+}
+
+/** Descuenta uno del arrojable que se tiró. Lo usan el servidor y la predicción. */
+export function spendThrowable(p: PlayerState, kind: number): void {
+  if (kind === GRENADE_SMOKE) p.smokes--;
+  else if (kind === GRENADE_MOLOTOV) p.molotovs--;
+  else if (kind === GRENADE_MINE) p.mines--;
+  else p.grenades--;
 }
 
 /** Qué arrojable tira cada acción. */
 export function throwKind(act: number): number {
-  return act === ACT_SMOKE ? GRENADE_SMOKE : act === ACT_MOLOTOV ? GRENADE_MOLOTOV : GRENADE_FRAG;
+  if (act === ACT_SMOKE) return GRENADE_SMOKE;
+  if (act === ACT_MOLOTOV) return GRENADE_MOLOTOV;
+  if (act === ACT_MINE) return GRENADE_MINE;
+  return GRENADE_FRAG;
 }
 
 /** Dónde aparece y con qué velocidad sale una granada tirada ahora. */
@@ -1900,6 +1946,19 @@ function stepGrenades(state: GameState, arena: ArenaMap, events: SimEvent[]): vo
       } else if (g.kind === GRENADE_MOLOTOV) {
         state.fires.push({ id: g.id, ownerId: g.ownerId, x: g.x, y: g.y, ticksLeft: FIRE_TICKS });
         events.push({ t: "fire", x: g.x, y: g.y });
+      } else if (g.kind === GRENADE_MINE) {
+        // Se frenó: queda en el piso y se arma en un rato.
+        const team = findPlayer(state, g.ownerId)?.team ?? g.ownerId;
+        state.mines.push({
+          id: g.id,
+          ownerId: g.ownerId,
+          team,
+          x: g.x,
+          y: g.y,
+          armedAt: state.tick + MINE_ARM_TICKS,
+          ticksLeft: MINE_TICKS,
+        });
+        events.push({ t: "mine", x: g.x, y: g.y, byId: g.ownerId });
       } else {
         applyExplosion(state, g.x, g.y, g.ownerId, arena, events, g.id);
       }
@@ -1934,6 +1993,35 @@ function stepFires(state: GameState, arena: ArenaMap, events: SimEvent[]): void 
     }
   }
   state.fires = state.fires.filter((f) => f.ticksLeft > 0);
+}
+
+/**
+ * Las minas armadas explotan cuando un rival pasa por encima (no uno del
+ * equipo del que la puso, ni uno en paracaídas). La explosión es una de
+ * granada, a cuenta del que la puso. Pasado su tiempo, se apagan solas.
+ */
+function stepMines(state: GameState, arena: ArenaMap, events: SimEvent[]): void {
+  if (state.mines.length === 0) return;
+  const kept: MineState[] = [];
+  for (const m of state.mines) {
+    if (--m.ticksLeft <= 0) continue;
+    const armed = state.tick >= m.armedAt;
+    const victim =
+      armed &&
+      state.players.find(
+        (p) =>
+          p.alive &&
+          p.airTicks === 0 &&
+          p.team !== m.team &&
+          (p.x - m.x) * (p.x - m.x) + (p.y - m.y) * (p.y - m.y) <= MINE_TRIGGER * MINE_TRIGGER,
+      );
+    if (victim) {
+      applyExplosion(state, m.x, m.y, m.ownerId, arena, events);
+      continue;
+    }
+    kept.push(m);
+  }
+  state.mines = kept;
 }
 
 function stepSmokes(state: GameState): void {
@@ -2503,6 +2591,7 @@ export function step(
   stepSmokes(state);
   stepFires(state, arena, events);
   stepGrenades(state, arena, events);
+  stepMines(state, arena, events);
   stepChicken(state, arena);
   stepBullets(state, arena, events);
   stepZone(state, arena, events);

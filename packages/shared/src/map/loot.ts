@@ -53,6 +53,7 @@ const GROUND_TABLE: readonly Entry[] = [
   { kind: ITEM_GRENADE, ref: 0, weight: 6, min: 1, max: 1, tier: 2 }, // granadas
   { kind: ITEM_GRENADE, ref: 1, weight: 4, min: 1, max: 1, tier: 1 }, // humo
   { kind: ITEM_GRENADE, ref: 2, weight: 3, min: 1, max: 1, tier: 2 }, // molotov
+  { kind: ITEM_GRENADE, ref: 3, weight: 2, min: 1, max: 1, tier: 2 }, // mina
   { kind: ITEM_RADAR, ref: 0, weight: 1, min: 1, max: 1, tier: 3 }, // radar
   { kind: ITEM_BACKPACK, ref: 0, weight: 2, min: 1, max: 1, tier: 2 }, // mochila
 ];
@@ -74,6 +75,7 @@ const CRATE_TABLE: readonly Entry[] = [
   { kind: ITEM_GRENADE, ref: 0, weight: 11, min: 1, max: 2, tier: 2 }, // granadas
   { kind: ITEM_GRENADE, ref: 1, weight: 7, min: 1, max: 2, tier: 1 }, // humo
   { kind: ITEM_GRENADE, ref: 2, weight: 5, min: 1, max: 1, tier: 2 }, // molotov
+  { kind: ITEM_GRENADE, ref: 3, weight: 4, min: 1, max: 2, tier: 2 }, // minas
   // El radar y la mochila le sacan lugar a la curación: por eso las vendas pesan un poco más.
   { kind: ITEM_RADAR, ref: 0, weight: 3, min: 1, max: 1, tier: 3 }, // radar
   { kind: ITEM_BACKPACK, ref: 0, weight: 5, min: 1, max: 1, tier: 2 }, // mochila

@@ -39,6 +39,8 @@ export const ACT_THROW = 7;
 export const ACT_SMOKE = 8;
 /** Tirar una molotov. */
 export const ACT_MOLOTOV = 9;
+/** Tirar una mina (ver GRENADE_MINE). */
+export const ACT_MINE = 10;
 
 /** Causas de muerte que no son un arma, para el kill feed. */
 export const CAUSE_ZONE = -1;
@@ -146,6 +148,8 @@ export interface PlayerState {
   airTicks: number;
   /** Lleva mochila: carga más curaciones y granadas (ver carryLimit). */
   backpack: boolean;
+  /** Minas que lleva. */
+  mines: number;
   /** Ticks de radar que le quedan (0: apagado). */
   radarTicks: number;
   /** Tick en que vuelve con la segunda oportunidad, o -1 si no está esperando. */
@@ -255,6 +259,25 @@ export interface StrikeState {
 export const GRENADE_FRAG = 0;
 export const GRENADE_SMOKE = 1;
 export const GRENADE_MOLOTOV = 2;
+/**
+ * La mina: se tira como una granada y donde se frena queda en el piso,
+ * armada, hasta que pasa un rival (ver MineState).
+ */
+export const GRENADE_MINE = 3;
+
+/** Una mina en el piso. */
+export interface MineState {
+  id: number;
+  ownerId: number;
+  /** Equipo del que la puso: a los suyos no les explota. */
+  team: number;
+  x: number;
+  y: number;
+  /** Desde qué tick está armada (recién puesta, no: si no, te explota a vos). */
+  armedAt: number;
+  /** Ticks que le quedan: después se apaga sola. */
+  ticksLeft: number;
+}
 
 /** Un charco de fuego de molotov (ver FIRE_*). */
 export interface FireState {
@@ -340,6 +363,8 @@ export interface GameState {
   smokes: SmokeState[];
   /** Charcos de fuego. */
   fires: FireState[];
+  /** Minas en el piso. */
+  mines: MineState[];
   /** 1 todos contra todos, 2 dúos. Lo elige el host en el lobby. */
   teamSize: number;
   /**
@@ -490,6 +515,8 @@ export type SimEvent =
    * HEARD_GRID. Dice "por allá", no "acá".
    */
   | { t: "heard"; x: number; y: number; weapon: number }
+  /** Quedó una mina en el piso (suena el clic de armarla). */
+  | { t: "mine"; x: number; y: number; byId: number }
   /** De noche, un relámpago: ilumina todo un instante (ver stepStorm). */
   | { t: "lightning" }
   /** Le pegaron a la gallina dorada. */

@@ -446,6 +446,9 @@ export function itemName(item: GroundItem): string {
   if (item.kind === ITEM_GRENADE && item.ref === 2) {
     return item.count > 1 ? `Molotov x${item.count}` : "Molotov";
   }
+  if (item.kind === ITEM_GRENADE && item.ref === 3) {
+    return item.count > 1 ? `Minas x${item.count}` : "Mina";
+  }
   if (item.kind === ITEM_GRENADE) {
     return item.count > 1 ? `Granadas x${item.count}` : "Granada";
   }

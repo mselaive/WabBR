@@ -18,6 +18,7 @@ import {
   ITEM_RADAR,
   ITEM_BACKPACK,
   GRENADE_MOLOTOV,
+  GRENADE_MINE,
   GRENADE_SMOKE,
   ITEM_GRENADE,
   FIRE_RADIUS,
@@ -165,6 +166,7 @@ export class WorldView {
   private readonly bullets = new Map<number, Sprite>();
   private readonly itemSprites = new Map<number, Container>();
   private readonly grenadeSprites = new Map<number, Sprite>();
+  private readonly mineSprites = new Map<number, Container>();
   /** Sprite de cada caja de botín, por id (= su orden en el mapa). */
   private readonly crateSprites = new Map<number, Sprite>();
   /** Sprite de cada barril, por índice de obstáculo: los que estallan se cambian. */
@@ -741,6 +743,39 @@ export class WorldView {
     }
   }
 
+  /**
+   * Las minas que se ven: un disco en el piso con una luz que parpadea cuando
+   * está armada. La luz es roja en las de los rivales y verde en las tuyas (o
+   * de tu pareja): así no esquivás las propias de gusto.
+   */
+  private updateMines(frame: InterpolatedFrame, localTeam: number | undefined): void {
+    const seen = new Set<number>();
+    const blink = Math.floor(performance.now() / 350) % 2 === 0;
+    for (const m of frame.mines) {
+      seen.add(m.id);
+      let view = this.mineSprites.get(m.id);
+      if (!view) {
+        const body = new Sprite(this.tex.mine);
+        body.anchor.set(0.5, 0.5);
+        body.scale.set(ART_SCALE);
+        const light = new Graphics().circle(0, -1, 2.5).fill(0xffffff);
+        view = new Container();
+        view.addChild(body, light);
+        this.itemLayer.addChild(view);
+        this.mineSprites.set(m.id, view);
+      }
+      view.position.set(m.x, m.y);
+      const light = view.children[1] as Graphics;
+      light.tint = m.team === localTeam ? 0x5cd97a : 0xff4a4a;
+      light.visible = m.armed && blink;
+    }
+    for (const [id, view] of this.mineSprites) {
+      if (seen.has(id)) continue;
+      view.destroy({ children: true });
+      this.mineSprites.delete(id);
+    }
+  }
+
   /** Plumas doradas: le pegaron a la gallina (muchas, si la cazaron). */
   spawnFeathers(x: number, y: number, count = 6): void {
     for (let i = 0; i < count; i++) {
@@ -1147,6 +1182,8 @@ export class WorldView {
     wantedId = -1,
     /** El campeón de la sala: su nombre lleva una corona. */
     championId = -1,
+    /** Tu equipo, para pintar tus minas de otro color. */
+    localTeam?: number,
   ): void {
     const seen = new Set<number>();
 
@@ -1257,6 +1294,7 @@ export class WorldView {
     this.updateStrikes(frame);
     this.updateFires(frame);
     this.updateChicken(frame);
+    this.updateMines(frame, localTeam);
     this.updateNight(frame, localOverride ?? this.cameraCenter());
     this.updateZone(frame);
     this.sparkleGolden();
@@ -1313,6 +1351,7 @@ export class WorldView {
       return this.tex.itemArmor[item.ref] ?? this.tex.itemArmor[0]!;
     }
     if (item.kind === ITEM_GRENADE) {
+      if (item.ref === GRENADE_MINE) return this.tex.itemMine;
       return item.ref === GRENADE_SMOKE ? this.tex.itemSmoke : item.ref === GRENADE_MOLOTOV ? this.tex.itemMolotov : this.tex.itemGrenade;
     }
     if (item.kind === ITEM_RADAR) return this.tex.itemRadar;
@@ -1331,7 +1370,13 @@ export class WorldView {
       let sprite = this.grenadeSprites.get(g.id);
       if (!sprite) {
         sprite = new Sprite(
-          g.kind === GRENADE_SMOKE ? this.tex.smokeGrenade : g.kind === GRENADE_MOLOTOV ? this.tex.molotov : this.tex.grenade,
+          g.kind === GRENADE_SMOKE
+            ? this.tex.smokeGrenade
+            : g.kind === GRENADE_MOLOTOV
+              ? this.tex.molotov
+              : g.kind === GRENADE_MINE
+                ? this.tex.mine
+                : this.tex.grenade,
         );
         sprite.anchor.set(0.5, 0.8);
         sprite.scale.set(ART_SCALE);

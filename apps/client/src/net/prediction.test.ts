@@ -53,6 +53,7 @@ function snapshotOf(p: PlayerState, lastSeq: number): UnpackedPlayer {
     grenades: 0,
     smokes: 0,
     molotovs: 0,
+    mines: 0,
     jumpTicks: 0,
     airTicks: 0,
     jumpVx: 0,

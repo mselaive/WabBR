@@ -9,6 +9,7 @@ import {
   EMOTES,
   HEARD_GRID,
   HEARING_RANGE,
+  MINE_SPOT,
   MAX_PLAYERS,
   RULES,
   WORLD_CENTER_X,
@@ -833,6 +834,19 @@ export class GameRoom extends Server<Env> {
         }
       }
 
+      // Las minas: las del equipo siempre; las de los rivales, de cerca y a la vista.
+      const mines: [number, number, number, number, number][] = [];
+      for (const m of s.mines) {
+        const own = viewer !== undefined && viewer.team === m.team;
+        const near =
+          viewer !== undefined &&
+          Math.hypot(viewer.x - m.x, viewer.y - m.y) <= MINE_SPOT &&
+          hasLineOfSight(viewer.x, viewer.y, m.x, m.y, this.arena);
+        if (this.seesAll(viewer) || own || near) {
+          mines.push([m.id, Math.round(m.x), Math.round(m.y), s.tick >= m.armedAt ? 1 : 0, m.team]);
+        }
+      }
+
       const ev = this.visibleEvents(viewer);
 
       conn.send(
@@ -841,6 +855,7 @@ export class GameRoom extends Server<Env> {
           players,
           bullets,
           gr: grenades,
+          ...(mines.length > 0 ? { mn: mines } : {}),
           ...(ev.length > 0 ? { ev } : {}),
         }),
       );
@@ -885,8 +900,13 @@ export class GameRoom extends Server<Env> {
    * faltara un "se cayó esto", su lista de objetos quedaría desincronizada.
    */
   private visibleEvents(viewer: PlayerState | undefined): SimEvent[] {
-    // Las pasadas del radar son del equipo que lo levantó: a nadie más.
-    const events = this.events.filter((e) => e.t !== "radar" || e.team === viewer?.team);
+    // Las pasadas del radar son del equipo que lo levantó, y dónde quedó una
+    // mina, del equipo que la puso: a nadie más.
+    const events = this.events.filter((e) => {
+      if (e.t === "radar") return e.team === viewer?.team;
+      if (e.t === "mine") return this.seesAll(viewer) || findPlayer(this.state, e.byId)?.team === viewer?.team;
+      return true;
+    });
     if (!viewer || this.seesAll(viewer)) return events;
     const out: SimEvent[] = [];
     for (const e of events) {
@@ -997,6 +1017,7 @@ export class GameRoom extends Server<Env> {
     s.fires = [];
     s.strikes = [];
     s.chicken = null;
+    s.mines = [];
     s.wanted = null;
     s.winnerId = -1;
     s.tick = 0;

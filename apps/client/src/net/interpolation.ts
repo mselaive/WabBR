@@ -29,7 +29,17 @@ export interface Frame {
   strikes: UnpackedStrike[];
   fires: { id: number; x: number; y: number; ticksLeft: number }[];
   chicken: { x: number; y: number; hp: number } | null;
+  mines: FrameMine[];
   zone: UnpackedZone;
+}
+
+/** Una mina que se ve. */
+export interface FrameMine {
+  id: number;
+  x: number;
+  y: number;
+  armed: boolean;
+  team: number;
 }
 
 /** Lo que se sabe de una bala del servidor, para ubicarla en cualquier instante. */
@@ -76,6 +86,8 @@ export interface InterpolatedFrame {
   fires: { id: number; x: number; y: number; ticksLeft: number }[];
   /** La gallina dorada, si anda suelta. */
   chicken: { x: number; y: number; hp: number } | null;
+  /** Las minas que este jugador puede ver. */
+  mines: FrameMine[];
   zone: UnpackedZone;
 }
 
@@ -111,6 +123,7 @@ export class SnapshotBuffer {
       strikes: (msg.rz ?? []).map(unpackStrike),
       fires: (msg.fi ?? []).map(([id, x, y, ticksLeft]) => ({ id, x, y, ticksLeft })),
       chicken: msg.gc ? { x: msg.gc[0], y: msg.gc[1], hp: msg.gc[2] } : null,
+      mines: (msg.mn ?? []).map(([id, x, y, armed, team]) => ({ id, x, y, armed: armed === 1, team })),
       zone: unpackZone(msg.zone),
     });
     if (this.frames.length > MAX_FRAMES) this.frames.shift();
@@ -189,6 +202,7 @@ export class SnapshotBuffer {
         strikes: last.strikes,
         fires: last.fires,
         chicken: last.chicken,
+        mines: last.mines,
         zone: last.zone,
       };
     }
@@ -203,6 +217,7 @@ export class SnapshotBuffer {
         strikes: first.strikes,
         fires: first.fires,
         chicken: first.chicken,
+        mines: first.mines,
         zone: first.zone,
       };
     }
@@ -271,6 +286,7 @@ export class SnapshotBuffer {
       smokes,
       strikes: b.strikes,
       fires: b.fires,
+      mines: b.mines,
       // Corre, así que se interpola como un jugador.
       chicken:
         a.chicken && b.chicken

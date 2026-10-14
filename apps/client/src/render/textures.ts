@@ -605,6 +605,9 @@ export interface TexturePack {
   /** La mochila puesta: el bulto detrás del muñeco y las tiras por delante (mismo cuadro). */
   backpack: Texture;
   backpackStraps: Texture;
+  /** La mina: tirada y en el piso es la misma, con la luz aparte. */
+  mine: Texture;
+  itemMine: Texture;
   /** El paracaídas, blanco: se tiñe con el color de cada jugador. */
   parachute: Texture;
   smokePuff: Texture;
@@ -674,6 +677,12 @@ export function getTextures(): TexturePack {
       rect(ctx, 0, 7, 16, 8, "#1b1410");
       rect(ctx, 1, 8, 14, 6, "#7a5530");
       rect(ctx, 1, 8, 14, 1, "#94693c");
+    }),
+    mine: make(12, 8, drawMine),
+    itemMine: plate((ctx) => {
+      ctx.translate(2, 4);
+      drawMine(ctx);
+      ctx.translate(-2, -4);
     }),
     parachute: make(30, 26, (ctx) => {
       // Las cuerdas, del borde de la tela a los hombros (abajo al medio).
@@ -822,6 +831,14 @@ function adrenalineIcon(): Texture {
     rect(ctx, 9, 5, 1, 5, "#c3c8ce"); // aguja
     rect(ctx, 4, 10, 1, 1, "#c3c8ce");
   });
+}
+
+/** La mina: un disco chato de metal con el detonador al medio (12x8). */
+function drawMine(ctx: Ctx): void {
+  ellipse(ctx, 6, 4.5, 6, 3.5, "#1b1410");
+  ellipse(ctx, 6, 4, 5, 2.8, "#5b6168");
+  ellipse(ctx, 6, 3.5, 3.5, 1.8, "#7a828b");
+  rect(ctx, 5, 2, 2, 2, "#3a3f46");
 }
 
 /** Una mochila de frente, de 10x10 desde (x, y): bolsillo, solapa y tiras. */

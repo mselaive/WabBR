@@ -485,6 +485,19 @@ ganó otro título, se lleva **Adivino: apostó por el que ganó**. Le da algo q
 primero mientras mira. El servidor valida todo (que estés muerto de verdad, que el otro esté
 vivo, una por partida) y cuenta los aciertos (`addToTally`).
 
+## Minas
+
+Con **K** se tira una mina como si fuera una granada: rueda, y donde se frena queda en el piso.
+Se arma al segundo y medio (recién puesta no explota: si no, te explotaría a vos) y explota cuando
+un rival pasa a menos de 30 px, con la explosión de una granada a cuenta del que la puso. A los del
+equipo no les explota, y pasado un minuto y medio se apaga sola. Se llevan dos (tres con mochila).
+
+Lo que las hace justas: los rivales las ven recién **de cerca** (a 110 px y a la vista), con una
+lucecita roja que parpadea cuando está armada; las tuyas y las de tu pareja se ven siempre, con
+la luz verde. El servidor manda a cada uno sólo las minas que puede ver, y el aviso de "quedó una
+mina acá" sólo le llega al equipo que la puso. Los bots no las juntan (no las usan), pero las
+pisan como cualquiera.
+
 ## La mochila
 
 Un objeto de rareza azul, en las cajas y a veces en el piso. Se lleva puesta (con E) y deja cargar

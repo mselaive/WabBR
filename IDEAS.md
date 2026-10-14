@@ -89,6 +89,7 @@ está en `main`.
 | Paracaídas | Se empieza cayendo: 8 s planeando para elegir dónde, E para bajar ya; invulnerable en el aire; los bots eligen caja | 7 tests (6 mutaciones) + predicción con ping + capturas |
 | Tormenta | De noche, relámpagos cada ~20 s que iluminan todo un instante, con trueno | Test de frecuencia + capturas antes y durante |
 | Ayuda del menú | "Qué hay en el mapa" y las teclas nuevas | Captura |
+| Minas | `K`: se tira como granada, se arma donde se frena y explota con un rival; los rivales la ven sólo de cerca | 5 tests + captura en partida |
 | Lo mejor de la noche | En el lobby: más ganadas, más kills y mejor apostador de la sala | Captura después de una partida |
 | Cuarta revisión | El que esperaba la segunda oportunidad veía a todos; bots volándose con la gallina a cohetazos; el aviso de vuelta decía dónde; cortarse no la hacía perder; cohete a la gallina estallando donde estaba; la vuelta se deslizaba | Tests nuevos con mutaciones + partida en el navegador |
 

@@ -40,6 +40,7 @@ import {
   SP_MOLOTOVS,
   SP_JUMP,
   SP_AIR,
+  SP_MINES,
   SP_JUMP_VX,
   SP_JUMP_VY,
   SP_REVIVE_TICKS,
@@ -159,6 +160,7 @@ export function packPlayer(p: PlayerState, own = false): SnapPlayer {
     p.molotovs,
     p.jumpTicks,
     p.airTicks,
+    p.mines,
   ];
   // Del propio, además los relojes del arma y la velocidad del salto: la
   // predicción los necesita para seguir igual que el servidor.
@@ -279,6 +281,7 @@ export interface UnpackedPlayer {
   staminaDelay: number;
   grenades: number;
   smokes: number;
+  mines: number;
   molotovs: number;
   /** Volando de un hongo: ticks que le quedan y velocidad (ésta, sólo en el propio). */
   /** Ticks de paracaídas que le quedan. */
@@ -350,6 +353,7 @@ export function unpackPlayer(s: SnapPlayer): UnpackedPlayer {
     molotovs: s[SP_MOLOTOVS] ?? 0,
     jumpTicks: s[SP_JUMP] ?? 0,
     airTicks: s[SP_AIR] ?? 0,
+    mines: s[SP_MINES] ?? 0,
     jumpVx: s[SP_JUMP_VX] ?? 0,
     jumpVy: s[SP_JUMP_VY] ?? 0,
     downed: (flags & FLAG_DOWNED) !== 0,

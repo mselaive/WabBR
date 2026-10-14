@@ -47,6 +47,7 @@ import {
   GRENADE_FRAG,
   GRENADE_MOLOTOV,
   GRENADE_SMOKE,
+  GRENADE_MINE,
   type GameState,
   type PlayerInput,
   type PlayerState,
@@ -635,6 +636,8 @@ export function wants(me: PlayerState, item: GroundItem): boolean {
     return def !== undefined && (me.consumables[item.ref] ?? 0) < carryLimit(me, item.kind, item.ref);
   }
   const limit = carryLimit(me, item.kind, item.ref);
+  // Las minas no las usan: no tiene sentido que las junten.
+  if (item.kind === ITEM_GRENADE && item.ref === GRENADE_MINE) return false;
   if (item.kind === ITEM_GRENADE && item.ref === GRENADE_SMOKE) return me.smokes < limit;
   if (item.kind === ITEM_GRENADE && item.ref === GRENADE_MOLOTOV) return me.molotovs < limit;
   if (item.kind === ITEM_GRENADE) return me.grenades < limit;

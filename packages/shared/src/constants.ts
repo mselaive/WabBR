@@ -88,6 +88,16 @@ export const SMOKE_SPOT_DISTANCE = 70;
  * sacar a alguien de atrás de una caja o cerrar una puerta. Se tira con J.
  */
 export const MOLOTOV_MAX_STACK = 2;
+/**
+ * Las minas: se llevan hasta 2. Se arman MINE_ARM_TICKS después de quedar en
+ * el piso, explotan cuando un rival pasa a menos de MINE_TRIGGER y duran
+ * MINE_TICKS. Los rivales las ven recién a MINE_SPOT (una lucecita roja).
+ */
+export const MINE_MAX_STACK = 2;
+export const MINE_ARM_TICKS = 30;
+export const MINE_TRIGGER = 30;
+export const MINE_TICKS = 20 * 90;
+export const MINE_SPOT = 110;
 export const FIRE_RADIUS = 72;
 export const FIRE_TICKS = 6 * 20;
 /** Daño por segundo parado en el fuego: en seis segundos saca 72. */

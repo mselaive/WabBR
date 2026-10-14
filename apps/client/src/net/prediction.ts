@@ -1,10 +1,10 @@
 import {
   ACT_NONE,
   ACT_MOLOTOV,
+  ACT_MINE,
   ACT_SMOKE,
   ACT_THROW,
-  GRENADE_MOLOTOV,
-  GRENADE_SMOKE,
+  spendThrowable,
   throwKind,
   PLAYER_MAX_HP,
   activeTier,
@@ -44,7 +44,7 @@ export interface PredictedShot {
 /** Una granada tirada desde acá: con qué input y cómo sale. */
 export interface PredictedThrow {
   seq: number;
-  /** GRENADE_FRAG o GRENADE_SMOKE. */
+  /** GRENADE_FRAG, GRENADE_SMOKE, GRENADE_MOLOTOV o GRENADE_MINE. */
   kind: number;
   launch: ReturnType<typeof grenadeLaunch>;
 }
@@ -125,13 +125,11 @@ export class Predictor {
     const flying = this.state.airTicks > 0;
     stepPlayerMovement(this.state, input, arena);
     if (flying) return -1;
-    if (input.act === ACT_THROW || input.act === ACT_SMOKE || input.act === ACT_MOLOTOV) {
+    if (input.act === ACT_THROW || input.act === ACT_SMOKE || input.act === ACT_MOLOTOV || input.act === ACT_MINE) {
       // El mismo orden que el servidor: después de moverse, antes del arma.
       const kind = throwKind(input.act);
       if (canThrow(this.state, kind)) {
-        if (kind === GRENADE_SMOKE) this.state.smokes--;
-        else if (kind === GRENADE_MOLOTOV) this.state.molotovs--;
-        else this.state.grenades--;
+        spendThrowable(this.state, kind);
         if (!this.replaying) this.thrown = { seq: input.seq, kind, launch: grenadeLaunch(this.state) };
       }
     } else if (input.act !== ACT_NONE) {
@@ -177,6 +175,7 @@ export class Predictor {
     s.grenades = server.grenades;
     s.smokes = server.smokes;
     s.molotovs = server.molotovs;
+    s.mines = server.mines;
     // El salto de un hongo, igual que la estamina: cambia cómo se mueve.
     s.jumpTicks = server.jumpTicks;
     s.airTicks = server.airTicks;

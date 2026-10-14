@@ -260,11 +260,12 @@ export const SP_MOLOTOVS = 26;
 export const SP_JUMP = 27;
 /** Ticks de paracaídas que le quedan (para dibujarlo cayendo y predecirlo). */
 export const SP_AIR = 28;
+export const SP_MINES = 29;
 /** Sólo en la tupla del propio jugador: ver `packPlayer(p, own)`. */
-export const SP_FIRE_CD = 29;
-export const SP_RELOAD_CD = 30;
-export const SP_JUMP_VX = 31;
-export const SP_JUMP_VY = 32;
+export const SP_FIRE_CD = 30;
+export const SP_RELOAD_CD = 31;
+export const SP_JUMP_VX = 32;
+export const SP_JUMP_VY = 33;
 
 export const FLAG_ALIVE = 1;
 export const FLAG_RELOADING = 2;
@@ -338,6 +339,11 @@ export interface SnapshotMsg {
   rz?: SnapStrike[];
   /** Charcos de fuego: [id, x, y, ticksLeft]. Sólo cuando hay alguno. */
   fi?: [number, number, number, number][];
+  /**
+   * Las minas que este jugador puede ver: [id, x, y, armada (0/1), equipo].
+   * Las de su equipo siempre; las de los rivales, sólo de cerca.
+   */
+  mn?: [number, number, number, number, number][];
   /** La gallina dorada mientras ande suelta: [x, y, vida]. Va a todos. */
   gc?: [number, number, number];
   /** El más buscado y dónde se lo vio por última vez: [id, x, y]. Sólo si hay. */

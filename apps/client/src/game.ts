@@ -904,6 +904,11 @@ export class Game {
           }
           break;
         }
+        case "mine":
+          // Sólo te llega la tuya o la de tu pareja: el clic de dejarla armándose.
+          this.sound.reload();
+          if (ev.byId === this.localId) this.ui.addNotice("Mina puesta: se arma en un segundo y medio");
+          break;
         case "lightning":
           this.world.lightning();
           // El trueno llega después: la luz viaja más rápido.
@@ -1125,6 +1130,7 @@ export class Game {
       mates,
       this.wanted?.id ?? -1,
       this.champion?.id ?? -1,
+      this.standings.get(this.localId)?.team,
     );
 
     this.world.updateItems(this.items.values(), performance.now());
@@ -1454,6 +1460,7 @@ export class Game {
       { key: "G", name: "Granadas", count: shown?.grenades ?? 0 },
       { key: "H", name: "Humo", count: shown?.smokes ?? 0 },
       { key: "J", name: "Molotov", count: shown?.molotovs ?? 0 },
+      { key: "K", name: "Minas", count: shown?.mines ?? 0 },
     ]);
 
     this.updatePickupPrompt(me, localPredicted, frame.players);

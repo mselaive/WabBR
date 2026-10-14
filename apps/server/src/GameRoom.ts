@@ -482,7 +482,7 @@ export class GameRoom extends Server<Env> {
       case "mode": {
         if (seat.playerId !== this.hostId) return;
         if (this.state.phase !== "lobby") return;
-        if (msg.teamSize !== 1 && msg.teamSize !== 2) return;
+        if (msg.teamSize !== 1 && msg.teamSize !== 2 && msg.teamSize !== 3) return;
         this.state.teamSize = msg.teamSize;
         this.broadcastRoster();
         return;

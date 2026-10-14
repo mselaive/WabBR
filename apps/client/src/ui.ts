@@ -134,6 +134,7 @@ export class UI {
   private readonly slotsEl = el("slots");
   private readonly modeSolo = el("modeSolo") as HTMLButtonElement;
   private readonly modeDuos = el("modeDuos") as HTMLButtonElement;
+  private readonly modeTrios = el("modeTrios") as HTMLButtonElement;
   private readonly shieldBar = el("shieldBar");
   private readonly shieldFill = el("shieldFill");
   private readonly staminaFill = el("staminaFill");
@@ -215,6 +216,7 @@ export class UI {
     this.btnAddBot.addEventListener("click", () => this.cb.onAddBot());
     this.modeSolo.addEventListener("click", () => this.cb.onMode(1));
     this.modeDuos.addEventListener("click", () => this.cb.onMode(2));
+    this.modeTrios.addEventListener("click", () => this.cb.onMode(3));
     for (const b of el("rulesRow").querySelectorAll<HTMLButtonElement>("[data-rules]")) {
       b.addEventListener("click", () => this.cb.onRules(Number(b.dataset.rules)));
     }
@@ -547,6 +549,7 @@ export class UI {
     for (const [button, size] of [
       [this.modeSolo, 1],
       [this.modeDuos, 2],
+      [this.modeTrios, 3],
     ] as const) {
       const on = teamSize === size;
       button.classList.toggle("on", on);

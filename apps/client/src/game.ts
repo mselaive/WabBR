@@ -982,7 +982,7 @@ export class Game {
           if (ev.byId === this.localId) this.ui.addNotice("Mina puesta: se arma en un segundo y medio");
           break;
         case "finalTwo":
-          this.ui.addNotice(this.teamSize === 2 ? "¡Quedan dos parejas!" : "¡Quedan dos!");
+          this.ui.addNotice(this.teamSize === 3 ? "¡Quedan dos equipos!" : this.teamSize === 2 ? "¡Quedan dos parejas!" : "¡Quedan dos!");
           break;
         case "lightning":
           this.world.lightning();

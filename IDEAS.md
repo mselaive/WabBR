@@ -115,6 +115,7 @@ está en `main`. Protocolo **v3** (producción está en v2): al desplegar, prime
 | Lo mejor de la noche + resumen | Quién ganó más, mató más y apostó mejor; "Copiar resumen" para el grupo | Tests + capturas |
 | Elegir tu color | Tocar tu cuadradito pasa al siguiente color libre; se recuerda | Prueba en el navegador |
 | Dificultad de los bots | Fácil / Normal / Difícil | Test + captura |
+| Tríos | Equipos de tres, por sorteo | 2 tests + partida de tríos por socket |
 | Teléfono | Ayuda de puntería con el stick; botón Sonido; botones de a dos y sin filas vacías | Tests + capturas emulando un teléfono |
 | Volumen | Control en el menú | Captura |
 | Practicar con bots | Un botón en el menú: sala propia con 5 bots que arranca sola | Prueba en el navegador |

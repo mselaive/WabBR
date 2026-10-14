@@ -364,13 +364,15 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
     [slots[i], slots[j]] = [slots[j]!, slots[i]!];
   }
 
-  // En dúos, el lugar sorteado también arma las parejas: 0 y 1 juntos, 2 y 3...
-  // Cada pareja aparece junta, en un punto del anillo para ella sola. Con dos
-  // jugadores no hay dúos: serían compañeros y la partida terminaría al empezar.
-  const duos = state.teamSize === 2 && active.length > 2;
+  // En dúos (o tríos), el lugar sorteado también arma los equipos: 0 y 1
+  // juntos, 2 y 3... Cada equipo aparece junto, en un punto del anillo para él
+  // solo. Si no alcanza para dos equipos, todos contra todos: serían
+  // compañeros y la partida terminaría al empezar.
+  const size = state.teamSize >= 2 && active.length > state.teamSize ? state.teamSize : 1;
+  const duos = size === 2;
   // El que no juega esta partida no arrastra el equipo de la anterior.
   for (const p of state.players) p.team = p.id;
-  const teams = duos ? Math.ceil(active.length / 2) : active.length;
+  const teams = Math.ceil(active.length / size);
 
   // Las parejas que se eligieron en el lobby van primero, juntas; el resto se
   // empareja por sorteo. El lugar en el anillo igual sale al azar: la rotación
@@ -396,12 +398,16 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
 
   state.startTeams = teams;
   const firstOfTeam = new Map<number, { x: number; y: number }>();
+  const teamCount = new Map<number, number>();
   active.forEach((p) => {
     const slot = rank.get(p)!;
-    const team = duos ? Math.floor(slot / 2) : slot;
-    p.team = duos ? -1 - team : p.id;
+    const team = Math.floor(slot / size);
+    p.team = size > 1 ? -1 - team : p.id;
     const mate = firstOfTeam.get(team);
-    const sp = mate ? spawnBeside(mate, arena) : spawnPoint(team, teams, seed, arena);
+    // El segundo al lado del primero; el tercero, del otro lado.
+    const nth = teamCount.get(team) ?? 0;
+    teamCount.set(team, nth + 1);
+    const sp = mate ? spawnBeside(mate, arena, (nth - 1) * 4) : spawnPoint(team, teams, seed, arena);
     if (!mate) firstOfTeam.set(team, sp);
     p.x = sp.x;
     p.y = sp.y;

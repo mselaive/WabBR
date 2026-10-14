@@ -77,6 +77,37 @@ describe("dúos", () => {
     }
   });
 
+  it("tríos: equipos de tres que aparecen juntos, sin uno encima del otro", () => {
+    const arena = generateArena();
+    const state = createGameState(3);
+    state.teamSize = 3;
+    for (let i = 1; i <= 7; i++) state.players.push(createPlayer(i));
+    startMatch(state, 4242, arena);
+
+    const teams = new Map<number, typeof state.players>();
+    for (const p of state.players) teams.set(p.team, [...(teams.get(p.team) ?? []), p]);
+    // 7 jugadores: dos de tres y el que sobra, solo.
+    expect([...teams.values()].map((t) => t.length).sort()).toEqual([1, 3, 3]);
+    expect(state.startTeams).toBe(3);
+    for (const team of teams.values()) {
+      for (let a = 0; a < team.length; a++) {
+        for (let b = a + 1; b < team.length; b++) {
+          const d = Math.hypot(team[a]!.x - team[b]!.x, team[a]!.y - team[b]!.y);
+          expect(d).toBeLessThan(100);
+          expect(d).toBeGreaterThan(20);
+        }
+      }
+    }
+  });
+
+  it("tríos con tres o menos: todos contra todos", () => {
+    const state = createGameState(3);
+    state.teamSize = 3;
+    for (let i = 1; i <= 3; i++) state.players.push(createPlayer(i));
+    startMatch(state, 4242, generateArena());
+    expect(new Set(state.players.map((p) => p.team)).size).toBe(3);
+  });
+
   it("las parejas elegidas en el lobby se respetan; las inválidas se ignoran", () => {
     for (const seed of [1, 2, 3, 4, 5]) {
       const state = createGameState(3);

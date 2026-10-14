@@ -193,6 +193,11 @@ oscuridad (el que estaba quieto en la otra punta de la calle), así que también
 esconderse. Sale de un hash del tick (`stepStorm`), no del azar de la partida, y llega como evento:
 todos lo ven a la vez.
 
+**Tríos.** Además de *Dúos*, hay *Tríos*: equipos de tres por sorteo (el que sobra juega solo),
+que aparecen juntos —el tercero del otro lado del primero— y se juegan igual que los dúos: se
+levantan entre ellos, se ven siempre y las balas propias los atraviesan. Con tres o menos, todos
+contra todos.
+
 **Dúos.** Arriba de la lista, el host elige *Todos contra todos* o *Dúos*. En dúos cada
 fila tiene un botón **Pareja**: si dos se eligen entre sí juegan juntos (al otro le
 aparece "Aceptar pareja"; un bot acepta solo). Los que no eligieron se emparejan por

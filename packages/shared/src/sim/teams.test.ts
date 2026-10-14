@@ -327,5 +327,19 @@ describe("dúos", () => {
       const away = botInput(state, victim!, createBotMemory(2), EMPTY);
       expect(away.moveX !== 0 || away.moveY !== 0).toBe(true);
     });
+
+    it("desangrarse lejos no cuenta como tiro largo", () => {
+      const state = line();
+      knock(state);
+      // Como si lo hubiera tirado con el rifle (la explosión no cuenta como tiro).
+      state.players[1]!.downedCause = 2;
+      const shooter = state.players[2]!;
+      // El que lo tiró se va lejísimo mientras el otro se desangra.
+      shooter.x += 3000;
+      for (let t = 0; t < DOWNED_BLEED_TICKS + 2; t++) idle(state);
+      expect(state.players[1]!.alive).toBe(false);
+      expect(shooter.kills).toBe(1);
+      expect(shooter.longestKill).toBe(0);
+    });
   });
 });

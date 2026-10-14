@@ -1042,7 +1042,7 @@ function downOrKill(state: GameState, target: PlayerState, byId: number, cause: 
     return;
   }
   const credit = target.downed && (byId < 0 || byId === target.id) ? target.downedBy : byId;
-  killPlayer(state, target, credit, target.downed && byId < 0 ? target.downedCause : cause, events);
+  killPlayer(state, target, credit, target.downed && byId < 0 ? target.downedCause : cause, events, credit === byId);
 }
 
 /** El compañero caído más cercano al alcance de `p`, o undefined. */
@@ -1098,6 +1098,8 @@ function killPlayer(
   killerId: number,
   cause: number,
   events: SimEvent[],
+  /** El que mata es el que pegó ahora (no un caído que se desangró): cuenta para el tiro más largo. */
+  direct = false,
 ): void {
   victim.hp = 0;
   victim.alive = false;
@@ -1138,14 +1140,19 @@ function killPlayer(
   if (killer && killer.id !== victim.id) {
     killer.kills++;
     // Con un arma, no con la zona ni el bombardeo: el tiro más largo es un tiro.
-    if (cause >= 0) killer.longestKill = Math.max(killer.longestKill, Math.hypot(killer.x - victim.x, killer.y - victim.y));
+    // Sólo la del tiro que mató, con un arma: si se desangró mientras te ibas,
+    // la distancia de ahora no es la del tiro.
+    if (direct && cause >= 0) {
+      killer.longestKill = Math.max(killer.longestKill, Math.hypot(killer.x - victim.x, killer.y - victim.y));
+    }
   }
 
   // La recompensa por el más buscado: el que lo mata se cura entero.
   if (state.wanted?.id === victim.id) {
     state.wanted = null;
-    if (killer && killer.id !== victim.id && killer.alive) {
-      if (!killer.downed) killer.hp = PLAYER_MAX_HP;
+    // Si el que lo mató está caído (lo remató la zona, se desangró), no cobra.
+    if (killer && killer.id !== victim.id && killer.alive && !killer.downed) {
+      killer.hp = PLAYER_MAX_HP;
       events.push({ t: "bounty", byId: killer.id, targetId: victim.id });
     }
   }
@@ -1360,7 +1367,7 @@ function stepGrenades(state: GameState, arena: ArenaMap, events: SimEvent[]): vo
  * Sin eventos "hit" por tick (serían veinte por segundo): se ve en la vida que
  * baja y en las llamas.
  */
-function stepFires(state: GameState, events: SimEvent[]): void {
+function stepFires(state: GameState, arena: ArenaMap, events: SimEvent[]): void {
   if (state.fires.length === 0) return;
   for (const f of state.fires) {
     f.ticksLeft--;
@@ -1371,6 +1378,9 @@ function stepFires(state: GameState, events: SimEvent[]): void {
       const dx = p.x - f.x;
       const dy = p.y - f.y;
       if (dx * dx + dy * dy > FIRE_RADIUS * FIRE_RADIUS) continue;
+      // Las paredes frenan el fuego como frenan la vista: no quema del otro lado
+      // de una casa. Detrás de una caja sí: para eso está la molotov.
+      if (!hasLineOfSight(f.x, f.y, p.x, p.y, arena)) continue;
       applyDamage(state, p, FIRE_DPS * DT, f.ownerId, CAUSE_FIRE, events);
     }
   }
@@ -1437,7 +1447,24 @@ function stepBullets(state: GameState, arena: ArenaMap, events: SimEvent[]): voi
         const owner = findPlayer(state, b.ownerId);
         if (owner) owner.shotsHit++;
       }
-      applyExplosion(state, nx - b.vx * back, ny - b.vy * back, b.ownerId, arena, events, -1, b.weapon);
+      // De lleno: estalla donde está el otro ahora, contra su costado. El impacto
+      // se busca en el pasado (compensación de lag) pero el daño es del presente,
+      // y si estallara donde estaba podría no tocarlo.
+      if (hitPlayer) {
+        const speed = Math.max(1, Math.hypot(b.vx, b.vy));
+        applyExplosion(
+          state,
+          hitPlayer.x - (b.vx / speed) * PLAYER_RADIUS,
+          hitPlayer.y - (b.vy / speed) * PLAYER_RADIUS,
+          b.ownerId,
+          arena,
+          events,
+          -1,
+          b.weapon,
+        );
+      } else {
+        applyExplosion(state, nx - b.vx * back, ny - b.vy * back, b.ownerId, arena, events, -1, b.weapon);
+      }
       continue;
     }
 
@@ -1882,7 +1909,7 @@ export function step(
 
   stepDowned(state, events);
   stepSmokes(state);
-  stepFires(state, events);
+  stepFires(state, arena, events);
   stepGrenades(state, arena, events);
   stepBullets(state, arena, events);
   stepZone(state, arena, events);

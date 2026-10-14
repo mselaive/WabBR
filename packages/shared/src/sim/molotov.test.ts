@@ -65,6 +65,16 @@ describe("molotov", () => {
     expect(state.players[2]!.hp).toBe(PLAYER_MAX_HP);
   });
 
+  it("una pared frena el fuego: del otro lado no quema", () => {
+    const state = scene();
+    const victim = state.players[1]!;
+    fireAt(state, victim.x - 50, victim.y);
+    const obstacles = [{ kind: "buildingWall" as const, x: victim.x - 30, y: victim.y - 60, w: 20, h: 120, variant: 0 }];
+    const walled: ArenaMap = { ...EMPTY, obstacles, grid: new ObstacleGrid(obstacles) };
+    for (let t = 0; t < 20; t++) step(state, new Map(), [], walled);
+    expect(victim.hp).toBe(PLAYER_MAX_HP);
+  });
+
   it("al que la tiró también; a su compañero no", () => {
     const state = scene();
     state.teamSize = 2;

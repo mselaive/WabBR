@@ -98,6 +98,21 @@ describe("el más buscado", () => {
     expect(state.wanted).toBeNull();
   });
 
+  it("si el que lo mata está caído, no cobra", () => {
+    const state = match(4);
+    tick(state);
+    const [leader, hunter] = state.players;
+    hunter!.downed = true;
+    hunter!.hp = 50;
+    leader!.hp = 1;
+    hunter!.x = leader!.x + 200;
+    const events: SimEvent[] = [];
+    applyExplosion(state, leader!.x, leader!.y + 10, hunter!.id, EMPTY, events);
+    expect(leader!.alive).toBe(false);
+    expect(hunter!.hp).toBe(50);
+    expect(events.some((e) => e.t === "bounty")).toBe(false);
+  });
+
   it("los bots armados van a buscarlo; con la pistola de arranque, no", () => {
     const state = match(4);
     tick(state);

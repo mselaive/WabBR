@@ -84,4 +84,17 @@ describe("fogatas", () => {
     expect(without.moveX).toBe(-1);
     expect(withMeds.act).toBe(4);
   });
+
+  it("a una fogata afuera de la zona no va", () => {
+    const state = scene();
+    const bot = state.players[0]!;
+    bot.x = fire.x + 300;
+    bot.y = fire.y;
+    // La zona, chica y del otro lado: la fogata queda afuera.
+    state.zone.x = bot.x + 200;
+    state.zone.y = bot.y;
+    state.zone.radius = 300;
+    const input = botInput(state, bot, createBotMemory(3), open);
+    expect(input.moveX).not.toBe(-1);
+  });
 });

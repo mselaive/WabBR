@@ -9,6 +9,7 @@ import {
   GRENADE_MAX_STACK,
   PLAYER_RADIUS,
   REVIVE_RANGE,
+  MOLOTOV_MAX_STACK,
   SMOKE_MAX_STACK,
   SMOKE_RADIUS,
   STRIKE_RADIUS,
@@ -36,6 +37,7 @@ import {
   ACT_PICKUP,
   ACT_SLOT_0,
   ACT_SLOT_1,
+  ACT_MOLOTOV,
   ACT_SMOKE,
   ACT_THROW,
   ACT_USE_BASE,
@@ -262,10 +264,16 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
       input.aim = smoke;
       mem.throwCd = 60;
       mem.retreat = 80;
-    } else if (mem.reaction === 0 && mem.throwCd === 0 && canThrow(me) && (BOT_SKILLS[mem.skill] ?? BOT_SKILLS[1]).grenades) {
+    } else if (
+      mem.reaction === 0 &&
+      mem.throwCd === 0 &&
+      (canThrow(me) || canThrow(me, GRENADE_MOLOTOV)) &&
+      (BOT_SKILLS[mem.skill] ?? BOT_SKILLS[1]).grenades
+    ) {
+      // La granada primero; la molotov, si no le quedan (rueda igual y cae donde la granada).
       const aim = grenadeAim(me, target, arena);
       if (aim !== null) {
-        input.act = ACT_THROW;
+        input.act = canThrow(me) ? ACT_THROW : ACT_MOLOTOV;
         input.aim = aim;
         // Una cada varios segundos: tirar todas juntas es regalarlas.
         mem.throwCd = 100 + Math.floor(mem.random() * 80);
@@ -309,7 +317,7 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
       if (act >= ACT_USE_BASE) return input;
     }
     // Armado y sin nadie a la vista: a cazar al más buscado, si está cerca.
-    goal = campfireGoal(me, arena) ?? huntWanted(state, me) ?? pickGoal(state, me, mem, crates);
+    goal = campfireGoal(state, me, arena) ?? huntWanted(state, me) ?? pickGoal(state, me, mem, crates);
     if (goal) input.aim = Math.atan2(goal.y - me.y, goal.x - me.x);
   }
 
@@ -406,13 +414,16 @@ function smokeAim(me: PlayerState, target: PlayerState, arena: ArenaMap): number
  * Herido y sin nada con qué curarse: a la fogata más cercana, y quedarse ahí
  * hasta llenarse. Con vendas o botiquín, mejor usarlos (lo hace idleAction).
  */
-function campfireGoal(me: PlayerState, arena: ArenaMap): { x: number; y: number } | null {
+function campfireGoal(state: GameState, me: PlayerState, arena: ArenaMap): { x: number; y: number } | null {
   if (me.reviving >= 0 || me.hp >= 95) return null;
   const hasMeds = (me.consumables[0] ?? 0) > 0 || (me.consumables[1] ?? 0) > 0;
   if (hasMeds || (me.hp >= 70 && !nearCampfire(arena, me.x, me.y))) return null;
   let best: { x: number; y: number } | null = null;
   let bestD = 700;
+  const z = state.zone;
   for (const f of arena.campfires ?? []) {
+    // Afuera de la zona no: la zona lo sacaría de ahí y quedaría yendo y viniendo.
+    if (Math.hypot(f.x - z.x, f.y - z.y) > z.radius - 80) continue;
     const d = Math.hypot(f.x - me.x, f.y - me.y);
     if (d < bestD) {
       best = f;
@@ -556,8 +567,7 @@ export function wants(me: PlayerState, item: GroundItem): boolean {
     return def !== undefined && (me.consumables[item.ref] ?? 0) < def.maxStack;
   }
   if (item.kind === ITEM_GRENADE && item.ref === GRENADE_SMOKE) return me.smokes < SMOKE_MAX_STACK;
-  // La molotov no la usan: juntarla sería sólo sacársela a otro.
-  if (item.kind === ITEM_GRENADE && item.ref === GRENADE_MOLOTOV) return false;
+  if (item.kind === ITEM_GRENADE && item.ref === GRENADE_MOLOTOV) return me.molotovs < MOLOTOV_MAX_STACK;
   if (item.kind === ITEM_GRENADE) return me.grenades < GRENADE_MAX_STACK;
   if (item.kind === ITEM_ARMOR) return (ARMORS[item.ref]?.shield ?? 0) > me.shield;
   return false;

@@ -135,6 +135,8 @@ export class Game {
   private teamSize = 1;
   /** Kills recientes (performance.now()) y kills en esta vida, por jugador: para las rachas. */
   private streaks = new Map<number, { recent: number[]; life: number }>();
+  /** Si este cliente vio empezar la partida en curso (para los récords). */
+  private sawStart = false;
   /** Si los récords de esta partida ya se sumaron. */
   private recorded = false;
   /** Cómo te mataron, para mostrarlo mientras mirás el resto de la partida. */
@@ -385,6 +387,11 @@ export class Game {
   private reset(): void {
     this.localId = -1;
     this.hostId = -1;
+    // Récords y rachas son de una partida que este cliente vio empezar: al
+    // reconectar o cambiar de sala, nada de lo anterior sigue valiendo.
+    this.sawStart = false;
+    this.recorded = false;
+    this.streaks.clear();
     // Sin esto, reconectar durante una partida en curso no dispara el cambio de
     // fase y el jugador se queda mirando el lobby con el juego corriendo detrás.
     this.phase = "lobby";
@@ -451,6 +458,9 @@ export class Game {
 
       case "start":
         // Arranca la ronda: el predictor se re-sincroniza con el primer snapshot.
+        this.sawStart = true;
+        this.recorded = false;
+        this.streaks.clear();
         this.predictor = new Predictor(this.localId);
         this.spawned = false;
         this.seq = 1;
@@ -682,7 +692,9 @@ export class Game {
           : `Ganaron ${winners.join(" y ")}.`;
     // Los récords se cuentan una vez por partida, aunque el resultado se muestre de nuevo.
     let records: string[] = [];
-    if (mine && !this.recorded) {
+    // Sólo si la viste empezar: entrar a mitad (o recargar en la pantalla
+    // final) no es haberla jugado, y contaría la misma partida dos veces.
+    if (mine && this.sawStart && !this.recorded) {
       this.recorded = true;
       records = addMatch({ won: mine.place === 1 && msg.winner >= 0, kills: mine.kills, damage: mine.damage, longestKill: mine.longestKill });
       this.ui.setMyStats(recordsLine());

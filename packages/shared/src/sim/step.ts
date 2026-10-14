@@ -644,6 +644,41 @@ function tryPickup(
   events.push({ t: "pickup", itemId: item.id, byId: p.id });
 }
 
+/** Pisarlo alcanza: a esta distancia del centro del objeto se junta solo. */
+const AUTO_PICKUP_RADIUS = 26;
+
+/**
+ * Curaciones y granadas se juntan solas al pasar por encima, si entran
+ * enteras en la mochila (como la munición en surviv.io). Armas y chalecos
+ * siguen pidiendo E: ahí hay que elegir y uno no quiere soltar el suyo sin
+ * querer. Si no entran enteras, tampoco: E las junta igual, perdiendo lo que
+ * sobra, pero eso tiene que ser una decisión.
+ */
+function autoPickup(state: GameState, p: PlayerState, events: SimEvent[]): void {
+  for (let i = state.items.length - 1; i >= 0; i--) {
+    const item = state.items[i]!;
+    if (item.kind !== ITEM_CONSUMABLE && item.kind !== ITEM_GRENADE) continue;
+    const dx = item.x - p.x;
+    const dy = item.y - p.y;
+    if (dx * dx + dy * dy > AUTO_PICKUP_RADIUS * AUTO_PICKUP_RADIUS) continue;
+    if (!fitsWhole(p, item)) continue;
+    if (!takeItem(state, p, item, events)) continue;
+    state.items.splice(i, 1);
+    events.push({ t: "pickup", itemId: item.id, byId: p.id });
+  }
+}
+
+/** ¿Entra todo el montón en la mochila? */
+function fitsWhole(p: PlayerState, item: GroundItem): boolean {
+  if (item.kind === ITEM_GRENADE) {
+    return item.ref === GRENADE_SMOKE
+      ? p.smokes + item.count <= SMOKE_MAX_STACK
+      : p.grenades + item.count <= GRENADE_MAX_STACK;
+  }
+  const def = consumableAt(item.ref);
+  return def !== undefined && (p.consumables[item.ref] ?? 0) + item.count <= def.maxStack;
+}
+
 function handleAction(
   state: GameState,
   p: PlayerState,
@@ -1701,6 +1736,7 @@ export function step(
   // tramo más reciente es el de ahora.
   for (const p of state.players) {
     if (!p.alive) continue;
+    if (!p.downed) autoPickup(state, p, events);
     recordTrail(p, state.tick);
     p.inBush = bushAt(arena, p.x, p.y);
   }

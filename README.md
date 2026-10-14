@@ -296,6 +296,9 @@ mapa, y su id es su orden de aparición.
 - **Chalecos**: una barra de escudo que se gasta antes que la vida. La zona la
   ignora, para que un chaleco no te deje sobrevivir afuera.
 - Al morir soltás todo lo que llevabas: matar a alguien tiene que valer la pena.
+- **Curaciones y granadas se juntan solas** al pasarles por encima, si entran enteras en la
+  mochila (como la munición en surviv.io). Armas y chalecos siguen pidiendo `E`: ahí hay que
+  elegir, y nadie quiere soltar su arma sin querer.
 
 Cada arma tiene un **techo de rareza** (`maxTier`). El francotirador tope en
 épica: con el multiplicador legendario haría 104 de daño y mataría de un tiro

@@ -169,8 +169,6 @@ export class Game {
   private colorChosen = false;
   /** El último latido de poca vida (performance.now()). */
   private lastHeartbeat = 0;
-  /** Ya se avisó que quedan los dos últimos en esta partida. */
-  private announcedFinal = false;
   /** Cuándo arranca sola la próxima partida (performance.now()), o 0. */
   private nextMatchAt = 0;
   /** Por quién apostaste en esta partida, o -1. */
@@ -533,7 +531,6 @@ export class Game {
         this.sawStart = true;
         this.recorded = false;
         this.respawnAt = 0;
-        this.announcedFinal = false;
         this.myBet = -1;
         this.finalBets = [];
         this.streaks.clear();
@@ -615,14 +612,6 @@ export class Game {
     this.snapshots.push(msg, performance.now());
     if (msg.bt) this.finalBets = msg.bt;
     this.aliveCount = msg.alive;
-    // Los dos últimos (o las dos últimas parejas): un aviso, una vez.
-    if (msg.phase === "playing" && !this.announcedFinal) {
-      const teams = new Set(msg.st.filter((r) => r[2] === 1).map((r) => r[4] ?? r[0]));
-      if (teams.size === 2 && msg.st.length > 2) {
-        this.announcedFinal = true;
-        this.ui.addNotice(this.teamSize === 2 ? "¡Quedan dos parejas!" : "¡Quedan dos!");
-      }
-    }
     this.wanted = msg.mw ? { id: msg.mw[0], x: msg.mw[1], y: msg.mw[2] } : null;
     this.champion = msg.ch ? { id: msg.ch[0], x: msg.ch[1], y: msg.ch[2] } : null;
     if (this.champion && this.champion.id !== this.announcedChampion && msg.phase === "playing") {
@@ -644,9 +633,12 @@ export class Game {
     const now = performance.now();
     if (!msg.gc) this.chickenHint = null;
     else if (!this.chickenHint || now - this.chickenHint.at > 8000) this.chickenHint = { x: msg.gc[0], y: msg.gc[1], at: now };
-    for (const [id] of msg.ad ?? []) {
+    // Los paquetes pedidos con bengala ya los anuncia el evento "flare".
+    const flares = (msg.ev ?? []).filter((e) => e.t === "flare");
+    for (const [id, x, y] of msg.ad ?? []) {
       if (this.announcedAirdrops.has(id)) continue;
       this.announcedAirdrops.add(id);
+      if (flares.some((f) => Math.abs(f.x - x) < 2 && Math.abs(f.y - y) < 2)) continue;
       this.ui.addNotice("Cae un paquete aéreo");
       this.sound.airdrop();
     }
@@ -956,6 +948,9 @@ export class Game {
           // Sólo te llega la tuya o la de tu pareja: el clic de dejarla armándose.
           this.sound.reload();
           if (ev.byId === this.localId) this.ui.addNotice("Mina puesta: se arma en un segundo y medio");
+          break;
+        case "finalTwo":
+          this.ui.addNotice(this.teamSize === 2 ? "¡Quedan dos parejas!" : "¡Quedan dos!");
           break;
         case "lightning":
           this.world.lightning();

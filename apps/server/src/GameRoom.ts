@@ -694,6 +694,10 @@ export class GameRoom extends Server<Env> {
         inputs.set(seat.playerId, me?.alive && s.phase === "playing" ? [botInput(s, me, seat.bot, this.arena)] : []);
         continue;
       }
+      // Con la conexión cortada, sin lista: así la simulación lo sigue haciendo
+      // caer si estaba en paracaídas. Conectado y sin nada a tiempo, lista vacía:
+      // espera su input, igual que la predicción.
+      if (seat.goneAt > 0) continue;
       inputs.set(seat.playerId, seat.inputs.take());
     }
 
@@ -936,7 +940,7 @@ export class GameRoom extends Server<Env> {
     // mina, del equipo que la puso: a nadie más.
     const events = this.events.filter((e) => {
       if (e.t === "radar") return e.team === viewer?.team;
-      if (e.t === "mine") return this.seesAll(viewer) || findPlayer(this.state, e.byId)?.team === viewer?.team;
+      if (e.t === "mine") return viewer !== undefined && findPlayer(this.state, e.byId)?.team === viewer.team;
       return true;
     });
     if (!viewer || this.seesAll(viewer)) return events;
@@ -1067,6 +1071,9 @@ export class GameRoom extends Server<Env> {
 
   private resetToLobby(): void {
     const s = this.state;
+    // Los que se fueron en plena partida quedaban en la lista con su puesto
+    // viejo, y aparecían en los resultados de las siguientes.
+    s.players = s.players.filter((p) => this.seats.has(p.id));
     this.lastSeen.clear();
     s.phase = "lobby";
     s.phaseTicksLeft = 0;

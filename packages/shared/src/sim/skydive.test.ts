@@ -118,10 +118,12 @@ describe("el paracaídas", () => {
     const state = falling();
     for (let t = 0; t < AIR_TICKS; t++) step(state, new Map(), [], WALLED);
     expect(state.players[0]!.airTicks).toBe(0);
-    // Y como lo manda el servidor: una lista vacía por jugador.
-    const server = falling();
-    for (let t = 0; t < AIR_TICKS; t++) step(server, new Map([[1, []], [2, []]]), [], WALLED);
-    expect(server.players.every((p) => p.airTicks === 0)).toBe(true);
+    // Conectado y con la lista vacía (el input no llegó a tiempo), espera su
+    // input como la predicción del cliente: si cayera igual, aterrizaría antes
+    // de lo predicho. El servidor no manda lista del que tiene la conexión cortada.
+    const late = falling();
+    for (let t = 0; t < 20; t++) step(late, new Map([[1, []], [2, []]]), [], WALLED);
+    expect(late.players[0]!.airTicks).toBe(AIR_TICKS);
   });
 
   it("un bot en el piso no le tira al que viene en paracaídas", () => {

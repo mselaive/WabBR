@@ -264,6 +264,8 @@ export function createGameState(seed = 1): GameState {
     rules: 0,
     secondChance: false,
     skydive: false,
+    startTeams: 0,
+    finalTwo: false,
     chicken: null,
     chickenSpawned: false,
     airdrops: [],
@@ -326,6 +328,7 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
   state.fires = [];
   state.airdrops = [];
   state.mines = [];
+  state.finalTwo = false;
   state.chicken = null;
   state.chickenSpawned = false;
   state.nextAirdropId = 1;
@@ -391,6 +394,7 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
   for (const x of rest) order.push(x.p);
   const rank = new Map(order.map((p, i) => [p, i]));
 
+  state.startTeams = teams;
   const firstOfTeam = new Map<number, { x: number; y: number }>();
   active.forEach((p) => {
     const slot = rank.get(p)!;
@@ -2630,9 +2634,6 @@ export function step(
 
     if (input) {
       const list: readonly PlayerInput[] = isInputList(input) ? input : [input];
-      // El servidor manda una lista por jugador en cada tick, vacía si no llegó
-      // nada: en el aire, igual se cae.
-      if (list.length === 0 && p.airTicks > 0) fallWithoutInput(p, arena);
       for (const one of list) {
         // En el aire sólo se planea: ni tiros, ni granadas, ni curarse.
         const flying = p.airTicks > 0;
@@ -2724,6 +2725,13 @@ export function step(
     // El que se desconecta no pasa por killPlayer: su tiempo vivo termina acá.
     if (p.diedAtTick < 0) p.diedAtTick = state.tick;
     if (!aliveTeams.has(p.team)) p.place = aliveTeams.size + 1;
+  }
+
+  // Los dos últimos (contando a los que esperan volver): un aviso, una vez, y
+  // sólo si arrancaron más de dos (en un mano a mano no es noticia).
+  if (!state.finalTwo && state.startTeams > 2 && aliveTeams.size === 2) {
+    state.finalTwo = true;
+    events.push({ t: "finalTwo" });
   }
 
   // Si los únicos que quedan están esperando para volver, se los espera.

@@ -383,6 +383,10 @@ export interface GameState {
    * por segunda vez) vuelve una vez, con lo de arranque. Lo elige el host.
    */
   secondChance: boolean;
+  /** Cuántos equipos arrancaron la partida (para avisar cuando quedan dos). */
+  startTeams: number;
+  /** Ya se avisó que quedan los dos últimos. */
+  finalTwo: boolean;
   /** Se empieza cayendo en paracaídas (ver AIR_TICKS). Lo elige el host. */
   skydive: boolean;
   /** La gallina dorada, mientras ande suelta. */
@@ -527,6 +531,8 @@ export type SimEvent =
   | { t: "flare"; byId: number; x: number; y: number }
   /** Quedó una mina en el piso (suena el clic de armarla). */
   | { t: "mine"; x: number; y: number; byId: number }
+  /** Quedan los dos últimos equipos en carrera (una vez por partida). */
+  | { t: "finalTwo" }
   /** De noche, un relámpago: ilumina todo un instante (ver stepStorm). */
   | { t: "lightning" }
   /** Le pegaron a la gallina dorada. */

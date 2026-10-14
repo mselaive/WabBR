@@ -165,4 +165,26 @@ describe("segunda oportunidad", () => {
     expect(rows.get(2)?.cameBack).toBe(true);
     expect(rows.get(3)?.cameBack).toBe(false);
   });
+
+  it("cuando quedan los dos últimos (contando al que espera volver), un aviso, una vez", () => {
+    const state = match(4);
+    state.startTeams = 4;
+    kill(state, state.players[3]!, 1);
+    state.players[3]!.respawnTick = -1; // Este no vuelve.
+    const first = tick(state);
+    expect(first.some((e) => e.t === "finalTwo")).toBe(false);
+    // El 3 muere temprano y espera volver: siguen siendo tres en carrera.
+    kill(state, state.players[2]!, 1);
+    expect(tick(state).some((e) => e.t === "finalTwo")).toBe(false);
+    state.zone.phase = 2;
+    state.players[2]!.respawnTick = -1;
+    expect(tick(state).some((e) => e.t === "finalTwo")).toBe(true);
+    expect(tick(state).some((e) => e.t === "finalTwo")).toBe(false);
+  });
+
+  it("en un mano a mano no hay aviso de los dos últimos", () => {
+    const state = match(2);
+    state.startTeams = 2;
+    expect(tick(state).some((e) => e.t === "finalTwo")).toBe(false);
+  });
 });

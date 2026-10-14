@@ -657,7 +657,7 @@ no rompe récords: no había nada que romper. Los metros son 20 px cada uno (un 
 ### Logros y gorros
 
 Tampoco con cuentas: en el menú, abajo del nombre, está **tu gorro** (`apps/client/src/achievements.ts`).
-Hay 9 logros y cada uno desbloquea un gorro que todos ven sobre tu muñeco (y en el podio):
+Hay 11 logros y cada uno desbloquea un gorro que todos ven sobre tu muñeco (y en el podio):
 
 | Logro | Cómo | Gorro |
 |---|---|---|
@@ -670,6 +670,8 @@ Hay 9 logros y cada uno desbloquea un gorro que todos ven sobre tu muñeco (y en
 | Pirómano | Una kill con una molotov | Bandana |
 | Ángel guardián | Levantar a tu compañero | Aureola |
 | Búho | Ganar de noche | Gorro de mago |
+| Cazador | Cazar la gallina dorada | Cresta |
+| Vidente | Acertar una apuesta de espectador | Turbante |
 
 Al conseguir uno, un aviso lo dice. Los bloqueados se ven apagados y dicen cómo se consiguen. El
 gorro viaja como un número con el nombre al conectarse (`?hat=`), el servidor sólo comprueba que

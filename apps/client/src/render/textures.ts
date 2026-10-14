@@ -460,6 +460,20 @@ export function drawHat(ctx: Ctx, hat: number): void {
       rect(ctx, 3, 9, 10, 2, "#1b1f24");
       rect(ctx, 6, 3, 1, 4, "#3a4048");
       break;
+    case 10: // cresta de gallo (la gallina dorada)
+      rect(ctx, 5, 6, 6, 4, "#d9302a");
+      rect(ctx, 5, 4, 2, 2, "#d9302a");
+      rect(ctx, 8, 3, 2, 3, "#e8473f");
+      rect(ctx, 11, 5, 1, 2, "#d9302a");
+      rect(ctx, 6, 8, 4, 1, "#a8231e");
+      break;
+    case 11: // turbante (el vidente)
+      ellipse(ctx, 8, 8, 6, 4, "#f4efe6");
+      rect(ctx, 3, 8, 10, 1, "#d8d0c2");
+      rect(ctx, 5, 6, 6, 1, "#d8d0c2");
+      rect(ctx, 7, 5, 2, 2, "#7b4fd6");
+      rect(ctx, 7, 3, 2, 2, "#ffe066");
+      break;
   }
 }
 

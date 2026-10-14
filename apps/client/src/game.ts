@@ -789,6 +789,10 @@ export class Game {
       if (won && this.night) this.achieve("nightWin");
       if (mine.kills >= 5) this.achieve("fiveKills");
       if (mine.longestKill >= 40) this.achieve("longShot");
+      const guessed = this.finalBets.some(
+        ([by, on]) => by === this.localId && winnerTeam !== undefined && this.standings.get(on)?.team === winnerTeam,
+      );
+      if (guessed) this.achieve("bet");
       if (loadRecords().played >= 10) this.achieve("veteran");
     }
     // Las apuestas: quién apostó por quién, con un ✓ si acertó.
@@ -882,6 +886,7 @@ export class Game {
         case "chicken": {
           const by = this.everyone.get(ev.byId)?.name ?? "Alguien";
           this.ui.addNotice(ev.byId === this.localId ? "¡Cazaste la gallina dorada! Agarrá el botín" : `${by} cazó la gallina dorada`);
+          if (ev.byId === this.localId) this.achieve("chicken");
           this.defer(() => {
             this.world.spawnFeathers(ev.x, ev.y, 18);
             this.sound.cluck(this.spot(ev.x, ev.y), true);

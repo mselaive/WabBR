@@ -1621,14 +1621,21 @@ body.touch #consumables .consumable {
 }
 
 /* El selector de gorros del menú. */
+/* Doce gorros: en una fila en la compu, en dos en el teléfono. */
 .hat-picker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 4px;
+}
+
+@media (max-width: 520px) {
+  .hat-picker {
+    grid-template-columns: repeat(6, 1fr);
+  }
 }
 
 .hat-option {
-  width: 40px;
+  width: 100%;
   height: 52px;
   padding: 2px;
   border: 2px solid var(--line);
@@ -1639,7 +1646,9 @@ body.touch #consumables .consumable {
 
 .hat-option img {
   width: 32px;
+  max-width: 100%;
   height: 48px;
+  object-fit: contain;
   image-rendering: pixelated;
 }
 

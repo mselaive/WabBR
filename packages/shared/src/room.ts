@@ -38,7 +38,7 @@ function isInvisible(code: number): boolean {
 }
 
 /** Cuántos gorros hay (0 es la gorra de siempre, del color del jugador). */
-export const HAT_COUNT = 10;
+export const HAT_COUNT = 12;
 
 /** El gorro que pidió el cliente, o 0 si no es uno válido. */
 export function sanitizeHat(raw: unknown): number {

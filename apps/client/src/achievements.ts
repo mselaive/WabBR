@@ -25,6 +25,8 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   { id: "fireKill", name: "Pirómano", how: "Una kill con una molotov", hat: 6, hatName: "Bandana" },
   { id: "revive", name: "Ángel guardián", how: "Levantá a tu compañero", hat: 7, hatName: "Aureola" },
   { id: "nightWin", name: "Búho", how: "Ganá una partida de noche", hat: 8, hatName: "Gorro de mago" },
+  { id: "chicken", name: "Cazador", how: "Cazá la gallina dorada", hat: 10, hatName: "Cresta" },
+  { id: "bet", name: "Vidente", how: "Acertá una apuesta de espectador", hat: 11, hatName: "Turbante" },
 ];
 
 const UNLOCKED_KEY = "wabbr:achievements";

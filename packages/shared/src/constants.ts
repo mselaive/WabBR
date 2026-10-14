@@ -126,6 +126,19 @@ export const STRIKE_BOMB_EVERY = 10;
  * de todos cada WANTED_REVEAL_TICKS. Lo sigue siendo mientras vaya primero
  * solo; si lo alcanzan, deja de serlo. El que lo mata se cura entero.
  */
+/**
+ * La gallina dorada (como la llama de Fortnite): aparece cuando la zona se
+ * cierra por primera vez, se escapa del que se acerca y, cazada, suelta
+ * botín de caja dorada. Corriendo va más rápido que un jugador caminando y
+ * más lento que uno corriendo: se la alcanza, pero a los tiros.
+ */
+export const CHICKEN_HP = 45;
+export const CHICKEN_RADIUS = 11;
+export const CHICKEN_FLEE_SPEED = 270;
+export const CHICKEN_WALK_SPEED = 55;
+/** A cuánto se asusta de alguien. */
+export const CHICKEN_FEAR_RADIUS = 280;
+
 /** Cuánto se espera para volver con la segunda oportunidad: 8 s. */
 export const RESPAWN_TICKS = 160;
 

@@ -604,6 +604,8 @@ export interface TexturePack {
   pump: Texture;
   campfire: Texture;
   jumpPad: Texture;
+  /** La gallina dorada mirando a la derecha: parada y con el paso dado. */
+  chicken: Texture[];
   /** Por índice de gorro (el 0 queda vacío: es la gorra de la remera). */
   hats: Texture[];
 }
@@ -662,6 +664,7 @@ export function getTextures(): TexturePack {
     pump: pump(),
     campfire: campfireLogs(),
     jumpPad: jumpPad(),
+    chicken: [chicken(0), chicken(1)],
     hats: Array.from({ length: HAT_COUNT }, (_, i) => hatTexture(i)),
   };
   return pack;
@@ -978,6 +981,35 @@ function jumpPad(): Texture {
     ellipse(ctx, 13, 5, 1.5, 1.5, "#ffffff");
     ellipse(ctx, 11, 9, 1.2, 1.2, "#ffffff");
     ellipse(ctx, 5, 9, 1, 1, "#ffffff");
+  });
+}
+
+/** La gallina dorada, de perfil. `step` cambia las patas: con dos cuadros ya camina. */
+function chicken(step: number): Texture {
+  return make(18, 16, (ctx) => {
+    // Contorno: la misma silueta un poco más grande y oscura.
+    ellipse(ctx, 8, 9, 7, 5.5, "#1b1410");
+    ellipse(ctx, 13, 5, 3.8, 3.8, "#1b1410");
+    rect(ctx, 1, 3, 4, 6, "#1b1410");
+    // Cola.
+    rect(ctx, 2, 4, 2, 5, "#c99a1f");
+    rect(ctx, 3, 3, 2, 3, "#e0b02a");
+    // Cuerpo y cabeza.
+    ellipse(ctx, 8, 9, 6, 4.5, "#f0c030");
+    ellipse(ctx, 8, 11, 5, 2.5, "#c99a1f");
+    ellipse(ctx, 13, 5, 3, 3, "#f5cc3a");
+    ellipse(ctx, 7, 7, 2.5, 1.5, "#ffe27a");
+    // Ala.
+    ellipse(ctx, 7, 9.5, 3, 2, "#d9a823");
+    // Cresta, pico, barbilla y ojo.
+    rect(ctx, 12, 1, 3, 2, "#d9302a");
+    rect(ctx, 16, 5, 2, 1, "#f08a1e");
+    rect(ctx, 14, 7, 1, 2, "#d9302a");
+    rect(ctx, 14, 4, 1, 1, "#1b1410");
+    // Patas.
+    const a = step === 0 ? 0 : 1;
+    rect(ctx, 6 - a, 13, 1, 3, "#f08a1e");
+    rect(ctx, 9 + a, 13, 1, 3, "#f08a1e");
   });
 }
 

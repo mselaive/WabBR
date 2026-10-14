@@ -179,6 +179,11 @@ export class WorldView {
   private golden = new Set<number>();
   private openedIds = new Set<number>();
   private lastSparkle = 0;
+  /** La gallina dorada: su sprite, para dónde mira y dónde estaba el cuadro anterior. */
+  private chickenSprite: Sprite | null = null;
+  private chickenFacing = 1;
+  private chickenLast = { x: 0, y: 0 };
+  private chickenSparkle = 0;
   /** Sacudón pendiente, en píxeles. Se apaga solo. */
   private shake = 0;
   /** Marca de acierto sobre la mira: segundos que le quedan. */
@@ -672,6 +677,59 @@ export class WorldView {
     }
   }
 
+  /**
+   * La gallina dorada: camina dando pasitos (dos cuadros), mira para donde va,
+   * brilla como las cajas doradas y, corriendo, rebota.
+   */
+  private updateChicken(frame: InterpolatedFrame): void {
+    const c = frame.chicken;
+    if (!c) {
+      if (this.chickenSprite) this.chickenSprite.visible = false;
+      return;
+    }
+    let sprite = this.chickenSprite;
+    if (!sprite) {
+      sprite = new Sprite(this.tex.chicken[0]!);
+      sprite.anchor.set(0.5, 0.9);
+      this.entityLayer.addChild(sprite);
+      this.chickenSprite = sprite;
+      this.chickenLast = { x: c.x, y: c.y };
+    }
+    const dx = c.x - this.chickenLast.x;
+    const moved = Math.hypot(dx, c.y - this.chickenLast.y);
+    this.chickenLast = { x: c.x, y: c.y };
+    if (Math.abs(dx) > 0.2) this.chickenFacing = dx > 0 ? 1 : -1;
+    const now = performance.now();
+    const running = moved > 2;
+    const step = moved > 0.2 ? Math.floor(now / (running ? 70 : 160)) % 2 : 0;
+    sprite.texture = this.tex.chicken[step]!;
+    sprite.visible = true;
+    sprite.scale.set(ART_SCALE * this.chickenFacing, ART_SCALE);
+    sprite.position.set(c.x, c.y - (running && step === 1 ? 3 : 0));
+    sprite.zIndex = c.y;
+    if (now - this.chickenSparkle > 260) {
+      this.chickenSparkle = now;
+      const g = new Graphics();
+      g.moveTo(-3, 0).lineTo(3, 0).moveTo(0, -3).lineTo(0, 3).stroke({ width: 2, color: 0xfff3b0 });
+      g.position.set(c.x + (Math.random() - 0.5) * 26, c.y - Math.random() * 28);
+      this.effectLayer.addChild(g);
+      this.effects.push({ node: g, life: 0.45, maxLife: 0.45, vx: 0, vy: 0, kind: "spark" });
+    }
+  }
+
+  /** Plumas doradas: le pegaron a la gallina (muchas, si la cazaron). */
+  spawnFeathers(x: number, y: number, count = 6): void {
+    for (let i = 0; i < count; i++) {
+      const g = new Graphics().rect(0, 0, 4, 2).fill(i % 3 === 0 ? 0xfff3b0 : 0xf0c030);
+      g.position.set(x, y - 10);
+      g.rotation = Math.random() * Math.PI;
+      this.effectLayer.addChild(g);
+      const a = Math.random() * Math.PI * 2;
+      const s = 30 + Math.random() * 60;
+      this.effects.push({ node: g, life: 0.7, maxLife: 0.7, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 20, kind: "blood" });
+    }
+  }
+
   /** Vuelve a cerrar todas: se llama al empezar una ronda nueva. */
   resetCrates(): void {
     for (const sprite of this.crateSprites.values()) {
@@ -1111,6 +1169,7 @@ export class WorldView {
     this.updateAirdrops(frame);
     this.updateStrikes(frame);
     this.updateFires(frame);
+    this.updateChicken(frame);
     this.updateNight(frame, localOverride ?? this.cameraCenter());
     this.updateZone(frame);
     this.sparkleGolden();

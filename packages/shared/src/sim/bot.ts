@@ -316,9 +316,19 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
       // Curarse arranca acá: quedarse quieto para no cancelarlo.
       if (act >= ACT_USE_BASE) return input;
     }
-    // Armado y sin nadie a la vista: a cazar al más buscado, si está cerca.
-    goal = campfireGoal(state, me, arena) ?? huntWanted(state, me) ?? pickGoal(state, me, mem, crates);
-    if (goal) input.aim = Math.atan2(goal.y - me.y, goal.x - me.x);
+    const hen = chickenInSight(state, me, arena);
+    if (hen) {
+      // Sin nadie a la vista y con la gallina dorada a tiro: a cazarla.
+      const dx = hen.x - me.x;
+      const dy = hen.y - me.y;
+      input.aim = Math.atan2(dy, dx) + mem.aimError;
+      input.shoot = Math.hypot(dx, dy) < 450;
+      goal = { x: hen.x, y: hen.y };
+    } else {
+      // Armado y sin nadie a la vista: a cazar al más buscado, si está cerca.
+      goal = campfireGoal(state, me, arena) ?? huntWanted(state, me) ?? pickGoal(state, me, mem, crates);
+      if (goal) input.aim = Math.atan2(goal.y - me.y, goal.x - me.x);
+    }
   }
 
   // La zona manda por sobre todo menos un tiro: afuera se corre para adentro.
@@ -433,6 +443,15 @@ function campfireGoal(state: GameState, me: PlayerState, arena: ArenaMap): { x: 
   if (!best) return null;
   // Ya al calor: quieto, que moverse no cura más rápido.
   return bestD < CAMPFIRE_RADIUS - 20 ? { x: me.x, y: me.y } : best;
+}
+
+/** La gallina dorada, si está cerca y a la vista (de noche, más cerca). */
+function chickenInSight(state: GameState, me: PlayerState, arena: ArenaMap): { x: number; y: number } | null {
+  const c = state.chicken;
+  if (!c) return null;
+  const range = state.night ? NIGHT_SIGHT : 600;
+  if (Math.hypot(c.x - me.x, c.y - me.y) > range) return null;
+  return hasLineOfSight(me.x, me.y, c.x, c.y, arena) ? c : null;
 }
 
 /**

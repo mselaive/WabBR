@@ -28,6 +28,7 @@ export interface Frame {
   smokes: Map<number, SmokeState>;
   strikes: UnpackedStrike[];
   fires: { id: number; x: number; y: number; ticksLeft: number }[];
+  chicken: { x: number; y: number; hp: number } | null;
   zone: UnpackedZone;
 }
 
@@ -73,6 +74,8 @@ export interface InterpolatedFrame {
   strikes: UnpackedStrike[];
   /** Charcos de fuego de molotov. */
   fires: { id: number; x: number; y: number; ticksLeft: number }[];
+  /** La gallina dorada, si anda suelta. */
+  chicken: { x: number; y: number; hp: number } | null;
   zone: UnpackedZone;
 }
 
@@ -105,6 +108,7 @@ export class SnapshotBuffer {
       smokes: new Map((msg.sm ?? []).map(unpackSmoke).map((s) => [s.id, s])),
       strikes: (msg.rz ?? []).map(unpackStrike),
       fires: (msg.fi ?? []).map(([id, x, y, ticksLeft]) => ({ id, x, y, ticksLeft })),
+      chicken: msg.gc ? { x: msg.gc[0], y: msg.gc[1], hp: msg.gc[2] } : null,
       zone: unpackZone(msg.zone),
     });
     if (this.frames.length > MAX_FRAMES) this.frames.shift();
@@ -182,6 +186,7 @@ export class SnapshotBuffer {
         smokes: [...last.smokes.values()],
         strikes: last.strikes,
         fires: last.fires,
+        chicken: last.chicken,
         zone: last.zone,
       };
     }
@@ -195,6 +200,7 @@ export class SnapshotBuffer {
         smokes: [...first.smokes.values()],
         strikes: first.strikes,
         fires: first.fires,
+        chicken: first.chicken,
         zone: first.zone,
       };
     }
@@ -260,6 +266,11 @@ export class SnapshotBuffer {
       smokes,
       strikes: b.strikes,
       fires: b.fires,
+      // Corre, así que se interpola como un jugador.
+      chicken:
+        a.chicken && b.chicken
+          ? { ...b.chicken, x: lerp(a.chicken.x, b.chicken.x, t), y: lerp(a.chicken.y, b.chicken.y, t) }
+          : b.chicken,
       zone: {
         ...b.zone,
         x: lerp(a.zone.x, b.zone.x, t),

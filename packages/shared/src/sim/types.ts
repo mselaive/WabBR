@@ -268,6 +268,23 @@ export interface GrenadeState {
   fuse: number;
 }
 
+/** La gallina dorada (ver CHICKEN_HP). */
+export interface ChickenState {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  hp: number;
+  /** Ticks de carrera que le quedan desde el último susto. */
+  panic: number;
+  /** Ticks hasta elegir otro rumbo paseando. */
+  turnIn: number;
+  /** Su propio azar: así no mueve el de la partida. */
+  rng: number;
+  /** Dónde estuvo los últimos ticks, para la compensación de lag (como los jugadores). */
+  trail: number[];
+}
+
 export interface ZoneState {
   x: number;
   y: number;
@@ -328,6 +345,10 @@ export interface GameState {
    * por segunda vez) vuelve una vez, con lo de arranque. Lo elige el host.
    */
   secondChance: boolean;
+  /** La gallina dorada, mientras ande suelta. */
+  chicken: ChickenState | null;
+  /** Ya apareció en esta partida (aparece una sola vez). */
+  chickenSpawned: boolean;
   /** Parejas elegidas en el lobby (ids). Los demás se emparejan por sorteo. */
   pairs: [number, number][];
   airdrops: AirdropState[];
@@ -444,4 +465,8 @@ export type SimEvent =
   /** Alguien mató al más buscado y cobró la recompensa. */
   | { t: "bounty"; byId: number; targetId: number }
   /** Volvió con la segunda oportunidad. */
-  | { t: "respawn"; id: number; x: number; y: number };
+  | { t: "respawn"; id: number; x: number; y: number }
+  /** Le pegaron a la gallina dorada. */
+  | { t: "cluck"; x: number; y: number; byId: number }
+  /** Cazaron a la gallina dorada: el botín ya está en el piso. */
+  | { t: "chicken"; x: number; y: number; byId: number };

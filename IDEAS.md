@@ -79,6 +79,7 @@ está en `main`.
 | Mapa nuevo cada partida | Opción del host: 12 mapas con nombre, el de siempre es el primero; cambia en el lobby | Un test por mapa (casas, apariciones, cajas, saltos) + bots del servidor en otro mapa + predicción sin correcciones |
 | Segunda oportunidad | (De Warzone) Opción del host: el que muere temprano vuelve una vez a los 8 s, lejos de los rivales; título "Gato" | 9 tests (mutaciones incluidas) + partida en el navegador |
 | Opciones en una fila | Mapa nuevo, segunda oportunidad y noche como interruptores: el lobby entra en el teléfono | Capturas en PC y teléfono |
+| Gallina dorada | (Llama de Fortnite) Aparece con la primera zona, escapa corriendo, cazada suelta botín de caja dorada; pista en el minimapa; los bots la cazan | 7 tests + captura en partida |
 
 ## Ideas que quedaron, en el orden en que las haría
 

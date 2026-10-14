@@ -739,6 +739,9 @@ export class GameRoom extends Server<Env> {
         ? { fi: s.fires.map((f) => [f.id, Math.round(f.x), Math.round(f.y), f.ticksLeft] as [number, number, number, number]) }
         : {}),
       ...(s.wanted ? { mw: [s.wanted.id, Math.round(s.wanted.x), Math.round(s.wanted.y)] as [number, number, number] } : {}),
+      ...(s.chicken
+        ? { gc: [Math.round(s.chicken.x), Math.round(s.chicken.y), Math.ceil(s.chicken.hp)] as [number, number, number] }
+        : {}),
       ...this.championPosition(),
     };
 
@@ -888,6 +891,7 @@ export class GameRoom extends Server<Env> {
     s.smokes = [];
     s.fires = [];
     s.strikes = [];
+    s.chicken = null;
     s.wanted = null;
     s.winnerId = -1;
     s.tick = 0;

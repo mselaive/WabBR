@@ -398,6 +398,25 @@ su propio azar, así no cambia nada más del reparto). Es de oro y larga destell
 en el minimapa**: hay que encontrarla. Trae botín de paquete aéreo:
 un arma épica o legendaria (nunca el lanzacohetes), el chaleco pesado y un botiquín.
 
+## La gallina dorada
+
+Copiada de la llama de Fortnite (y un poco de los duendes del Diablo). Cuando la zona empieza a
+cerrarse por primera vez aparece **una gallina dorada**, adentro de la zona y lejos de todos, y
+se avisa a todos. Pasea picoteando; si alguien se le acerca a menos de 280 px sale corriendo para
+el otro lado, zigzagueando, a 270 px/s: más rápido que caminando y más lento que corriendo. Si le
+tiran de lejos, escapa del que le tiró. Tiene 45 de vida (cuatro tiros de pistola, uno de
+francotirador) y, cazada, **suelta lo de una caja dorada**: un arma épica o legendaria, chaleco
+pesado y botiquín. Nunca se va de la zona (si la zona la matara, el botín quedaría afuera).
+
+En el minimapa hay una pista: un círculo punteado donde se la oyó, que se actualiza cada 8
+segundos. Se la escucha cacarear al pegarle y suelta plumas. Los bots que no tienen a nadie a la
+vista le tiran si la ven.
+
+Vive en la simulación (`stepChicken`, `damageChicken`) con su propio azar, para no mover el de la
+partida, y con su propia historia de posiciones: las balas le pegan donde la veía el que tiró, con
+la misma compensación de lag que a los jugadores. El cliente la interpola como a un jugador y la
+cuenta como blanco para sus balas predichas.
+
 ## Paquetes aéreos
 
 Cuando la zona empieza a cerrarse en las dos primeras fases, cae un paquete con

@@ -162,6 +162,10 @@ export class Game {
   private champion: { id: number; x: number; y: number } | null = null;
   /** De qué campeón ya se avisó en esta partida. */
   private announcedChampion = -1;
+  /** Ya se avisó que anda suelta la gallina dorada. */
+  private announcedChicken = false;
+  /** Dónde se la oyó por última vez, para el minimapa: se refresca cada tanto. */
+  private chickenHint: { x: number; y: number; at: number } | null = null;
   /** El más buscado y dónde se lo vio por última vez, o null. */
   private wanted: { id: number; x: number; y: number } | null = null;
   /** Lugares marcados por la pareja, que se muestran unos segundos. */
@@ -278,6 +282,7 @@ export class Game {
         camara: () => this.world.debugCamera(),
         cortar: () => this.net?.simulateDrop(),
         paquetes: () => [...(this.snapshots.latest?.airdrops.values() ?? [])],
+        gallina: () => this.snapshots.latest?.chicken ?? null,
         // El centro del follaje del arbusto más cercano, para probar el escondite.
         arbusto: () => {
           const me = this.lastLocal;
@@ -568,6 +573,16 @@ export class Game {
           : `${name} ganó más partidas: todos lo ven en el mapa (corona roja)`,
       );
     }
+    if (msg.gc && !this.announcedChicken && msg.phase === "playing") {
+      this.announcedChicken = true;
+      this.ui.addNotice("¡Anda suelta una gallina dorada! Cazala a los tiros: suelta botín legendario");
+      this.sound.cluck();
+    }
+    // La pista del minimapa: dónde se la oyó, cada 8 segundos. Encontrarla es
+    // parte del juego, pero el mapa es grande para ir a ciegas.
+    const now = performance.now();
+    if (!msg.gc) this.chickenHint = null;
+    else if (!this.chickenHint || now - this.chickenHint.at > 8000) this.chickenHint = { x: msg.gc[0], y: msg.gc[1], at: now };
     for (const [id] of msg.ad ?? []) {
       if (this.announcedAirdrops.has(id)) continue;
       this.announcedAirdrops.add(id);
@@ -636,6 +651,8 @@ export class Game {
       this.respawnAt = 0;
       this.recorded = false;
       this.announcedChampion = -1;
+      this.announcedChicken = false;
+      this.chickenHint = null;
       this.streaks.clear();
       this.freeCam = null;
       this.watched = null;
@@ -803,6 +820,22 @@ export class Game {
             ev.byId === this.localId ? `Cobraste la recompensa por ${target}: vida llena` : `${by} cobró la recompensa por ${target}`,
           );
           if (ev.byId === this.localId) this.sound.pickup();
+          break;
+        }
+        case "cluck":
+          this.defer(() => {
+            this.world.spawnFeathers(ev.x, ev.y);
+            this.sound.cluck(this.spot(ev.x, ev.y));
+          });
+          if (ev.byId === this.localId) this.world.showHitMarker();
+          break;
+        case "chicken": {
+          const by = this.everyone.get(ev.byId)?.name ?? "Alguien";
+          this.ui.addNotice(ev.byId === this.localId ? "¡Cazaste la gallina dorada! Agarrá el botín" : `${by} cazó la gallina dorada`);
+          this.defer(() => {
+            this.world.spawnFeathers(ev.x, ev.y, 18);
+            this.sound.cluck(this.spot(ev.x, ev.y), true);
+          });
           break;
         }
         case "respawn": {
@@ -977,7 +1010,11 @@ export class Game {
     // Tus balas chocan contra los demás tal como los ves, que es contra lo que
     // apuntaste. A tu compañero lo atraviesan, igual que en el servidor.
     const mates = this.mates();
-    const targets = frame.players.filter((p) => p.alive && p.id !== this.localId && !mates.has(p.id));
+    const targets: { id: number; x: number; y: number }[] = frame.players.filter(
+      (p) => p.alive && p.id !== this.localId && !mates.has(p.id),
+    );
+    // La gallina también frena las balas propias, como en el servidor.
+    if (frame.chicken) targets.push({ id: -1, x: frame.chicken.x, y: frame.chicken.y });
     this.shots.update(now, this.arena, targets, (x, y) => this.world.spawnImpact(x, y));
     // Las del servidor que ya dibujamos nosotros no se dibujan dos veces.
     const bullets = frame.bullets.filter((b) => !this.shots.covers(b.id));
@@ -1040,7 +1077,17 @@ export class Game {
     // Esperando para volver se ve lo mismo que vivo: si no, volverías sabiendo
     // dónde está cada uno.
     const showAll = !playing && this.respawnAt === 0;
-    this.minimap.draw(frame, this.roster, this.watched?.id ?? this.localId, mates, this.marks, this.wanted, showAll, this.champion);
+    this.minimap.draw(
+      frame,
+      this.roster,
+      this.watched?.id ?? this.localId,
+      mates,
+      this.marks,
+      this.wanted,
+      showAll,
+      this.champion,
+      this.chickenHint,
+    );
     this.updateHud(frame, localPredicted);
 
     this.world.setCrosshair(this.input.mouseX, this.input.mouseY, this.phase === "playing");

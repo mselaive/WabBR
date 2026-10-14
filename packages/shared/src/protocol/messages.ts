@@ -313,6 +313,8 @@ export interface SnapshotMsg {
   rz?: SnapStrike[];
   /** Charcos de fuego: [id, x, y, ticksLeft]. Sólo cuando hay alguno. */
   fi?: [number, number, number, number][];
+  /** La gallina dorada mientras ande suelta: [x, y, vida]. Va a todos. */
+  gc?: [number, number, number];
   /** El más buscado y dónde se lo vio por última vez: [id, x, y]. Sólo si hay. */
   mw?: [number, number, number];
   /**

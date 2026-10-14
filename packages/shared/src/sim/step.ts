@@ -17,6 +17,11 @@ import {
   REVIVE_RANGE,
   REVIVE_TICKS,
   RESPAWN_TICKS,
+  CHICKEN_FEAR_RADIUS,
+  CHICKEN_FLEE_SPEED,
+  CHICKEN_HP,
+  CHICKEN_RADIUS,
+  CHICKEN_WALK_SPEED,
   RULES_BLITZ,
   RULES_CHAOS,
   RULES_LEGENDARY,
@@ -230,6 +235,8 @@ export function createGameState(seed = 1): GameState {
     night: false,
     rules: 0,
     secondChance: false,
+    chicken: null,
+    chickenSpawned: false,
     airdrops: [],
     nextAirdropId: 1,
     strikes: [],
@@ -284,6 +291,8 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
   state.smokes = [];
   state.fires = [];
   state.airdrops = [];
+  state.chicken = null;
+  state.chickenSpawned = false;
   state.nextAirdropId = 1;
   state.strikes = [];
   state.nextStrikeId = 1;
@@ -449,33 +458,12 @@ function stepRespawns(state: GameState, arena: ArenaMap, events: SimEvent[]): vo
     if (state.tick < p.respawnTick) continue;
     p.respawnTick = -1;
 
-    const z = state.zone;
-    const cx = z.shrinking ? z.targetX : z.x;
-    const cy = z.shrinking ? z.targetY : z.y;
-    const radius = z.shrinking ? z.targetRadius : z.radius;
     const random = (): number => {
       const r = nextRandom(state.rng);
       state.rng = r.state;
       return r.value;
     };
-    let best = { x: cx, y: cy };
-    let bestScore = -1;
-    for (let found = 0, attempt = 0; found < 6 && attempt < 60; attempt++) {
-      const angle = random() * Math.PI * 2;
-      const d = (0.3 + random() * 0.5) * radius;
-      const x = cx + Math.cos(angle) * d;
-      const y = cy + Math.sin(angle) * d;
-      if (!respawnClear(x, y, arena)) continue;
-      found++;
-      let nearest = Infinity;
-      for (const o of state.players) {
-        if (o.alive && o.team !== p.team) nearest = Math.min(nearest, Math.hypot(o.x - x, o.y - y));
-      }
-      if (nearest > bestScore) {
-        bestScore = nearest;
-        best = { x, y };
-      }
-    }
+    const best = safeSpot(state, arena, random, (o) => o.team !== p.team);
 
     equipFresh(state, p);
     p.x = best.x;
@@ -491,6 +479,192 @@ function stepRespawns(state: GameState, arena: ArenaMap, events: SimEvent[]): vo
     }
     events.push({ t: "respawn", id: p.id, x: p.x, y: p.y });
   }
+}
+
+/**
+ * Un lugar libre adentro de la zona (de la próxima, si se está cerrando), lo
+ * más lejos posible de los que importan: de seis lugares libres al azar, el
+ * que tenga al más cercano más lejos.
+ */
+function safeSpot(
+  state: GameState,
+  arena: ArenaMap,
+  random: () => number,
+  avoid: (p: PlayerState) => boolean,
+): { x: number; y: number } {
+  const z = state.zone;
+  const cx = z.shrinking ? z.targetX : z.x;
+  const cy = z.shrinking ? z.targetY : z.y;
+  const radius = z.shrinking ? z.targetRadius : z.radius;
+  let best = { x: cx, y: cy };
+  let bestScore = -1;
+  for (let found = 0, attempt = 0; found < 6 && attempt < 60; attempt++) {
+    const angle = random() * Math.PI * 2;
+    const d = (0.3 + random() * 0.5) * radius;
+    const x = cx + Math.cos(angle) * d;
+    const y = cy + Math.sin(angle) * d;
+    if (!respawnClear(x, y, arena)) continue;
+    found++;
+    let nearest = Infinity;
+    for (const o of state.players) {
+      if (o.alive && avoid(o)) nearest = Math.min(nearest, Math.hypot(o.x - x, o.y - y));
+    }
+    if (nearest > bestScore) {
+      bestScore = nearest;
+      best = { x, y };
+    }
+  }
+  return best;
+}
+
+// ------------------------------------------------------- gallina dorada
+
+/**
+ * La gallina dorada. Aparece cuando la zona empieza a cerrarse por primera
+ * vez, lejos de todos. Pasea despacio; si alguien se le acerca, sale
+ * corriendo para el otro lado, zigzagueando, y sigue corriendo un rato
+ * aunque ya no lo vea. Se queda adentro de la zona (no se muere ahí: si la
+ * zona la matara, el botín quedaría afuera). Chocar con una pared la frena
+ * como a cualquiera: en una esquina es cuando se la caza.
+ */
+function stepChicken(state: GameState, arena: ArenaMap): void {
+  const z = state.zone;
+  if (!state.chickenSpawned && z.phase === 0 && z.shrinking) {
+    state.chickenSpawned = true;
+    let rng = state.rng ^ 0x6a11;
+    const random = (): number => {
+      const r = nextRandom(rng);
+      rng = r.state;
+      return r.value;
+    };
+    const at = safeSpot(state, arena, random, () => true);
+    state.chicken = {
+      x: at.x,
+      y: at.y,
+      vx: 0,
+      vy: 0,
+      hp: CHICKEN_HP,
+      panic: 0,
+      turnIn: 0,
+      rng,
+      trail: new Array<number>(TRAIL_LENGTH * 2).fill(0).map((_, i) => (i % 2 === 0 ? at.x : at.y)),
+    };
+  }
+  const c = state.chicken;
+  if (!c) return;
+  const random = (): number => {
+    const r = nextRandom(c.rng);
+    c.rng = r.state;
+    return r.value;
+  };
+
+  // Del que esté más cerca, si está a tiro de susto.
+  let threat: PlayerState | null = null;
+  let threatD = CHICKEN_FEAR_RADIUS;
+  for (const p of state.players) {
+    if (!p.alive) continue;
+    const d = Math.hypot(p.x - c.x, p.y - c.y);
+    if (d < threatD) {
+      threatD = d;
+      threat = p;
+    }
+  }
+
+  const zx = z.x - c.x;
+  const zy = z.y - c.y;
+  const zd = Math.hypot(zx, zy);
+  let speed = CHICKEN_WALK_SPEED;
+  if (zd > z.radius * 0.85) {
+    // Afuera (o casi): para adentro, sin importar quién esté.
+    c.vx = zx / zd;
+    c.vy = zy / zd;
+    speed = CHICKEN_FLEE_SPEED;
+  } else if (threat) {
+    c.panic = 30;
+    const ax = c.x - threat.x;
+    const ay = c.y - threat.y;
+    const len = Math.hypot(ax, ay) || 1;
+    // Para el otro lado, zigzagueando.
+    const wobble = Math.sin(state.tick * 0.9) * 0.6;
+    c.vx = ax / len - (ay / len) * wobble;
+    c.vy = ay / len + (ax / len) * wobble;
+    const n = Math.hypot(c.vx, c.vy) || 1;
+    c.vx /= n;
+    c.vy /= n;
+    speed = CHICKEN_FLEE_SPEED;
+  } else if (c.panic > 0) {
+    c.panic--;
+    speed = CHICKEN_FLEE_SPEED;
+  } else {
+    // Paseando: un rumbo al azar cada tanto, a veces quieta picoteando.
+    if (--c.turnIn <= 0) {
+      c.turnIn = 30 + Math.floor(random() * 40);
+      const angle = random() * Math.PI * 2;
+      const still = random() < 0.3;
+      c.vx = still ? 0 : Math.cos(angle);
+      c.vy = still ? 0 : Math.sin(angle);
+    }
+  }
+
+  const fromX = c.x;
+  const fromY = c.y;
+  c.x += c.vx * speed * DT;
+  c.y += c.vy * speed * DT;
+  arena.grid.query(c.x, c.y, CHICKEN_RADIUS, nearby);
+  nearby.sort((a, b) => a - b);
+  for (let i = 0; i < nearby.length; i++) {
+    if (resolveCircleBox(c.x, c.y, CHICKEN_RADIUS, arena.obstacles[nearby[i]!]!, scratch)) {
+      c.x = scratch.x;
+      c.y = scratch.y;
+    }
+  }
+  clampToArena(c.x, c.y, CHICKEN_RADIUS, scratch);
+  c.x = scratch.x;
+  c.y = scratch.y;
+  // Paseando contra una pared: mejor otro rumbo. (Quieta, picoteando, no.)
+  const walking = speed === CHICKEN_WALK_SPEED && (c.vx !== 0 || c.vy !== 0);
+  if (walking && Math.hypot(c.x - fromX, c.y - fromY) < speed * DT * 0.3) c.turnIn = 0;
+
+  const slot = trailSlot(state.tick);
+  c.trail[slot] = c.x;
+  c.trail[slot + 1] = c.y;
+}
+
+/** Un tiro o una explosión a la gallina. Si no le queda vida, suelta el botín. */
+function damageChicken(state: GameState, amount: number, byId: number, events: SimEvent[]): void {
+  const c = state.chicken;
+  if (!c) return;
+  c.hp -= amount;
+  // Sale corriendo para el lado contrario al que le tiró.
+  c.panic = 40;
+  const shooter = findPlayer(state, byId);
+  if (shooter) {
+    const len = Math.hypot(c.x - shooter.x, c.y - shooter.y) || 1;
+    c.vx = (c.x - shooter.x) / len;
+    c.vy = (c.y - shooter.y) / len;
+  }
+  events.push({ t: "cluck", x: c.x, y: c.y, byId });
+  if (c.hp > 0) return;
+
+  state.chicken = null;
+  const rolled = rollGolden(state);
+  state.rng = rolled.state;
+  rolled.items.forEach((content, i) => {
+    const loot = { ...content, ...ruledLoot(state, content) };
+    const angle = (i / rolled.items.length) * Math.PI * 2;
+    const item: GroundItem = {
+      id: state.nextItemId++,
+      kind: loot.kind,
+      ref: loot.ref,
+      tier: loot.tier,
+      x: c.x + Math.cos(angle) * 26,
+      y: c.y + Math.sin(angle) * 26,
+      count: loot.count,
+    };
+    state.items.push(item);
+    events.push({ t: "drop", item });
+  });
+  events.push({ t: "chicken", x: c.x, y: c.y, byId });
 }
 
 /** Un lugar donde aparecer: adentro de la arena y sin nada encima, con margen. */
@@ -530,7 +704,7 @@ function recordTrail(p: PlayerState, tick: number): void {
  * el ping más 100 ms, y la bala que en tu pantalla le pegaba no hacía daño.
  * Probándola contra donde los veías, lo que ves es lo que pasa.
  */
-export function pastPosition(p: PlayerState, tick: number, rewind: number, out: Resolved): void {
+export function pastPosition(p: { x: number; y: number; trail: number[] }, tick: number, rewind: number, out: Resolved): void {
   if (rewind <= 0) {
     out.x = p.x;
     out.y = p.y;
@@ -1437,6 +1611,14 @@ export function applyExplosion(
     applyDamage(state, p, damage, byId, cause, events);
   }
 
+  const c = state.chicken;
+  if (c) {
+    const dist = Math.hypot(c.x - x, c.y - y);
+    if (dist <= EXPLOSION_RADIUS && hasLineOfSight(x, y, c.x, c.y, arena)) {
+      damageChicken(state, lerp(EXPLOSION_MAX_DAMAGE, EXPLOSION_MIN_DAMAGE, dist / EXPLOSION_RADIUS), byId, events);
+    }
+  }
+
   // Los barriles de alrededor también reciben: así se encadenan.
   damageBarrelsAround(state, x, y, byId, arena, events);
 }
@@ -1625,6 +1807,7 @@ function stepBullets(state: GameState, arena: ArenaMap, events: SimEvent[]): voi
 
     let bestT = 1;
     let hitPlayer: PlayerState | null = null;
+    let hitChicken = false;
 
     // Impacto contra jugadores (test de segmento: la bala no puede atravesarlos),
     // cada uno donde lo veía el que disparó.
@@ -1639,6 +1822,17 @@ function stepBullets(state: GameState, arena: ArenaMap, events: SimEvent[]): voi
       }
     }
 
+    // La gallina, también donde la veía el que disparó.
+    if (state.chicken) {
+      pastPosition(state.chicken, state.tick, b.rewind, scratch);
+      const t = segmentCircleT(b.x, b.y, dx, dy, scratch.x, scratch.y, CHICKEN_RADIUS + BULLET_RADIUS);
+      if (t >= 0 && t < bestT) {
+        bestT = t;
+        hitPlayer = null;
+        hitChicken = true;
+      }
+    }
+
     // Impacto contra obstáculos.
     let hitBox = false;
     let boxIndex = -1;
@@ -1650,6 +1844,7 @@ function stepBullets(state: GameState, arena: ArenaMap, events: SimEvent[]): voi
       if (t >= 0 && t < bestT) {
         bestT = t;
         hitPlayer = null;
+        hitChicken = false;
         hitBox = true;
         boxIndex = nearby[i]!;
       }
@@ -1661,7 +1856,7 @@ function stepBullets(state: GameState, arena: ArenaMap, events: SimEvent[]): voi
     // El cohete no pega: estalla donde toca, un poco antes de la pared para
     // que la pared no se trague su propia explosión.
     const def = weaponAt(b.weapon);
-    if (def.explosive && (hitPlayer || hitBox || b.life <= 1 || outsideArena(nx, ny))) {
+    if (def.explosive && (hitPlayer || hitChicken || hitBox || b.life <= 1 || outsideArena(nx, ny))) {
       const back = hitBox ? 10 / Math.max(1, Math.hypot(b.vx, b.vy)) : 0;
       events.push({ t: "impact", x: nx, y: ny, bullet: b.id });
       if (hitPlayer) {
@@ -1703,6 +1898,12 @@ function stepBullets(state: GameState, arena: ArenaMap, events: SimEvent[]): voi
       const owner = findPlayer(state, b.ownerId);
       if (owner) owner.shotsHit++;
       applyDamage(state, hitPlayer, b.damage, b.ownerId, b.weapon, events);
+      continue;
+    }
+
+    if (hitChicken) {
+      events.push({ t: "impact", x: nx, y: ny, bullet: b.id });
+      damageChicken(state, b.damage, b.ownerId, events);
       continue;
     }
 
@@ -2132,6 +2333,7 @@ export function step(
   stepSmokes(state);
   stepFires(state, arena, events);
   stepGrenades(state, arena, events);
+  stepChicken(state, arena);
   stepBullets(state, arena, events);
   stepZone(state, arena, events);
   stepCampfires(state, arena);

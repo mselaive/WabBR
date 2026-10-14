@@ -140,6 +140,14 @@ export class Sound {
     this.tone(out, { freq: 70, endFreq: 35, decay: 0.5, gain: 1, type: "sine" });
   }
 
+  /** La gallina dorada: un cacareo (dos notas cortas y chillonas). Cazada, uno largo. */
+  cluck(at?: Spot, caught = false): void {
+    const out = this.voice(at, 0.45);
+    if (!out) return;
+    this.tone(out, { freq: 900, endFreq: 700, decay: 0.06, gain: 0.8, type: "square" });
+    this.tone(out, { freq: 1200, endFreq: 800, decay: caught ? 0.4 : 0.09, gain: 0.8, type: "square", delay: 0.08 });
+  }
+
   /** Un hongo saltarín: un "boing" que sube. */
   jump(): void {
     const out = this.voice(undefined, 0.4);

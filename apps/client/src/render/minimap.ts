@@ -84,6 +84,8 @@ export class Minimap {
     showAll = false,
     /** El campeón de la sala: aparece siempre, esté donde esté. */
     champion: { id: number; x: number; y: number } | null = null,
+    /** Dónde se oyó a la gallina dorada hace poco: una pista, no su lugar exacto. */
+    chicken: { x: number; y: number } | null = null,
   ): void {
     const ctx = this.ctx;
     const cx = this.tx(WORLD_CENTER_X);
@@ -314,6 +316,21 @@ export class Minimap {
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
+    }
+
+    // La gallina dorada: un círculo punteado donde se la oyó (es una zona, no
+    // un punto: hay que buscarla igual).
+    if (chicken) {
+      ctx.save();
+      ctx.strokeStyle = "#f0c030";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.arc(this.tx(chicken.x), this.ty(chicken.y), 9, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = "#f0c030";
+      ctx.fillRect(this.tx(chicken.x) - 1.5, this.ty(chicken.y) - 1.5, 3, 3);
     }
 
     // Marcas de la pareja: un anillo que se cierra sobre el lugar, del color

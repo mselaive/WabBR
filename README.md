@@ -166,6 +166,12 @@ los fogonazos, así que **disparar de noche te delata**. Los bots también ven m
 de 700). Es sólo de cómo se dibuja (`updateNight`: un lienzo a un cuarto de la resolución con
 agujeros de luz suaves) más la vista de los bots: el servidor sigue mandando lo mismo.
 
+**Con tormenta.** De noche, cada unos 20 segundos cae un relámpago: casi medio segundo de luz, con
+un parpadeo, y el trueno un rato después. Se ve todo lo que tenías a la vista y no se notaba en la
+oscuridad (el que estaba quieto en la otra punta de la calle), así que también es un momento para
+esconderse. Sale de un hash del tick (`stepStorm`), no del azar de la partida, y llega como evento:
+todos lo ven a la vez.
+
 **Dúos.** Arriba de la lista, el host elige *Todos contra todos* o *Dúos*. En dúos cada
 fila tiene un botón **Pareja**: si dos se eligen entre sí juegan juntos (al otro le
 aparece "Aceptar pareja"; un bot acepta solo). Los que no eligieron se emparejan por

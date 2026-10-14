@@ -295,6 +295,8 @@ export class Game {
         gallina: () => this.snapshots.latest?.chicken ?? null,
         // Ticks de paracaídas que le quedan (predichos y del servidor).
         aire: () => ({ pred: this.predictor?.state.airTicks ?? -1, srv: this.snapshots.latest?.players.get(this.localId)?.airTicks ?? -1 }),
+        // Un relámpago de mentira, para ver el destello.
+        rayo: () => this.handleEvents([{ t: "lightning" }]),
         // Un tiro oído de mentira (detrás de una pared), para ver la marca.
         oir: (x: number, y: number) => this.handleEvents([{ t: "heard", x, y, weapon: 2 }]),
         // Una pasada de radar de mentira, para ver cómo se dibuja.
@@ -902,6 +904,11 @@ export class Game {
           }
           break;
         }
+        case "lightning":
+          this.world.lightning();
+          // El trueno llega después: la luz viaja más rápido.
+          this.defer(() => this.sound.thunder(), 500 + Math.random() * 1200);
+          break;
         case "strike":
           this.ui.addNotice("¡Bombardeo! Salí de la zona roja o metete en una casa");
           this.sound.siren();

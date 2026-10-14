@@ -162,6 +162,14 @@ export class Sound {
     this.tone(out, { freq: 70, endFreq: 35, decay: 0.5, gain: 1, type: "sine" });
   }
 
+  /** Un trueno: un retumbo grave que tarda en apagarse. */
+  thunder(): void {
+    const out = this.voice(undefined, 0.8);
+    if (!out) return;
+    this.noiseBurst(out, { type: "lowpass", freq: 260, endFreq: 90, decay: 2.2, gain: 1 });
+    this.noiseBurst(out, { type: "lowpass", freq: 900, endFreq: 200, decay: 0.4, gain: 0.6 });
+  }
+
   /** Una pasada del radar: un "bip" de sonar. */
   radar(): void {
     const out = this.voice(undefined, 0.25);

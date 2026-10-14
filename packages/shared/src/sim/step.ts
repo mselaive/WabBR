@@ -1081,6 +1081,22 @@ function takeItem(
   return false;
 }
 
+/** Cada cuánto cae un relámpago, en promedio: unos 20 segundos. */
+const LIGHTNING_EVERY = 400;
+
+/**
+ * De noche hay tormenta: cada tanto un relámpago ilumina todo el mapa un
+ * instante. Sale de un hash del tick y no del azar de la partida, así no mueve
+ * nada más; y como es un evento, todos lo ven a la vez. No cambia quién ve a
+ * quién (eso lo decide el servidor igual que siempre): es la oscuridad la que
+ * se corre, y por un momento se ve al que estaba a la vista y no se notaba.
+ */
+function stepStorm(state: GameState, events: SimEvent[]): void {
+  if (!state.night) return;
+  const hash = Math.imul(state.tick ^ 0x5bd1e995, 2654435761) >>> 0;
+  if (hash % LIGHTNING_EVERY === 0) events.push({ t: "lightning" });
+}
+
 /**
  * Los radares prendidos: una pasada cada RADAR_PING_EVERY ticks, la primera
  * en cuanto se prende. Marca dónde están los rivales cercanos en ese momento
@@ -2496,6 +2512,7 @@ export function step(
   stepAirdrops(state, events);
   stepRespawns(state, arena, events);
   stepRadars(state, events);
+  stepStorm(state, events);
 
   // Una pareja con los dos caídos ya no tiene quién la levante: se terminan.
   const standing = new Set(state.players.filter((p) => p.alive && !p.downed).map((p) => p.team));

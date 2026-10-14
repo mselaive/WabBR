@@ -490,6 +490,8 @@ export type SimEvent =
    * HEARD_GRID. Dice "por allá", no "acá".
    */
   | { t: "heard"; x: number; y: number; weapon: number }
+  /** De noche, un relámpago: ilumina todo un instante (ver stepStorm). */
+  | { t: "lightning" }
   /** Le pegaron a la gallina dorada. */
   | { t: "cluck"; x: number; y: number; byId: number }
   /** Cazaron a la gallina dorada: el botín ya está en el piso. */

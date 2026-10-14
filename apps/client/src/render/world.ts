@@ -177,6 +177,8 @@ export class WorldView {
    * suaves donde hay luz, estirado sobre el mundo y debajo del HUD.
    */
   private night = false;
+  /** Hasta cuándo dura el relámpago (performance.now()). */
+  private flashUntil = 0;
   private readonly nightCanvas = document.createElement("canvas");
   private nightTexture: Texture | null = null;
   private readonly nightSprite = new Sprite();
@@ -473,6 +475,11 @@ export class WorldView {
     this.nightSprite.visible = on;
   }
 
+  /** Un relámpago: la oscuridad se corre un instante, con un parpadeo. */
+  lightning(): void {
+    this.flashUntil = performance.now() + 450;
+  }
+
   /**
    * Las luces de la noche: alrededor tuyo (o del que mirás), las fogatas, el
    * fuego de las molotov, los fogonazos y las explosiones. Disparar de noche
@@ -494,7 +501,10 @@ export class WorldView {
     const ctx = this.nightCanvas.getContext("2d")!;
     ctx.globalCompositeOperation = "source-over";
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = "rgba(3, 7, 18, 0.93)";
+    // Durante un relámpago, casi de día, con un parpadeo a la mitad.
+    const flash = this.flashUntil - performance.now();
+    const dark = flash > 0 ? (flash > 300 || flash < 150 ? 0.12 : 0.6) : 0.93;
+    ctx.fillStyle = `rgba(3, 7, 18, ${dark})`;
     ctx.fillRect(0, 0, w, h);
     ctx.globalCompositeOperation = "destination-out";
     const hole = (x: number, y: number, radius: number): void => {

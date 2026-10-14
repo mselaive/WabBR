@@ -289,8 +289,8 @@ mapa, y su id es su orden de aparición.
   para pelear de cerca: dos tiros matan hasta unos 100 px, y de ahí para afuera
   pierde contra el rifle. Su cono abría el doble y a 120 px entraban tres
   perdigones de ocho; hay tests que fijan las dos cosas.
-- **El revólver** es la pistola pesada: lento y preciso, tres tiros matan (dos con suerte en
-  legendario no: 57). **La ametralladora** tiene 60 balas para tapar una puerta o una calle, abre
+- **El revólver** es la pistola pesada, lenta y precisa: tres tiros matan, y ni en legendario
+  mata de dos (hace 57). **La ametralladora** tiene 60 balas para tapar una puerta o una calle, abre
   más que el rifle y su recarga es eterna (4 segundos).
 - **El lanzacohetes** es el arma rara: **sólo existe legendario** y sólo lo trae uno de cada
   ~8 paquetes aéreos (en vez de la otra arma); nunca sale de una caja. El cohete es lento (se ve venir, con su estela de humo, y se esquiva) y no pega:

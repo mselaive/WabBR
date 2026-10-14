@@ -496,6 +496,33 @@ function dropGoal(state: GameState, me: PlayerState, mem: BotMemory, crates: rea
   return { x: pick.x + pick.w / 2, y: pick.y + pick.h + 50 };
 }
 
+/**
+ * Esquivar las minas rivales que se ven (de cerca, como las ve un jugador):
+ * si el rumbo la acerca, se le suma un empujón para el costado. No las busca
+ * ni las desarma; sólo no se las pisa de frente.
+ */
+function avoidMines(state: GameState, me: PlayerState, angle: number, arena: ArenaMap | null): number {
+  let dx = Math.cos(angle);
+  let dy = Math.sin(angle);
+  for (const m of state.mines) {
+    if (m.team === me.team) continue;
+    const ox = me.x - m.x;
+    const oy = me.y - m.y;
+    const d = Math.hypot(ox, oy);
+    if (d > MINE_AVOID || d < 1) continue;
+    if (arena && !hasLineOfSight(me.x, me.y, m.x, m.y, arena)) continue;
+    // Sólo si voy hacia ella.
+    if (dx * -ox + dy * -oy <= 0) continue;
+    const push = (MINE_AVOID - d) / MINE_AVOID * 2.5;
+    dx += (ox / d) * push;
+    dy += (oy / d) * push;
+  }
+  return Math.atan2(dy, dx);
+}
+
+/** A cuánto esquiva una mina que ve: menos que lo que la ve (MINE_SPOT). */
+const MINE_AVOID = 90;
+
 /** La gallina dorada, si está cerca y a la vista (de noche, más cerca). */
 function chickenInSight(state: GameState, me: PlayerState, arena: ArenaMap): { x: number; y: number } | null {
   const c = state.chicken;
@@ -761,6 +788,7 @@ function steer(
     angle = Math.atan2(next.y - me.y, next.x - me.x);
   }
   if (angle === null) return;
+  angle = avoidMines(state, me, angle, arena);
 
   const cos = Math.cos(angle);
   const sin = Math.sin(angle);

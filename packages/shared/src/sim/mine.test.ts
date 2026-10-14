@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { GRENADE_FUSE_TICKS, MINE_ARM_TICKS, MINE_TICKS, WORLD_CENTER_X, WORLD_CENTER_Y } from "../constants.js";
-import { ITEM_GRENADE } from "../items.js";
+import { ITEM_ARMOR, ITEM_GRENADE } from "../items.js";
 import type { ArenaMap } from "../map/arena.js";
+import { botInput, createBotMemory } from "./bot.js";
 import { ObstacleGrid } from "./collision.js";
 import { canThrow, carryLimit, createGameState, createPlayer, step } from "./step.js";
 import { ACT_MINE, GRENADE_MINE, emptyInput, type GameState, type PlayerInput, type SimEvent } from "./types.js";
@@ -108,5 +109,25 @@ describe("las minas", () => {
     expect(carryLimit(p, ITEM_GRENADE, GRENADE_MINE)).toBe(3);
     p.mines = 0;
     expect(canThrow(p, GRENADE_MINE)).toBe(false);
+  });
+});
+
+describe("los bots y las minas", () => {
+  it("un bot que va derecho hacia una mina rival que ve, la esquiva", () => {
+    const state = scene();
+    const bot = state.players[1]!;
+    // Un chaleco pesado que el bot quiere, con la mina del 1 justo en el medio.
+    state.items.push({ id: 50, kind: ITEM_ARMOR, ref: 1, tier: 3, x: bot.x - 130, y: bot.y, count: 1 });
+    state.mines.push({ id: 99, ownerId: 1, team: 1, x: bot.x - 65, y: bot.y, armedAt: 0, ticksLeft: 1000 });
+    state.players[0]!.x = bot.x - 1300;
+    state.players[2]!.alive = false;
+    const memory = createBotMemory(4);
+    for (let t = 1; t <= 60 && state.mines.length > 0; t++) {
+      step(state, new Map([[2, [botInput(state, bot, memory, EMPTY)]]]), [], EMPTY);
+    }
+    expect(state.mines).toHaveLength(1);
+    expect(bot.hp).toBe(100);
+    // Y el chaleco lo agarró igual, por el costado.
+    expect(bot.shield).toBeGreaterThan(0);
   });
 });

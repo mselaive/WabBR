@@ -526,8 +526,8 @@ equipo no les explota, y pasado un minuto y medio se apaga sola. Se llevan dos (
 Lo que las hace justas: los rivales las ven recién **de cerca** (a 110 px y a la vista), con una
 lucecita roja que parpadea cuando está armada; las tuyas y las de tu pareja se ven siempre, con
 la luz verde. El servidor manda a cada uno sólo las minas que puede ver, y el aviso de "quedó una
-mina acá" sólo le llega al equipo que la puso. Los bots no las juntan (no las usan), pero las
-pisan como cualquiera.
+mina acá" sólo le llega al equipo que la puso. Los bots no las juntan (no las usan); las que ven
+(de cerca y a la vista, como cualquiera) las rodean, y las que no ven, las pisan.
 
 ## La mochila
 

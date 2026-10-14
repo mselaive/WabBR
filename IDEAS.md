@@ -87,7 +87,7 @@ está en `main`. Protocolo **v3** (producción está en v2): al desplegar, prime
 | Lanzacohetes | Sólo legendario y rarísimo (paquetes aéreos) | 7 tests + capturas |
 | Revólver y ametralladora | Dos armas más | Tests + íconos |
 | Molotov (`J`) | Charco de fuego 6 s | 7 tests + captura |
-| Minas (`K`) | Se tiran como granada, se arman donde se frenan; los rivales las ven sólo de cerca | 5 tests + captura |
+| Minas (`K`) | Se tiran como granada, se arman donde se frenan; los rivales las ven sólo de cerca; los bots rodean las que ven | 6 tests + captura |
 | Mochila | La mitad más de curaciones y granadas; se ve puesta | 5 tests + captura |
 | Radar | (UAV de Warzone) 10 s marcando a los rivales cercanos en el minimapa de tu equipo | 5 tests + capturas |
 | Bengala | Pide un paquete aéreo a tu lado, que todos ven venir | Test + captura |
@@ -132,8 +132,8 @@ test, y la mayoría se probó a la inversa (romper el arreglo y ver que el test 
 
 1. **Killcam.** Ver los últimos segundos desde los ojos del que te mató. Al morir la cámara ya
    sigue al que te mató; la repetición de verdad pide guardar historia de snapshots por jugador.
-2. **Bots que usan lo nuevo.** Hoy no tiran minas, no buscan tirolesas ni hongos a propósito y
-   no esquivan las minas que ven. Es lo que más haría que una partida contra bots se parezca a
+2. **Bots que usan lo nuevo.** Ya rodean las minas que ven, pero no las tiran ni buscan
+   tirolesas u hongos a propósito. Es lo que más haría que una partida contra bots se parezca a
    una entre amigos.
 3. **Puestos de compra** (Warzone): plata por kills y cajas, para comprar chaleco, radar o la
    vuelta de tu pareja. Es un sistema grande; vale la pena si las partidas se sienten repetidas.

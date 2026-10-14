@@ -60,8 +60,9 @@ import { LocalShots } from "./net/shots.js";
 import { LocalGrenades } from "./net/grenades.js";
 import { InputController, type SpectateIntent } from "./input.js";
 import { TouchControls } from "./touch.js";
-import { PX_PER_METER, addMatch, recordsLine } from "./records.js";
+import { PX_PER_METER, addMatch, loadRecords, recordsLine } from "./records.js";
 import { titlesFor } from "./titles.js";
+import { selectedHat, unlock, type Achievement } from "./achievements.js";
 import { WorldView } from "./render/world.js";
 import { Minimap, type Mark } from "./render/minimap.js";
 import { causeIconUrl } from "./render/textures.js";
@@ -136,6 +137,8 @@ export class Game {
   private teamSize = 1;
   /** Reglas especiales de la sala (índice en RULES). */
   private rules = 0;
+  /** Si la partida es de noche (para el logro "Búho"). */
+  private night = false;
   /** Kills recientes (performance.now()) y kills en esta vida, por jugador: para las rachas. */
   private streaks = new Map<number, { recent: number[]; life: number }>();
   /** Si este cliente vio empezar la partida en curso (para los récords). */
@@ -329,6 +332,7 @@ export class Game {
     this.net = new Net({
       room,
       name,
+      hat: selectedHat(),
       onMessage: (msg) => this.onMessage(msg),
       onClose: (code) => {
         if (this.localId === -1) return;
@@ -458,6 +462,7 @@ export class Game {
         this.ui.setNight(msg.night === true, this.hostId === this.localId);
         this.ui.setRules(msg.rules ?? 0, this.hostId === this.localId);
         this.rules = msg.rules ?? 0;
+        this.night = msg.night === true;
         this.world.setNight(msg.night === true);
         return;
 
@@ -633,6 +638,7 @@ export class Game {
       const meta = this.everyone.get(id);
       rows.push({
         id,
+        hat: meta?.hat ?? 0,
         name: meta?.name ?? "Alguien",
         kills,
         colorIndex: meta?.colorIndex ?? 0,
@@ -702,8 +708,14 @@ export class Game {
     // final) no es haberla jugado, y contaría la misma partida dos veces.
     if (mine && this.sawStart && !this.recorded) {
       this.recorded = true;
-      records = addMatch({ won: mine.place === 1 && msg.winner >= 0, kills: mine.kills, damage: mine.damage, longestKill: mine.longestKill });
+      const won = mine.place === 1 && msg.winner >= 0;
+      records = addMatch({ won, kills: mine.kills, damage: mine.damage, longestKill: mine.longestKill });
       this.ui.setMyStats(recordsLine());
+      if (won) this.achieve("win");
+      if (won && this.night) this.achieve("nightWin");
+      if (mine.kills >= 5) this.achieve("fiveKills");
+      if (mine.longestKill >= 40) this.achieve("longShot");
+      if (loadRecords().played >= 10) this.achieve("veteran");
     }
     this.ui.showResult(title, subtitle, rows, awardsFor(rows), records);
   }
@@ -856,6 +868,7 @@ export class Game {
           break;
         }
         case "revive": {
+          if (ev.byId === this.localId) this.achieve("revive");
           if (ev.targetId === this.localId || ev.byId === this.localId) {
             this.sound.pickup();
             const other = this.roster.get(ev.targetId === this.localId ? ev.byId : ev.targetId)?.name ?? "";
@@ -875,6 +888,11 @@ export class Game {
             involvesMe: ev.targetId === this.localId || ev.byId === this.localId,
           });
           this.countStreak(ev.byId, ev.targetId, killer?.name);
+          if (ev.byId === this.localId && ev.targetId !== this.localId) {
+            this.achieve("firstKill");
+            if (ev.cause === WEAPON_IDS.indexOf("rocket")) this.achieve("rocketKill");
+            if (ev.cause === CAUSE_FIRE) this.achieve("fireKill");
+          }
           if (ev.targetId === this.localId) {
             this.deathNote = deathNote(ev, killer?.name);
             // En dúos se sigue mirando al compañero, que sigue jugando por los dos.
@@ -1436,6 +1454,15 @@ export class Game {
   /** Agregar un bot a la sala. El servidor comprueba que seas el host. */
   addBot(): void {
     this.net?.send({ t: "bot" });
+  }
+
+  /** Desbloquea un logro y, si es nuevo, lo avisa con el gorro que gana. */
+  private achieve(id: string): void {
+    const a: Achievement | null = unlock(id);
+    if (!a) return;
+    this.ui.addNotice(`¡Logro: ${a.name}! Desbloqueaste: ${a.hatName}`);
+    this.ui.refreshHats();
+    this.sound.streak(3);
   }
 
   /**

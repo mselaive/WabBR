@@ -37,6 +37,15 @@ function isInvisible(code: number): boolean {
   );
 }
 
+/** Cuántos gorros hay (0 es la gorra de siempre, del color del jugador). */
+export const HAT_COUNT = 10;
+
+/** El gorro que pidió el cliente, o 0 si no es uno válido. */
+export function sanitizeHat(raw: unknown): number {
+  const n = typeof raw === "string" ? Number(raw) : typeof raw === "number" ? raw : 0;
+  return Number.isInteger(n) && n >= 0 && n < HAT_COUNT ? n : 0;
+}
+
 export function sanitizeName(raw: unknown): string {
   const s = typeof raw === "string" ? raw : "";
   let cleaned = "";

@@ -987,8 +987,9 @@ body.playing {
 }
 
 .podium-avatar {
+  /* 16x24: el muñeco con lugar arriba para el gorro. */
   width: 64px;
-  height: 72px;
+  height: 96px;
   image-rendering: pixelated;
   animation: podium-pop 0.3s steps(3) both;
   animation-delay: calc(var(--delay) + 0.45s);
@@ -996,7 +997,7 @@ body.playing {
 
 .slot-1 .podium-avatar {
   width: 80px;
-  height: 90px;
+  height: 120px;
   filter: drop-shadow(0 0 10px #ffc94a80);
 }
 
@@ -1508,4 +1509,49 @@ body.touch #consumables .consumable {
 
 .rules-row .mode-btn {
   flex: 1 1 40%;
+}
+
+/* El selector de gorros del menú. */
+.hat-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hat-option {
+  width: 40px;
+  height: 52px;
+  padding: 2px;
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-2);
+  cursor: pointer;
+}
+
+.hat-option img {
+  width: 32px;
+  height: 48px;
+  image-rendering: pixelated;
+}
+
+.hat-option.on {
+  border-color: var(--accent);
+}
+
+.hat-option.locked {
+  opacity: 0.35;
+  filter: grayscale(1);
+  cursor: help;
+}
+
+.hat-hint {
+  margin: 4px 0 0;
+  min-height: 1em;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.hats-field small {
+  color: var(--muted);
+  font-weight: 400;
 }

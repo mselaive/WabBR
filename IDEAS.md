@@ -73,6 +73,7 @@ está en `main`.
 | Revólver y ametralladora | Dos armas más: la pistola pesada y la de 60 balas | Tests de todas las armas + íconos revisados |
 | De noche | Opción del host: ves poco alrededor; fogatas, fuego, explosiones y fogonazos iluminan | Capturas |
 | Reglas especiales | Normal / Todo legendario / Francotiradores / Relámpago, las elige el host | 3 tests + captura del lobby |
+| Logros y gorros | 9 logros que desbloquean gorros que todos ven, sin cuentas | 4 tests + capturas del menú y del gorro en partida |
 | Molotov | `J`: charco de fuego 6 s que quema al que lo pisa | 7 tests + captura |
 
 ## Ideas que quedaron, en el orden en que las haría

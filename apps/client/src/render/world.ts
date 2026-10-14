@@ -95,6 +95,9 @@ function project(x: number, y: number, lx: number, ly: number): { x: number; y: 
 
 interface PlayerView {
   root: Container;
+  /** El gorro (si tiene uno de los desbloqueables) y cuál es. */
+  hat: Sprite;
+  hatIndex: number;
   /** El globito de la última frase rápida, y hasta cuándo se ve (performance.now()). */
   bubble: Container | null;
   bubbleUntil: number;
@@ -945,7 +948,26 @@ export class WorldView {
     root.addChild(shadow, gun, flash, body, shirt, hpBar, label);
     this.entityLayer.addChild(root);
 
-    const view: PlayerView = { root, body, shirt, gun, flash, label, hpBar, lastAmmo: -1, bubble: null, bubbleUntil: 0 };
+    // El gorro, en un cuadro 6 px más alto que el muñeco: el ancla cae en el mismo punto.
+    const hat = new Sprite(this.tex.hats[0]!);
+    hat.anchor.set(0.5, (18 * 0.72 + 6) / 24);
+    hat.scale.set(ART_SCALE);
+    hat.visible = false;
+    root.addChild(hat);
+    const view: PlayerView = {
+      root,
+      body,
+      shirt,
+      gun,
+      flash,
+      label,
+      hpBar,
+      lastAmmo: -1,
+      bubble: null,
+      bubbleUntil: 0,
+      hat,
+      hatIndex: 0,
+    };
     this.players.set(id, view);
     return view;
   }
@@ -998,6 +1020,16 @@ export class WorldView {
       view.flash.rotation = aim;
       view.flash.position.set(Math.cos(aim) * 24, Math.sin(aim) * 24 + 2);
 
+      // El gorro, si cambió (o recién llega su meta).
+      const hatIndex = meta?.hat ?? 0;
+      if (hatIndex !== view.hatIndex) {
+        view.hatIndex = hatIndex;
+        view.hat.texture = this.tex.hats[hatIndex] ?? this.tex.hats[0]!;
+        view.hat.visible = hatIndex > 0;
+        // Con gorro, el nombre y la barra de vida un poco más arriba para no taparlo.
+        view.label.y = -PLAYER_RADIUS - (hatIndex > 0 ? 30 : 16);
+        view.hpBar.y = -PLAYER_RADIUS - (hatIndex > 0 ? 24 : 12);
+      }
       if (meta && !p.downed) {
         const crown = p.id === championId ? "♛ " : "";
         const name = p.id === wantedId ? `${crown}★ ${meta.name}` : `${crown}${meta.name}`;
@@ -1013,6 +1045,7 @@ export class WorldView {
       const lying = p.downed ? Math.PI / 2 : 0;
       view.body.rotation = lying;
       view.shirt.rotation = lying;
+      view.hat.rotation = lying;
       view.gun.visible = !p.downed;
       if (p.downed) {
         const name = isLocal ? "Caíste" : `${meta?.name ?? ""} (caído)`;

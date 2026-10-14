@@ -36,6 +36,8 @@ import {
   packResults,
   packSnapshotArrays,
   sanitizeName,
+  sanitizeHat,
+  HAT_COUNT,
   sanitizeToken,
   startMatch,
   findPlayer,
@@ -185,6 +187,7 @@ export class GameRoom extends Server<Env> {
     }
 
     const name = sanitizeName(url.searchParams.get("name"));
+    const hat = sanitizeHat(url.searchParams.get("hat"));
 
     if (this.kicked.has(name.trim().toLowerCase())) {
       this.sendTo(conn, {
@@ -202,7 +205,7 @@ export class GameRoom extends Server<Env> {
       connId: conn.id,
       token,
       goneAt: 0,
-      meta: { id: playerId, name, colorIndex: this.freeColorIndex(), ready: false },
+      meta: { id: playerId, name, colorIndex: this.freeColorIndex(), ready: false, hat },
       inputs: new InputQueue(),
       lastMarkAt: 0,
       lastEmoteAt: 0,
@@ -914,7 +917,15 @@ export class GameRoom extends Server<Env> {
       connId: null,
       token: null,
       goneAt: 0,
-      meta: { id: playerId, name, colorIndex: this.freeColorIndex(), ready: true, bot: true },
+      // Los bots, con un gorro al azar (o la gorra de siempre): que no sean todos iguales.
+      meta: {
+        id: playerId,
+        name,
+        colorIndex: this.freeColorIndex(),
+        ready: true,
+        bot: true,
+        hat: Math.random() < 0.4 ? 0 : 1 + Math.floor(Math.random() * (HAT_COUNT - 1)),
+      },
       inputs: new InputQueue(),
       lastMarkAt: 0,
       lastEmoteAt: 0,

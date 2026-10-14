@@ -497,6 +497,28 @@ una partida en la que superaste algo, el resultado lo dice: "¡Récord personal!
 no rompe récords: no había nada que romper. Los metros son 20 px cada uno (un muñeco mide
 ~1,2 m).
 
+### Logros y gorros
+
+Tampoco con cuentas: en el menú, abajo del nombre, está **tu gorro** (`apps/client/src/achievements.ts`).
+Hay 9 logros y cada uno desbloquea un gorro que todos ven sobre tu muñeco (y en el podio):
+
+| Logro | Cómo | Gorro |
+|---|---|---|
+| Primera sangre | Tu primera kill | Galera |
+| Campeón | Ganar una partida | Corona |
+| Masacre | 5 kills en una partida | Casco |
+| Ojo de águila | Una kill a 40 m o más | Sombrero vaquero |
+| Veterano | Jugar 10 partidas | Gorro de fiesta |
+| Demolición | Una kill con el lanzacohetes | Cuernos |
+| Pirómano | Una kill con una molotov | Bandana |
+| Ángel guardián | Levantar a tu compañero | Aureola |
+| Búho | Ganar de noche | Gorro de mago |
+
+Al conseguir uno, un aviso lo dice. Los bloqueados se ven apagados y dicen cómo se consiguen. El
+gorro viaja como un número con el nombre al conectarse (`?hat=`), el servidor sólo comprueba que
+exista. Se guarda en el navegador: alguien que edite su almacenamiento puede ponerse cualquiera,
+y para un juego de amigos está bien así. Los bots llevan uno al azar.
+
 ### Cómo te mataron
 
 Al morir, arriba de la vista de espectador queda **quién te mató, con qué y cómo lo

@@ -1,5 +1,6 @@
 import { MAX_PLAYERS, MIN_PLAYERS, playerColor, type PlayerMeta } from "@wabbr/shared";
 import { playerPortraitUrl } from "./render/textures.js";
+import { ACHIEVEMENTS, hatUnlocked, selectHat, selectedHat, unlockedAchievements } from "./achievements.js";
 
 export type ScreenName = "menu" | "lobby" | "result" | "connecting" | null;
 
@@ -41,6 +42,8 @@ export interface ResultRow {
   longestKill: number;
   /** El título que se llevó ("Ciego: no dio una bala"). */
   title?: { label: string; detail: string };
+  /** Su gorro, para el retrato del podio. */
+  hat?: number;
 }
 
 /** Un premio del resultado: "más daño", "mejor puntería"... */
@@ -154,6 +157,7 @@ export class UI {
 
   constructor(private readonly cb: UICallbacks) {
     this.nameInput.value = localStorage.getItem(NAME_KEY) ?? "";
+    this.refreshHats();
 
     // Si el link trae ?room=XXXX, precargar el código para que solo haya que entrar.
     const room = new URLSearchParams(location.search).get("room");
@@ -246,6 +250,42 @@ export class UI {
   }
 
   // ------------------------------------------------------------ pantallas
+
+  /**
+   * El selector de gorros del menú: los desbloqueados se eligen con un click;
+   * los otros se ven apagados y dicen con qué logro se consiguen.
+   */
+  refreshHats(): void {
+    const done = unlockedAchievements();
+    const current = selectedHat();
+    const hint = el("hatHint");
+    const options = [{ hat: 0, name: "La gorra de siempre", how: "" }, ...ACHIEVEMENTS.map((a) => ({ hat: a.hat, name: a.hatName, how: `${a.name}: ${a.how}` }))];
+    el("hatsCount").textContent = `· ${done.size}/${ACHIEVEMENTS.length} logros`;
+    el("hatPicker").replaceChildren(
+      ...options.map((o) => {
+        const open = hatUnlocked(o.hat, done);
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = `hat-option${open ? "" : " locked"}${o.hat === current ? " on" : ""}`;
+        b.title = open ? o.name : `${o.name} · ${o.how}`;
+        b.setAttribute("aria-label", b.title);
+        const img = document.createElement("img");
+        img.src = playerPortraitUrl(0x4aa3ff, o.hat);
+        img.alt = "";
+        b.append(img);
+        b.addEventListener("click", () => {
+          if (!open) {
+            hint.textContent = `Bloqueado. ${o.how}.`;
+            return;
+          }
+          selectHat(o.hat);
+          hint.textContent = o.name;
+          this.refreshHats();
+        });
+        return b;
+      }),
+    );
+  }
 
   /** Tus números de siempre, abajo del nombre del juego. Vacío lo esconde. */
   setMyStats(line: string): void {
@@ -858,7 +898,7 @@ export class UI {
 
     const avatar = document.createElement("img");
     avatar.className = "podium-avatar";
-    avatar.src = playerPortraitUrl(playerColor(r.colorIndex));
+    avatar.src = playerPortraitUrl(playerColor(r.colorIndex), r.hat ?? 0);
     avatar.alt = "";
 
     const name = document.createElement("span");

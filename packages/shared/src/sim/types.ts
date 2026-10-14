@@ -185,6 +185,8 @@ export interface PlayerMeta {
   totalKills?: number;
   /** Con quién quiere jugar en dúos (id), si eligió. La pareja es mutua. */
   partner?: number;
+  /** El gorro que lleva (0 la gorra de siempre). Se desbloquean con logros. */
+  hat?: number;
 }
 
 export interface BulletState {

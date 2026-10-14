@@ -1,5 +1,5 @@
 import { Texture } from "pixi.js";
-import { WEAPON_IDS, makeRng } from "@wabbr/shared";
+import { HAT_COUNT, WEAPON_IDS, makeRng } from "@wabbr/shared";
 
 /**
  * Todo el arte se dibuja por código en un canvas y se sube como textura.
@@ -387,6 +387,86 @@ function drawPlayerShirt(ctx: Ctx): void {
   rect(ctx, 4, 4, 8, 2, "#dddddd");
 }
 
+/**
+ * Los gorros. Se dibujan en un cuadro de 16x24: el mismo del muñeco (16x18)
+ * con 6 px más arriba, porque algunos son altos. La cabeza queda en (8, 12).
+ * El 0 no es un gorro: es la gorra de siempre, que es parte de la remera.
+ */
+export function drawHat(ctx: Ctx, hat: number): void {
+  const gold = "#ffc94a";
+  switch (hat) {
+    case 1: // corona
+      rect(ctx, 4, 6, 8, 3, gold);
+      rect(ctx, 4, 4, 2, 2, gold);
+      rect(ctx, 7, 3, 2, 3, gold);
+      rect(ctx, 10, 4, 2, 2, gold);
+      rect(ctx, 7, 7, 2, 1, "#e0483b");
+      rect(ctx, 4, 8, 8, 1, "#c9952a");
+      break;
+    case 2: // casco
+      ellipse(ctx, 8, 10, 6, 5, "#4f6b3a");
+      ellipse(ctx, 7, 9, 3, 2, "#6b8a50");
+      rect(ctx, 2, 11, 12, 2, "#3e542d");
+      break;
+    case 3: // sombrero vaquero
+      ellipse(ctx, 8, 11, 8, 2.5, "#8a5a30");
+      rect(ctx, 5, 5, 6, 6, "#a3743c");
+      rect(ctx, 5, 9, 6, 1, "#4e351a");
+      break;
+    case 4: // gorro de fiesta
+      ctx.fillStyle = "#4aa3ff";
+      ctx.beginPath();
+      ctx.moveTo(4, 10);
+      ctx.lineTo(12, 10);
+      ctx.lineTo(8, 1);
+      ctx.closePath();
+      ctx.fill();
+      rect(ctx, 6, 6, 4, 1, "#ff5c8a");
+      rect(ctx, 5, 8, 6, 1, "#ffd257");
+      rect(ctx, 7, 0, 2, 2, "#ff5c8a");
+      break;
+    case 5: // cuernos
+      rect(ctx, 3, 6, 2, 3, "#c0392b");
+      rect(ctx, 2, 4, 2, 2, "#e74c3c");
+      rect(ctx, 11, 6, 2, 3, "#c0392b");
+      rect(ctx, 12, 4, 2, 2, "#e74c3c");
+      break;
+    case 6: // bandana
+      rect(ctx, 3, 9, 10, 2, "#d9483b");
+      rect(ctx, 3, 9, 10, 1, "#ff6a5a");
+      rect(ctx, 12, 11, 2, 3, "#d9483b");
+      break;
+    case 7: // aureola
+      ctx.strokeStyle = "#ffe066";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(8, 4, 5, 2, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      break;
+    case 8: // gorro de mago
+      ctx.fillStyle = "#7b4fd6";
+      ctx.beginPath();
+      ctx.moveTo(3, 10);
+      ctx.lineTo(13, 10);
+      ctx.lineTo(9, 0);
+      ctx.closePath();
+      ctx.fill();
+      rect(ctx, 2, 9, 12, 2, "#5a36a8");
+      rect(ctx, 8, 5, 2, 2, "#ffe066");
+      break;
+    case 9: // galera
+      rect(ctx, 5, 3, 6, 7, "#1b1f24");
+      rect(ctx, 5, 7, 6, 1, "#c0392b");
+      rect(ctx, 3, 9, 10, 2, "#1b1f24");
+      rect(ctx, 6, 3, 1, 4, "#3a4048");
+      break;
+  }
+}
+
+function hatTexture(hat: number): Texture {
+  return make(16, 24, (ctx) => drawHat(ctx, hat));
+}
+
 function playerBody(): Texture {
   return make(16, 18, drawPlayerBody);
 }
@@ -523,6 +603,8 @@ export interface TexturePack {
   smokePuff: Texture;
   pump: Texture;
   campfire: Texture;
+  /** Por índice de gorro (el 0 queda vacío: es la gorra de la remera). */
+  hats: Texture[];
 }
 
 let pack: TexturePack | null = null;
@@ -578,6 +660,7 @@ export function getTextures(): TexturePack {
     smokePuff: smokePuff(),
     pump: pump(),
     campfire: campfireLogs(),
+    hats: Array.from({ length: HAT_COUNT }, (_, i) => hatTexture(i)),
   };
   return pack;
 }
@@ -971,15 +1054,16 @@ export function causeIconUrl(cause: number): string {
   return causeIcons.get(cause) ?? causeIcons.get(0)!;
 }
 
-const portraits = new Map<number, string>();
+const portraits = new Map<string, string>();
 
 /**
  * El muñeco con la remera del color del jugador, para el podio. Es el mismo
  * dibujo que en el juego; la remera se multiplica por el color igual que hace
  * el tint de Pixi, así que se ve idéntico.
  */
-export function playerPortraitUrl(color: number): string {
-  const cached = portraits.get(color);
+export function playerPortraitUrl(color: number, hat = 0): string {
+  const key = `${color}:${hat}`;
+  const cached = portraits.get(key);
   if (cached) return cached;
 
   const canvas = (): [HTMLCanvasElement, Ctx] => {
@@ -1003,10 +1087,14 @@ export function playerPortraitUrl(color: number): string {
   tctx.globalCompositeOperation = "destination-in";
   tctx.drawImage(white, 0, 0);
 
-  const url = iconUrl(16, 18, (ctx) => {
+  // 16x24, como los gorros: el muñeco 6 px más abajo para que entren los altos.
+  const url = iconUrl(16, 24, (ctx) => {
+    ctx.translate(0, 6);
     drawPlayerBody(ctx);
     ctx.drawImage(tinted, 0, 0);
+    ctx.translate(0, -6);
+    if (hat > 0) drawHat(ctx, hat);
   });
-  portraits.set(color, url);
+  portraits.set(key, url);
   return url;
 }

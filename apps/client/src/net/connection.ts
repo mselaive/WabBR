@@ -10,6 +10,8 @@ import {
 export interface NetOptions {
   room: string;
   name: string;
+  /** El gorro elegido (ver achievements.ts). */
+  hat: number;
   onMessage: (msg: ServerMsg) => void;
   onOpen?: () => void;
   /** `code` es el del cierre: 4001 = otra pestaña se quedó con el asiento. */
@@ -119,7 +121,7 @@ export class Net {
       party: "game-room",
       room: opts.room,
       // El mismo token en cada reintento: PartySocket reusa la query al reconectar.
-      query: { name: opts.name, token: reconnectToken(opts.room), v: String(PROTOCOL_VERSION) },
+      query: { name: opts.name, hat: String(opts.hat), token: reconnectToken(opts.room), v: String(PROTOCOL_VERSION) },
     });
 
     this.socket.addEventListener("open", () => {

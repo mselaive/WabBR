@@ -8,6 +8,7 @@ import {
   InputQueue,
   EMOTES,
   MAX_PLAYERS,
+  RULES,
   WORLD_CENTER_X,
   WORLD_CENTER_Y,
   botInput,
@@ -369,6 +370,15 @@ export class GameRoom extends Server<Env> {
         if (this.seats.size < MIN_PLAYERS) return;
         this.state.phase = "countdown";
         this.state.phaseTicksLeft = COUNTDOWN_TICKS;
+        return;
+      }
+
+      case "rules": {
+        if (seat.playerId !== this.hostId) return;
+        if (this.state.phase !== "lobby") return;
+        if (typeof msg.rules !== "number" || !Number.isInteger(msg.rules) || msg.rules < 0 || msg.rules >= RULES.length) return;
+        this.state.rules = msg.rules;
+        this.broadcastRoster();
         return;
       }
 
@@ -949,6 +959,7 @@ export class GameRoom extends Server<Env> {
         teamSize: this.state.teamSize,
         botSkill: this.botSkill,
         night: this.state.night,
+        rules: this.state.rules,
       }),
     );
   }

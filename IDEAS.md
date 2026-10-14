@@ -72,6 +72,7 @@ está en `main`.
 | Dificultad de los bots | Fácil / Normal / Difícil en el lobby: reacción, puntería y granadas | Test + captura del lobby |
 | Revólver y ametralladora | Dos armas más: la pistola pesada y la de 60 balas | Tests de todas las armas + íconos revisados |
 | De noche | Opción del host: ves poco alrededor; fogatas, fuego, explosiones y fogonazos iluminan | Capturas |
+| Reglas especiales | Normal / Todo legendario / Francotiradores / Relámpago, las elige el host | 3 tests + captura del lobby |
 | Molotov | `J`: charco de fuego 6 s que quema al que lo pisa | 7 tests + captura |
 
 ## Ideas que quedaron, en el orden en que las haría

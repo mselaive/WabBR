@@ -34,6 +34,7 @@ const ui = new UI({
   onPartner: (id) => game.setPartner(id),
   onBotSkill: (skill) => game.setBotSkill(skill),
   onNight: (on) => game.setNight(on),
+  onRules: (rules) => game.setRules(rules),
   onLeave: () => {
     game.disconnect();
     ui.showScreen("menu");

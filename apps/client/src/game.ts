@@ -18,6 +18,7 @@ import {
   WEAPON_IDS,
   ZONE_PHASES,
   EMOTES,
+  RULES,
   DOWNED_BLEED_TICKS,
   DOWNED_HP,
   REVIVE_RANGE,
@@ -133,6 +134,8 @@ export class Game {
   private standings = new Map<number, { kills: number; alive: boolean; place: number; team: number }>();
   /** Modo de la sala: 1 todos contra todos, 2 dúos. */
   private teamSize = 1;
+  /** Reglas especiales de la sala (índice en RULES). */
+  private rules = 0;
   /** Kills recientes (performance.now()) y kills en esta vida, por jugador: para las rachas. */
   private streaks = new Map<number, { recent: number[]; life: number }>();
   /** Si este cliente vio empezar la partida en curso (para los récords). */
@@ -453,6 +456,8 @@ export class Game {
         this.ui.setMode(this.teamSize, this.hostId === this.localId);
         this.ui.setBotSkill(msg.botSkill ?? 1, this.hostId === this.localId, msg.roster.some((p) => p.bot));
         this.ui.setNight(msg.night === true, this.hostId === this.localId);
+        this.ui.setRules(msg.rules ?? 0, this.hostId === this.localId);
+        this.rules = msg.rules ?? 0;
         this.world.setNight(msg.night === true);
         return;
 
@@ -461,6 +466,7 @@ export class Game {
         this.sawStart = true;
         this.recorded = false;
         this.streaks.clear();
+        if (this.rules !== 0) this.ui.addNotice(`Reglas de esta partida: ${RULES[this.rules] ?? ""}`);
         this.predictor = new Predictor(this.localId);
         this.spawned = false;
         this.seq = 1;
@@ -1479,6 +1485,11 @@ export class Game {
     if (mine === undefined) return mates;
     for (const [id, s] of this.standings) if (id !== this.localId && s.team === mine) mates.add(id);
     return mates;
+  }
+
+  /** Las reglas especiales. El servidor comprueba que seas el host. */
+  setRules(rules: number): void {
+    this.net?.send({ t: "rules", rules });
   }
 
   /** De día o de noche. El servidor comprueba que seas el host. */

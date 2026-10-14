@@ -194,6 +194,18 @@ export const ZONE_PHASES: readonly ZonePhaseConfig[] = [
  * ZONE_FULL_PACE_PLAYERS en adelante, lo normal.
  */
 export const ZONE_MIN_PACE = 0.5;
+
+/**
+ * Reglas especiales que elige el host, para variar la noche: 0 normal; 1 todo
+ * legendario (toda arma sale en su máxima rareza); 2 francotiradores (todos
+ * arrancan con uno y sólo hay armas de precisión); 3 relámpago (la zona espera
+ * un tercio y todos arrancan con subfusil y chaleco).
+ */
+export const RULES = ["Normal", "Todo legendario", "Francotiradores", "Relámpago"] as const;
+export const RULES_NORMAL = 0;
+export const RULES_LEGENDARY = 1;
+export const RULES_SNIPERS = 2;
+export const RULES_BLITZ = 3;
 export const ZONE_FULL_PACE_PLAYERS = 8;
 
 // ------------------------------------------------------------ caído (dúos)

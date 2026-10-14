@@ -308,6 +308,8 @@ export interface GameState {
   championId: number;
   /** Partida de noche: se ve poco alrededor (los bots también ven menos). */
   night: boolean;
+  /** Reglas especiales (ver RULES). */
+  rules: number;
   /** Parejas elegidas en el lobby (ids). Los demás se emparejan por sorteo. */
   pairs: [number, number][];
   airdrops: AirdropState[];

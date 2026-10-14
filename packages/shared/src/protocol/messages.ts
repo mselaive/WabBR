@@ -66,6 +66,12 @@ export interface ModeMsg {
   teamSize: number;
 }
 
+/** El host elige las reglas de la próxima partida (índice en RULES). */
+export interface RulesMsg {
+  t: "rules";
+  rules: number;
+}
+
 /** El host elige si la próxima partida es de noche. */
 export interface NightMsg {
   t: "night";
@@ -114,6 +120,7 @@ export type ClientMsg =
   | ModeMsg
   | BotSkillMsg
   | NightMsg
+  | RulesMsg
   | PartnerMsg
   | EmoteMsg
   | MarkMsg;
@@ -248,6 +255,8 @@ export interface RosterMsg {
   botSkill?: number;
   /** Si la partida (la próxima, o la que se está jugando) es de noche. */
   night?: boolean;
+  /** Las reglas especiales (índice en RULES). */
+  rules?: number;
 }
 
 export interface SnapshotMsg {

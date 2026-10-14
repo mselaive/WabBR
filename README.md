@@ -142,6 +142,13 @@ bloqueo blando y a propósito: sin cuentas no hay identidad estable, así que ca
 igual. Cubre lo que molesta —el que reentra de un clic— y no pretende ser más que eso. Sólo funciona
 en el lobby: en partida, echar sería un arma más.
 
+**Reglas especiales.** Para variar la noche, el host elige entre *Normal*, *Todo legendario*
+(toda arma —en el piso, en cajas, en paquetes y la de arranque— sale en su máxima rareza),
+*Francotiradores* (todos arrancan con uno y las armas que aparecen son sólo francotirador,
+ballesta o revólver) y *Relámpago* (la zona espera un tercio en cada fase y todos arrancan con
+subfusil y chaleco ligero). Se aplican en la simulación (`ruledLoot`, `startingWeapon`), así que
+valen igual para el botín, las cajas y los paquetes.
+
 **De noche.** El host elige *De día* o *De noche*. De noche ves unos 230 px alrededor tuyo y el
 resto queda en penumbra azul; iluminan las fogatas, el fuego de las molotov, las explosiones y
 los fogonazos, así que **disparar de noche te delata**. Los bots también ven menos (330 px en vez

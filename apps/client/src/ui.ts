@@ -15,6 +15,7 @@ export interface UICallbacks {
   onPartner: (id: number) => void;
   onBotSkill: (skill: number) => void;
   onNight: (on: boolean) => void;
+  onRules: (rules: number) => void;
 }
 
 const NAME_KEY = "wabbr:name";
@@ -185,6 +186,9 @@ export class UI {
     this.btnAddBot.addEventListener("click", () => this.cb.onAddBot());
     this.modeSolo.addEventListener("click", () => this.cb.onMode(1));
     this.modeDuos.addEventListener("click", () => this.cb.onMode(2));
+    for (const b of el("rulesRow").querySelectorAll<HTMLButtonElement>("[data-rules]")) {
+      b.addEventListener("click", () => this.cb.onRules(Number(b.dataset.rules)));
+    }
     el("timeDay").addEventListener("click", () => this.cb.onNight(false));
     el("timeNight").addEventListener("click", () => this.cb.onNight(true));
     for (const b of el("botSkillRow").querySelectorAll<HTMLButtonElement>("[data-skill]")) {
@@ -437,6 +441,16 @@ export class UI {
       button.disabled = !isHost;
     }
     this.modeDuos.title = "Las parejas se sortean al empezar";
+  }
+
+  /** Las reglas especiales. Las cambia el host. */
+  setRules(rules: number, isHost: boolean): void {
+    for (const b of el("rulesRow").querySelectorAll<HTMLButtonElement>("[data-rules]")) {
+      const on = Number(b.dataset.rules) === rules;
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-checked", String(on));
+      b.disabled = !isHost;
+    }
   }
 
   /** De día o de noche. Lo cambia el host. */

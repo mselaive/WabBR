@@ -1500,3 +1500,12 @@ body.touch #consumables .consumable {
   font-size: 13px;
   color: var(--muted);
 }
+
+/* Cuatro reglas: en dos filas cuando no entran. */
+.rules-row {
+  flex-wrap: wrap;
+}
+
+.rules-row .mode-btn {
+  flex: 1 1 40%;
+}

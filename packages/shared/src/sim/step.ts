@@ -16,6 +16,9 @@ import {
   REVIVE_HP,
   REVIVE_RANGE,
   REVIVE_TICKS,
+  RULES_BLITZ,
+  RULES_LEGENDARY,
+  RULES_SNIPERS,
   SMOKE_MAX_STACK,
   MOLOTOV_MAX_STACK,
   FIRE_DPS,
@@ -215,6 +218,7 @@ export function createGameState(seed = 1): GameState {
     pairs: [],
     championId: -1,
     night: false,
+    rules: 0,
     airdrops: [],
     nextAirdropId: 1,
     strikes: [],
@@ -233,10 +237,32 @@ export function createGameState(seed = 1): GameState {
   };
 }
 
+/** Con qué arranca cada uno según las reglas. */
+function startingWeapon(rules: number): number {
+  if (rules === RULES_SNIPERS) return WEAPON_IDS.indexOf("sniper");
+  if (rules === RULES_BLITZ) return WEAPON_IDS.indexOf("smg");
+  return STARTING_WEAPON;
+}
+
+/** Las armas de precisión, las únicas de la regla francotiradores. */
+const PRECISION = ["sniper", "crossbow", "revolver"].map((id) => WEAPON_IDS.indexOf(id as (typeof WEAPON_IDS)[number]));
+
+/**
+ * Cómo cambian las reglas un arma del botín (en el piso, en una caja o en un
+ * paquete): todo legendario la sube a su máxima rareza; francotiradores la
+ * cambia por una de precisión, elegida por su ref para que sea siempre igual.
+ */
+function ruledLoot(state: GameState, item: { kind: number; ref: number; tier: number }): { ref: number; tier: number } {
+  if (item.kind !== ITEM_WEAPON) return { ref: item.ref, tier: item.tier };
+  let ref = item.ref;
+  if (state.rules === RULES_SNIPERS && !PRECISION.includes(ref)) ref = PRECISION[ref % PRECISION.length]!;
+  const tier = state.rules === RULES_LEGENDARY ? 4 : item.tier;
+  return { ref, tier: clampTier(ref, tier) };
+}
+
 /** Coloca a todos en el anillo de spawn, reparte el loot y arranca la partida. */
 export function startMatch(state: GameState, seed: number, arena: ArenaMap = getArena()): void {
   const active = state.players.filter((p) => p.connected);
-  const start = weaponStats(STARTING_WEAPON, 0);
 
   state.phase = "playing";
   state.phaseTicksLeft = 0;
@@ -252,12 +278,13 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
   state.wanted = null;
   state.barrelHp = new Map();
   state.explodedBarrels = [];
-  state.zone = createZone(zonePace(active.length));
+  // Relámpago: la zona espera un tercio de lo que esperaría.
+  state.zone = createZone(zonePace(active.length) * (state.rules === RULES_BLITZ ? 1 / 3 : 1));
   state.rng = seed | 0;
   state.winnerId = -1;
   state.tick = 0;
 
-  state.items = spawnLoot(seed, arena);
+  state.items = spawnLoot(seed, arena).map((item) => ({ ...item, ...ruledLoot(state, item) }));
   state.nextItemId = state.items.length + 1;
   state.openedCrates = [];
   // Las doradas, sorteadas con su propio azar: no cambian nada más del reparto.
@@ -323,11 +350,13 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
     p.hp = PLAYER_MAX_HP;
     p.alive = true;
     p.kills = 0;
-    p.slots = [STARTING_WEAPON, -1];
-    p.slotTier = [0, 0];
-    p.slotAmmo = [start.magSize, 0];
+    const first = startingWeapon(state.rules);
+    p.slots = [first, -1];
+    p.slotTier = [clampTier(first, state.rules === RULES_LEGENDARY ? 4 : 0), 0];
+    p.slotAmmo = [weaponStats(first, p.slotTier[0]!).magSize, 0];
     p.activeSlot = 0;
-    p.shield = 0;
+    // Relámpago: con chaleco, para que las peleas apuradas no se terminen al primer tiro.
+    p.shield = state.rules === RULES_BLITZ ? ARMORS[0]!.shield : 0;
     p.consumables = new Array<number>(CONSUMABLE_KINDS).fill(0);
     p.useCd = 0;
     p.useIndex = -1;
@@ -614,6 +643,7 @@ function openCrate(
   const cx = crate.x + crate.w / 2;
   const cy = crate.y + crate.h / 2;
 
+  rolled.items = rolled.items.map((content) => ({ ...content, ...ruledLoot(state, content) }));
   rolled.items.forEach((content, i) => {
     // En corona alrededor de la caja, para que no queden apilados y se pueda
     // elegir cuál levantar.
@@ -1721,7 +1751,7 @@ function stepAirdrops(state: GameState, events: SimEvent[]): void {
     const tier = clampTier(weapon, r2.value < 0.5 ? 3 : 4);
 
     const loot: Omit<GroundItem, "id" | "x" | "y">[] = [
-      { kind: ITEM_WEAPON, ref: weapon, tier, count: 1 },
+      { kind: ITEM_WEAPON, count: 1, ...ruledLoot(state, { kind: ITEM_WEAPON, ref: weapon, tier }) },
       { kind: ITEM_ARMOR, ref: ARMORS.length - 1, tier: 3, count: 1 },
       { kind: ITEM_CONSUMABLE, ref: 1, tier: 3, count: 1 },
       { kind: ITEM_GRENADE, ref: 0, tier: 3, count: 2 },

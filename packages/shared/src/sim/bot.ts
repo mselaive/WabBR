@@ -8,6 +8,7 @@ import {
   REVIVE_RANGE,
   SMOKE_MAX_STACK,
   SMOKE_RADIUS,
+  STRIKE_RADIUS,
 } from "../constants.js";
 import {
   ARMORS,
@@ -177,8 +178,9 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
     return input;
   }
 
-  // La zona y una granada al lado mandan por sobre levantar al compañero.
-  const busy = !target && (zonePull(state, me) !== null || grenadeEscape(state, me) !== null);
+  // La zona, una granada al lado o un bombardeo mandan por sobre levantar al compañero.
+  const busy =
+    !target && (zonePull(state, me) !== null || grenadeEscape(state, me) !== null || strikeEscape(state, me) !== null);
 
   // Levantando al compañero: quieto hasta terminar, salvo que aparezca alguien.
   if (me.reviving >= 0 && !target && !busy) return input;
@@ -293,7 +295,7 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
 
   // Una granada a punto de estallar al lado: correr, aunque sea afuera de la
   // zona. Dos segundos de zona duelen menos que una granada.
-  const flee = grenadeEscape(state, me);
+  const flee = grenadeEscape(state, me) ?? strikeEscape(state, me);
   if (flee) {
     goal = flee;
     input.sprint = me.stamina > 0;
@@ -369,6 +371,25 @@ function smokeAim(me: PlayerState, target: PlayerState, arena: ArenaMap): number
     const t = Math.max(0, Math.min(1, ((g.x - me.x) * dx + (g.y - me.y) * dy) / len2));
     const off = Math.hypot(me.x + dx * t - g.x, me.y + dy * t - g.y);
     if (off < SMOKE_RADIUS * 0.6) return aim;
+  }
+  return null;
+}
+
+/**
+ * A dónde ir si está adentro de un bombardeo anunciado o en curso: afuera del
+ * círculo, por el lado más corto. Meterse en una casa también salva, pero
+ * salir es más simple y casi siempre igual de rápido.
+ */
+function strikeEscape(state: GameState, me: PlayerState): { x: number; y: number } | null {
+  for (const s of state.strikes) {
+    if (state.tick >= s.endTick) continue;
+    const dx = me.x - s.x;
+    const dy = me.y - s.y;
+    const d = Math.hypot(dx, dy);
+    if (d > STRIKE_RADIUS + 30) continue;
+    const ux = d > 1 ? dx / d : 1;
+    const uy = d > 1 ? dy / d : 0;
+    return { x: s.x + ux * (STRIKE_RADIUS + 80), y: s.y + uy * (STRIKE_RADIUS + 80) };
   }
   return null;
 }

@@ -41,6 +41,7 @@ export const ACT_SMOKE = 8;
 /** Causas de muerte que no son un arma, para el kill feed. */
 export const CAUSE_ZONE = -1;
 export const CAUSE_EXPLOSION = -2;
+export const CAUSE_STRIKE = -3;
 
 export function emptyInput(seq = 0): PlayerInput {
   return {
@@ -203,6 +204,16 @@ export interface AirdropState {
   landTick: number;
 }
 
+/** Un bombardeo marcado en el mapa (ver STRIKE_*). */
+export interface StrikeState {
+  id: number;
+  x: number;
+  y: number;
+  /** Tick en que cae la primera bomba, y en que termina. */
+  startTick: number;
+  endTick: number;
+}
+
 export const GRENADE_FRAG = 0;
 export const GRENADE_SMOKE = 1;
 
@@ -268,6 +279,9 @@ export interface GameState {
   pairs: [number, number][];
   airdrops: AirdropState[];
   nextAirdropId: number;
+  /** Bombardeos anunciados o en curso. */
+  strikes: StrikeState[];
+  nextStrikeId: number;
   /** Vida que les queda a los barriles tocados, por índice de obstáculo. */
   barrelHp: Map<number, number>;
   /** Barriles que ya estallaron, por índice de obstáculo. Quedan quemados. */
@@ -358,4 +372,6 @@ export type SimEvent =
   /** Lo levantó el compañero. */
   | { t: "revive"; targetId: number; byId: number }
   /** Aterrizó un paquete aéreo: su botín llega con eventos "drop". */
-  | { t: "airdrop"; x: number; y: number };
+  | { t: "airdrop"; x: number; y: number }
+  /** Se anunció un bombardeo: las bombas empiezan en STRIKE_WARN_TICKS. */
+  | { t: "strike"; x: number; y: number };

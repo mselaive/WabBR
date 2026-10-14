@@ -1,4 +1,5 @@
 import {
+  STRIKE_RADIUS,
   WORLD_CENTER_X,
   WORLD_CENTER_Y,
   WORLD_RADIUS,
@@ -195,6 +196,17 @@ export class Minimap {
     ctx.beginPath();
     ctx.arc(this.tx(z.x), this.ty(z.y), Math.max(1, z.radius * this.scale), 0, Math.PI * 2);
     ctx.stroke();
+
+    // Bombardeos: un círculo rojo, para saber de dónde salir sin mirar el mapa grande.
+    for (const s of frame.strikes) {
+      ctx.fillStyle = "rgba(255, 42, 26, 0.35)";
+      ctx.strokeStyle = "#ff3b2a";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(this.tx(s.x), this.ty(s.y), STRIKE_RADIUS * this.scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
 
     // Paquetes aéreos: un cuadrado dorado que late. Es lo primero que hay que
     // ver al abrir el minimapa, porque todos van a ir para ahí.

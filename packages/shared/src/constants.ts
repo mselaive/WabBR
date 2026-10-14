@@ -94,6 +94,22 @@ export const AIRDROP_PHASES = 2;
 export const AIRDROP_FALL_TICKS = 10 * TICK_RATE;
 
 /**
+ * Bombardeo (la "zona roja" de PUBG): a mitad de la espera de algunas fases se
+ * marca un círculo adentro de la zona y, después del aviso, caen bombas en
+ * puntos al azar. Adentro de una casa no te alcanzan: las paredes frenan la
+ * explosión y ninguna bomba cae bajo techo. Saca a la gente de donde está
+ * acampando y hace ruido que tapa los tiros.
+ */
+export const STRIKE_FIRST_PHASE = 1;
+export const STRIKE_LAST_PHASE = 3;
+export const STRIKE_RADIUS = 210;
+/** Aviso antes de la primera bomba: tiempo para salir o meterse en una casa. */
+export const STRIKE_WARN_TICKS = 5 * TICK_RATE;
+/** Cuánto dura el bombardeo y cada cuánto cae una bomba. */
+export const STRIKE_TICKS = 6 * TICK_RATE;
+export const STRIKE_BOMB_EVERY = 10;
+
+/**
  * Vida de un barril: dos o tres tiros de pistola. Al llegar a cero estalla
  * como una granada (applyExplosion) y queda quemado, todavía de cobertura.
  */

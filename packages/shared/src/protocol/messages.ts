@@ -137,6 +137,12 @@ export type SnapResult = [number, number, number, number, number, number];
  */
 export type SnapAirdrop = [number, number, number, number];
 
+/**
+ * [id, x, y, ticksParaLaPrimeraBomba, ticksParaTerminar] de cada bombardeo.
+ * Va a todos: se anuncia justamente para que la gente se vaya.
+ */
+export type SnapStrike = [number, number, number, number, number];
+
 /** [id, kind, ref, tier, x, y, count] */
 export type SnapItem = [number, number, number, number, number, number, number];
 
@@ -237,6 +243,8 @@ export interface SnapshotMsg {
   ad?: SnapAirdrop[];
   /** Nubes de humo. Sólo cuando hay alguna. */
   sm?: SnapSmoke[];
+  /** Bombardeos anunciados o en curso. Sólo cuando hay alguno. */
+  rz?: SnapStrike[];
 }
 
 export interface ItemsMsg {

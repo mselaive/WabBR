@@ -37,6 +37,7 @@ import {
   weaponStats,
   weaponAt,
   CAUSE_EXPLOSION,
+  CAUSE_STRIKE,
   CAUSE_ZONE,
   type ArenaMap,
   type GroundItem,
@@ -658,6 +659,10 @@ export class Game {
           break;
         case "throw":
           if (ev.byId === this.localId) this.grenades.confirm(ev.seq, ev.grenade);
+          break;
+        case "strike":
+          this.ui.addNotice("¡Bombardeo! Salí de la zona roja o metete en una casa");
+          this.sound.siren();
           break;
         case "smoke":
           // Junto con la nube, que se dibuja en el reloj atrasado.
@@ -1362,6 +1367,7 @@ const MIN_SHOTS_FOR_ACCURACY = 20;
  */
 function deathNote(ev: Extract<SimEvent, { t: "kill" }>, killerName: string | undefined): string {
   if (ev.cause === CAUSE_ZONE) return "Te terminó la zona.";
+  if (ev.cause === CAUSE_STRIKE) return "Te alcanzó el bombardeo.";
   if (ev.byId === ev.targetId) return "Te mataste solo.";
   const how = ev.cause === CAUSE_EXPLOSION ? "con una explosión" : `con ${weaponArticle(ev.cause)}`;
   const who = killerName ?? "alguien";

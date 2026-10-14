@@ -170,6 +170,16 @@ export class Sound {
     if (out) this.tone(out, { freq: 260, endFreq: 520, decay: 0.5, gain: 0.8, type: "triangle" });
   }
 
+  /** Se anunció un bombardeo: una sirena que sube y baja dos veces. */
+  siren(): void {
+    const out = this.voice(undefined, 0.3);
+    if (!out) return;
+    for (let i = 0; i < 2; i++) {
+      this.tone(out, { freq: 520, endFreq: 880, decay: 0.45, gain: 0.9, type: "sawtooth", delay: i * 0.9 });
+      this.tone(out, { freq: 880, endFreq: 520, decay: 0.45, gain: 0.9, type: "sawtooth", delay: i * 0.9 + 0.45 });
+    }
+  }
+
   /** Aterrizó un paquete. */
   landing(at?: Spot): void {
     const out = this.voice(at, 0.9);

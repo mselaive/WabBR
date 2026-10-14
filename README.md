@@ -316,6 +316,19 @@ dónde va a caer lo mejor, y eso los junta. Al tocar el piso el botín queda en
 corona, como el de las cajas, y se recoge con `E`. Dónde cae no es secreto: viaja a
 todos en el snapshot (`ad`), aunque no lo tengan a la vista.
 
+## Bombardeo
+
+Copiado de la "zona roja" de PUBG. A mitad de la espera de las fases 1 a 3 se marca un
+círculo rojo de 210 px adentro de la zona, con una cruz en el medio, en el piso y en el
+minimapa, y suena una sirena con el aviso "¡Bombardeo!". Cinco segundos después caen bombas
+en puntos al azar durante seis segundos: una cada medio segundo, con la misma explosión que
+la granada (también hacen estallar barriles). **Adentro de una casa no te alcanzan**: ninguna
+bomba cae bajo techo y las paredes frenan la explosión, igual que con las granadas. Saca a
+la gente de donde está acampando y el ruido tapa los tiros. Las muertes se anotan al
+bombardeo (nadie suma la kill) y los bots se van del círculo. Todo es de la simulación
+compartida con el azar de la partida (`launchStrike`, `stepStrikes`); el cliente sólo dibuja
+lo que llega en el snapshot (`rz`).
+
 ## Correr y granadas
 
 **Correr** (`Shift`) va 1,45× más rápido y gasta estamina: unos 3 segundos de

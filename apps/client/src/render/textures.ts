@@ -860,6 +860,13 @@ export function causeIconUrl(cause: number): string {
       rect(ctx, 4, 8, 8, 1, "#2c3f21");
       rect(ctx, 7, 4, 2, 3, "#8a8f95");
     }));
+    // Bombardeo: una bomba con aletas.
+    causeIcons.set(-3, iconUrl(16, 16, (ctx) => {
+      ellipse(ctx, 8, 9, 3.5, 5, "#3a3f46");
+      rect(ctx, 5, 2, 6, 2, "#5a6068");
+      rect(ctx, 7, 4, 2, 1, "#5a6068");
+      rect(ctx, 7, 13, 2, 2, "#ff6a4a");
+    }));
     // Zona.
     causeIcons.set(-1, iconUrl(16, 16, (ctx) => {
       ctx.strokeStyle = "#6fd3ff";

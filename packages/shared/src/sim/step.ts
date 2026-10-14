@@ -17,6 +17,12 @@ import {
   REVIVE_RANGE,
   REVIVE_TICKS,
   SMOKE_MAX_STACK,
+  STRIKE_BOMB_EVERY,
+  STRIKE_FIRST_PHASE,
+  STRIKE_LAST_PHASE,
+  STRIKE_RADIUS,
+  STRIKE_TICKS,
+  STRIKE_WARN_TICKS,
   SMOKE_TICKS,
   SPRINT_MULT,
   STAMINA_DRAIN,
@@ -74,6 +80,7 @@ import {
   ACT_SMOKE,
   ACT_SLOT_1,
   CAUSE_EXPLOSION,
+  CAUSE_STRIKE,
   CAUSE_ZONE,
   ACT_USE_BASE,
   GRENADE_FRAG,
@@ -185,6 +192,8 @@ export function createGameState(seed = 1): GameState {
     pairs: [],
     airdrops: [],
     nextAirdropId: 1,
+    strikes: [],
+    nextStrikeId: 1,
     barrelHp: new Map(),
     explodedBarrels: [],
     items: [],
@@ -210,6 +219,8 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
   state.smokes = [];
   state.airdrops = [];
   state.nextAirdropId = 1;
+  state.strikes = [];
+  state.nextStrikeId = 1;
   state.barrelHp = new Map();
   state.explodedBarrels = [];
   state.zone = createZone(zonePace(active.length));
@@ -1061,6 +1072,8 @@ export function applyExplosion(
   events: SimEvent[],
   /** La granada que estalló, si fue una: el que la tiró ya dibujó su explosión. */
   grenade = -1,
+  /** Con qué se anota la muerte: CAUSE_EXPLOSION, o CAUSE_STRIKE para el bombardeo. */
+  cause = CAUSE_EXPLOSION,
 ): void {
   events.push({ t: "explosion", x, y, byId, grenade });
   // A los compañeros no los lastima; al que la tiró, sí.
@@ -1086,7 +1099,7 @@ export function applyExplosion(
       dir: Math.atan2(p.y - y, p.x - x),
       bullet: -1,
     });
-    applyDamage(state, p, damage, byId, CAUSE_EXPLOSION, events);
+    applyDamage(state, p, damage, byId, cause, events);
   }
 
   // Los barriles de alrededor también reciben: así se encadenan.
@@ -1354,6 +1367,56 @@ function launchAirdrop(state: GameState, arena: ArenaMap): void {
   state.airdrops.push({ id: state.nextAirdropId++, x, y, landTick: state.tick + AIRDROP_FALL_TICKS });
 }
 
+/**
+ * Marca un bombardeo adentro de la zona actual, lejos de su borde, para que
+ * moleste donde está la gente y no en el pasto de afuera.
+ */
+function launchStrike(state: GameState, events: SimEvent[]): void {
+  const z = state.zone;
+  const random = (): number => {
+    const r = nextRandom(state.rng);
+    state.rng = r.state;
+    return r.value;
+  };
+  const angle = random() * Math.PI * 2;
+  const d = Math.sqrt(random()) * Math.max(0, z.radius - STRIKE_RADIUS) * 0.8;
+  const x = z.x + Math.cos(angle) * d;
+  const y = z.y + Math.sin(angle) * d;
+  state.strikes.push({
+    id: state.nextStrikeId++,
+    x,
+    y,
+    startTick: state.tick + STRIKE_WARN_TICKS,
+    endTick: state.tick + STRIKE_WARN_TICKS + STRIKE_TICKS,
+  });
+  events.push({ t: "strike", x, y });
+}
+
+/** ¿El punto está bajo techo? Ahí no cae ninguna bomba. */
+function underRoof(x: number, y: number, arena: ArenaMap): boolean {
+  return arena.buildings.some((b) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h);
+}
+
+/** Las bombas de los bombardeos en curso, y los terminados se borran. */
+function stepStrikes(state: GameState, arena: ArenaMap, events: SimEvent[]): void {
+  if (state.strikes.length === 0) return;
+  for (const s of state.strikes) {
+    if (state.tick < s.startTick || state.tick >= s.endTick) continue;
+    if ((state.tick - s.startTick) % STRIKE_BOMB_EVERY !== 0) continue;
+    const a = nextRandom(state.rng);
+    const b = nextRandom(a.state);
+    state.rng = b.state;
+    const angle = a.value * Math.PI * 2;
+    const d = Math.sqrt(b.value) * STRIKE_RADIUS;
+    const bx = s.x + Math.cos(angle) * d;
+    const by = s.y + Math.sin(angle) * d;
+    // Bajo techo no cae: la bomba que tocaría una casa revienta en el techo.
+    if (underRoof(bx, by, arena)) continue;
+    applyExplosion(state, bx, by, -1, arena, events, -1, CAUSE_STRIKE);
+  }
+  state.strikes = state.strikes.filter((s) => state.tick < s.endTick);
+}
+
 /** Lugar libre para que el botín quede en el piso y al alcance. */
 function airdropClear(x: number, y: number, arena: ArenaMap): boolean {
   const dx = x - WORLD_CENTER_X;
@@ -1417,6 +1480,11 @@ function stepZone(state: GameState, arena: ArenaMap, events: SimEvent[]): void {
   if (cfg) {
     if (!z.shrinking) {
       if (z.ticksLeft > 0) z.ticksLeft--;
+      // A mitad de la espera, un bombardeo (en las fases del medio).
+      const wait = Math.round(cfg.waitTicks * z.pace);
+      if (z.phase >= STRIKE_FIRST_PHASE && z.phase <= STRIKE_LAST_PHASE && z.ticksLeft === Math.floor(wait / 2)) {
+        launchStrike(state, events);
+      }
       if (z.ticksLeft === 0) {
         z.shrinking = true;
         z.ticksLeft = cfg.shrinkTicks;
@@ -1567,6 +1635,7 @@ export function step(
   stepGrenades(state, arena, events);
   stepBullets(state, arena, events);
   stepZone(state, arena, events);
+  stepStrikes(state, arena, events);
   stepAirdrops(state, events);
 
   // Una pareja con los dos caídos ya no tiene quién la levante: se terminan.

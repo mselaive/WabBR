@@ -29,6 +29,7 @@ import {
   packItem,
   packAirdrops,
   packSmokes,
+  packStrikes,
   packPlayer,
   packResults,
   packSnapshotArrays,
@@ -642,6 +643,7 @@ export class GameRoom extends Server<Env> {
       winner: s.winnerId,
       ...(s.airdrops.length > 0 ? { ad: packAirdrops(s) } : {}),
       ...(s.smokes.length > 0 ? { sm: packSmokes(s) } : {}),
+      ...(s.strikes.length > 0 ? { rz: packStrikes(s) } : {}),
     };
 
     // Fuera de la partida no hay nada que ocultar: un solo mensaje para todos.
@@ -758,6 +760,7 @@ export class GameRoom extends Server<Env> {
     s.bullets = [];
     s.grenades = [];
     s.smokes = [];
+    s.strikes = [];
     s.winnerId = -1;
     s.tick = 0;
     for (const p of s.players) {

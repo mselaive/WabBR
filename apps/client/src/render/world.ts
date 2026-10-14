@@ -18,6 +18,7 @@ import {
   GRENADE_SMOKE,
   ITEM_GRENADE,
   SMOKE_RADIUS,
+  STRIKE_RADIUS,
   smokeRadius,
   ITEM_WEAPON,
   itemColor,
@@ -125,6 +126,8 @@ export class WorldView {
   private readonly zoneLayer = new Graphics();
   /** Dónde va a caer cada paquete aéreo: anillo y sombra, debajo de los jugadores. */
   private readonly airdropGround = new Graphics();
+  /** Los bombardeos: un círculo rojo en el piso. */
+  private readonly strikeLayer = new Graphics();
   /** Lo que está en el aire, por encima de todo. */
   private readonly skyLayer = new Container();
   private readonly airdropSprites = new Map<number, Sprite>();
@@ -181,6 +184,7 @@ export class WorldView {
     this.camera.addChild(
       this.groundLayer,
       this.zoneLayer,
+      this.strikeLayer,
       this.itemLayer,
       this.airdropGround,
       this.shadowLayer,
@@ -847,6 +851,7 @@ export class WorldView {
     this.updateGrenades(frame);
     this.updateSmokes(frame, localOverride);
     this.updateAirdrops(frame);
+    this.updateStrikes(frame);
     this.updateZone(frame);
     this.updateEffects(dt);
     // El sacudón se apaga rápido: si dura, marea en vez de comunicar.
@@ -988,6 +993,27 @@ export class WorldView {
    * en el piso, un anillo que late donde va a caer y una sombra que crece a
    * medida que se acerca.
    */
+  /**
+   * Los bombardeos: un círculo rojo que late mientras avisa, más rápido cuanto
+   * menos falta, y se pone fuerte cuando caen las bombas.
+   */
+  private updateStrikes(frame: InterpolatedFrame): void {
+    const g = this.strikeLayer;
+    g.clear();
+    const now = performance.now();
+    for (const s of frame.strikes) {
+      const bombing = s.untilStart <= 0;
+      const speed = bombing ? 90 : 120 + s.untilStart * 3;
+      const pulse = 0.5 + 0.5 * Math.sin(now / speed);
+      g.circle(s.x, s.y, STRIKE_RADIUS).fill({ color: 0xff2a1a, alpha: (bombing ? 0.28 : 0.16) + 0.1 * pulse });
+      g.circle(s.x, s.y, STRIKE_RADIUS).stroke({ width: 6, color: 0xff3b2a, alpha: 0.65 + 0.35 * pulse });
+      // La cruz del medio: se ve de lejos qué es, aunque no se vea el borde.
+      const c = 18;
+      g.moveTo(s.x - c, s.y - c).lineTo(s.x + c, s.y + c).moveTo(s.x + c, s.y - c).lineTo(s.x - c, s.y + c);
+      g.stroke({ width: 4, color: 0xff3b2a, alpha: 0.7 });
+    }
+  }
+
   private updateAirdrops(frame: InterpolatedFrame): void {
     const g = this.airdropGround;
     g.clear();
@@ -1332,6 +1358,7 @@ export class WorldView {
 
   reset(): void {
     this.markLayer.clear();
+    this.strikeLayer.clear();
     for (const view of this.players.values()) view.root.visible = false;
     this.zoneArrow.visible = false;
     for (const [id, sprite] of this.bullets) {

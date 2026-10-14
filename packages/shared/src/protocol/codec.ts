@@ -8,6 +8,7 @@ import type {
   SnapPlayer,
   SnapResult,
   SnapSmoke,
+  SnapStrike,
   SnapZone,
 } from "./messages.js";
 import {
@@ -176,6 +177,29 @@ export interface UnpackedGrenade {
   fuse: number;
   /** GRENADE_FRAG o GRENADE_SMOKE. */
   kind: number;
+}
+
+export function packStrikes(state: GameState): SnapStrike[] {
+  return state.strikes.map((s) => [
+    s.id,
+    q(s.x, P),
+    q(s.y, P),
+    Math.max(0, s.startTick - state.tick),
+    Math.max(0, s.endTick - state.tick),
+  ]);
+}
+
+export interface UnpackedStrike {
+  id: number;
+  x: number;
+  y: number;
+  /** Ticks hasta la primera bomba (0 si ya empezó) y hasta que termina. */
+  untilStart: number;
+  untilEnd: number;
+}
+
+export function unpackStrike(s: SnapStrike): UnpackedStrike {
+  return { id: s[0], x: s[1], y: s[2], untilStart: s[3], untilEnd: s[4] };
 }
 
 export function packSmokes(state: GameState): SnapSmoke[] {

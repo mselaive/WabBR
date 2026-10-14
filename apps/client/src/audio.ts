@@ -194,10 +194,11 @@ export class Sound {
 
   /** Pasos de alguien corriendo: dos golpecitos sordos. */
   steps(at?: Spot): void {
-    const out = this.voice(at, 0.35);
+    // Medido: con la mitad de esto quedaba en 0,02 de pico, inaudible al lado de un tiro.
+    const out = this.voice(at, 1);
     if (!out) return;
-    this.noiseBurst(out, { type: "lowpass", freq: 500, decay: 0.05, gain: 1 });
-    this.noiseBurst(out, { type: "lowpass", freq: 450, decay: 0.05, gain: 0.9, delay: 0.22 });
+    this.noiseBurst(out, { type: "lowpass", freq: 800, decay: 0.08, gain: 1 });
+    this.noiseBurst(out, { type: "lowpass", freq: 700, decay: 0.08, gain: 0.9, delay: 0.22 });
   }
 
   /** Una tirolesa: el roce de la polea por el cable, que sube y se aleja. */

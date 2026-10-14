@@ -826,7 +826,9 @@ los dos últimos —o las dos últimas parejas— un aviso lo dice.
 volumen, que se elige en el menú. Los niveles están medidos —se pueden
 renderizar sin parlantes pasándole un `OfflineAudioContext` a `unlock()`—: ninguno
 pasa de 0,41 de pico, y un tiro a media pantalla a la derecha llega al oído izquierdo
-a un tercio.
+a un tercio. Los de esta noche también (trueno, latido, pasos, polea de la tirolesa, gallina,
+radar): el más fuerte sigue siendo un tiro de rifle, 0,22; los pasos quedaban en 0,02, inaudibles,
+y se subieron a 0,10.
 
 ## Línea de vista
 

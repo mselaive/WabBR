@@ -421,8 +421,9 @@ través de una casa.
 **Molotov** (`J`): rueda igual y al romperse deja un charco de fuego de 72 px por 6 segundos
 que quema 12 por segundo al que esté adentro —al que la tiró también, a su compañero no—, a
 cuenta del que la tiró. Sirve para sacar a alguien de atrás de una caja o cerrar una puerta. No
-hay un "hit" por tick (serían veinte por segundo): se ve en la vida que baja y en las llamas. Los
-bots salen del fuego y no la juntan.
+hay un "hit" por tick (serían veinte por segundo): se ve en la vida que baja y en las llamas. Las
+paredes lo frenan igual que a la vista (del otro lado de una casa no quema); detrás de una caja sí.
+Los bots salen del fuego y, si no les quedan granadas, tiran la molotov igual que una granada.
 
 **Humo** (`H`): rueda igual que la granada y a los 2 segundos suelta una nube de
 115 px de radio que dura 10 segundos. Tapa la vista, no las balas: nadie ve a

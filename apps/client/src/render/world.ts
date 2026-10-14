@@ -244,6 +244,19 @@ export class WorldView {
     this.drawCrosshair();
   }
 
+  /**
+   * Lo saca del escenario y suelta lo que armó. Para cambiar de mapa se arma
+   * uno nuevo: el escenario sale entero del mapa, y desarmarlo pieza por pieza
+   * sería repetir el constructor al revés.
+   */
+  destroy(): void {
+    this.app.stage.removeChild(this.camera, this.nightSprite, this.screenLayer);
+    this.camera.destroy({ children: true });
+    this.screenLayer.destroy({ children: true });
+    this.nightSprite.destroy();
+    this.nightTexture?.destroy(true);
+  }
+
   // ------------------------------------------------------------ escenario
 
   private buildGround(): void {

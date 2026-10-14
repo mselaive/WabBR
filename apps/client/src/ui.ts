@@ -17,6 +17,7 @@ export interface UICallbacks {
   onBotSkill: (skill: number) => void;
   onNight: (on: boolean) => void;
   onRules: (rules: number) => void;
+  onMapMode: (mode: number) => void;
 }
 
 const NAME_KEY = "wabbr:name";
@@ -193,6 +194,8 @@ export class UI {
     for (const b of el("rulesRow").querySelectorAll<HTMLButtonElement>("[data-rules]")) {
       b.addEventListener("click", () => this.cb.onRules(Number(b.dataset.rules)));
     }
+    el("mapSame").addEventListener("click", () => this.cb.onMapMode(0));
+    el("mapNew").addEventListener("click", () => this.cb.onMapMode(1));
     el("timeDay").addEventListener("click", () => this.cb.onNight(false));
     el("timeNight").addEventListener("click", () => this.cb.onNight(true));
     for (const b of el("botSkillRow").querySelectorAll<HTMLButtonElement>("[data-skill]")) {
@@ -491,6 +494,23 @@ export class UI {
       b.setAttribute("aria-checked", String(on));
       b.disabled = !isHost;
     }
+  }
+
+  /**
+   * Siempre el mismo mapa o uno nuevo cada partida; con uno nuevo, el botón
+   * dice cuál toca. Lo cambia el host.
+   */
+  setMap(mode: number, name: string, isHost: boolean): void {
+    for (const [id, value] of [
+      ["mapSame", 0],
+      ["mapNew", 1],
+    ] as const) {
+      const b = el(id) as HTMLButtonElement;
+      b.classList.toggle("on", mode === value);
+      b.setAttribute("aria-checked", String(mode === value));
+      b.disabled = !isHost;
+    }
+    el("mapNew").textContent = mode === 1 ? `Mapa: ${name}` : "Uno nuevo cada partida";
   }
 
   /** De día o de noche. Lo cambia el host. */

@@ -28,7 +28,8 @@ import {
   smokeRadius,
   nearCampfire,
   consumableAt,
-  getArena,
+  MAPS,
+  mapArena,
   itemName,
   lootCrates,
   playerColor,
@@ -91,7 +92,10 @@ export class Game {
   private app!: Application;
   private world!: WorldView;
   private minimap!: Minimap;
-  private readonly arena: ArenaMap = getArena();
+  /** El mapa de la sala: cambia en el lobby si el host eligió uno nuevo cada partida. */
+  private arena: ArenaMap = mapArena(0);
+  /** Índice en MAPS del mapa de arriba. */
+  private mapIndex = 0;
   private readonly input = new InputController();
   private readonly snapshots = new SnapshotBuffer();
 
@@ -137,6 +141,8 @@ export class Game {
   private teamSize = 1;
   /** Reglas especiales de la sala (índice en RULES). */
   private rules = 0;
+  /** 0 siempre el mismo mapa, 1 uno nuevo cada partida. */
+  private mapMode = 0;
   /** Si en el input anterior ya estaba volando de un hongo (para el sonido). */
   private wasJumping = false;
   /** Si la partida es de noche (para el logro "Búho"). */
@@ -180,7 +186,7 @@ export class Game {
   /** Las cajas doradas de la partida. */
   private goldenCrates: number[] = [];
   /** Cajas del mapa, en el mismo orden que las numera el servidor. */
-  private readonly crates = lootCrates(getArena());
+  private crates = lootCrates(this.arena);
   /** Ya recibimos la posición de spawn autoritativa de esta ronda. */
   private spawned = false;
   /** A quién se sigue al espectear. Al morir, a quien te mató. */
@@ -215,7 +221,7 @@ export class Game {
     document.getElementById("stage")!.appendChild(this.app.canvas);
 
     this.world = new WorldView(this.app, this.arena);
-    const minimapCanvas = document.getElementById("minimap") as HTMLCanvasElement;
+    const minimapCanvas = this.minimapCanvas;
     this.minimap = new Minimap(minimapCanvas, this.arena);
     // Tocar o clickear el minimapa marca ese lugar para el compañero.
     minimapCanvas.addEventListener(
@@ -456,6 +462,9 @@ export class Game {
       }
 
       case "roster":
+        if ((msg.map ?? 0) !== this.mapIndex) this.changeMap(msg.map ?? 0);
+        this.ui.setMap(msg.mapMode ?? 0, MAPS[this.mapIndex]?.name ?? "", msg.hostId === this.localId);
+        this.mapMode = msg.mapMode ?? 0;
         this.hostId = msg.hostId;
         this.teamSize = msg.teamSize ?? 1;
         this.setRoster(msg.roster);
@@ -474,6 +483,7 @@ export class Game {
         this.recorded = false;
         this.streaks.clear();
         if (this.rules !== 0) this.ui.addNotice(`Reglas de esta partida: ${RULES[this.rules] ?? ""}`);
+        if (this.mapMode === 1) this.ui.addNotice(`Mapa: ${MAPS[this.mapIndex]?.name ?? ""}`);
         this.predictor = new Predictor(this.localId);
         this.spawned = false;
         this.seq = 1;
@@ -1523,6 +1533,30 @@ export class Game {
   /** Las reglas especiales. El servidor comprueba que seas el host. */
   setRules(rules: number): void {
     this.net?.send({ t: "rules", rules });
+  }
+
+  /** Siempre el mismo mapa (0) o uno nuevo cada partida (1). El servidor comprueba que seas el host. */
+  setMapMode(mode: number): void {
+    this.net?.send({ t: "mapMode", mode });
+  }
+
+  /**
+   * Cambia de mapa: llega en el lobby, cuando el host eligió uno nuevo cada
+   * partida (o al entrar a una sala que ya juega en otro). El escenario y el
+   * minimapa se arman de nuevo; todo lo demás recibe el mapa en cada llamada.
+   */
+  private changeMap(index: number): void {
+    this.mapIndex = index;
+    this.arena = mapArena(index);
+    this.crates = lootCrates(this.arena);
+    this.world.destroy();
+    this.world = new WorldView(this.app, this.arena);
+    this.world.setNight(this.night);
+    this.minimap = new Minimap(this.minimapCanvas, this.arena);
+  }
+
+  private get minimapCanvas(): HTMLCanvasElement {
+    return document.getElementById("minimap") as HTMLCanvasElement;
   }
 
   /** De día o de noche. El servidor comprueba que seas el host. */

@@ -76,6 +76,7 @@ está en `main`.
 | Logros y gorros | 9 logros que desbloquean gorros que todos ven, sin cuentas | 4 tests + capturas del menú y del gorro en partida |
 | Hongos saltarines | 10 en el mapa: te lanzan por encima de lo que haya, predicho en el cliente | 6 tests (incluye predicción con ping) + capturas |
 | Molotov | `J`: charco de fuego 6 s que quema al que lo pisa | 7 tests + captura |
+| Mapa nuevo cada partida | Opción del host: 12 mapas con nombre, el de siempre es el primero; cambia en el lobby | Un test por mapa (casas, apariciones, cajas, saltos) + bots del servidor en otro mapa + predicción sin correcciones |
 
 ## Ideas que quedaron, en el orden en que las haría
 

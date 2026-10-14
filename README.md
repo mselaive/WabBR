@@ -208,9 +208,23 @@ el marcador de la sala (`roomChampion`), y su posición viaja en el snapshot (`c
 
 ## El mapa
 
-Arena circular de 3000 px de diámetro, generada con semilla fija en
+Arena circular de 3000 px de diámetro, generada con una semilla en
 `packages/shared/src/map/arena.ts`. No viaja por la red: cliente y servidor
 corren la misma función y llegan al mismo resultado.
+
+**Un mapa nuevo cada partida.** En el lobby el host elige *Mapa de siempre* o *Uno nuevo cada
+partida*. Hay 12 mapas (`MAPS`): las mismas piezas —distritos, casas, fogatas, hongos—
+acomodadas de otra forma, cada uno con nombre ("Mapa: Laguna Seca"). Por la red viaja sólo el
+número; cliente y servidor generan el mismo mapa. El mapa cambia en el lobby, nunca en partida:
+con *Uno nuevo cada partida*, al volver de una partida ya toca otro distinto, y el botón dice
+cuál. El cliente arma el escenario de nuevo ahí, en el lobby, y no al empezar.
+
+No son semillas al azar: probando 40, una de cada diez dejaba alguna caja donde los bots no
+llegan, y algunas tenían hongos que te dejaban adentro de un montón de cajas (eso se arregló para
+todas, ver Hongos saltarines). Cada mapa de la lista pasa por `sim/maps.test.ts`: los seis
+distritos, todas las casas con entrada, las 16 apariciones libres, el 95 % de las cajas al alcance
+de los bots y los saltos de cada hongo en 32 direcciones. Y la prueba de bots del servidor juega
+su partida en un mapa nuevo.
 
 La unidad de diseño es el **distrito**. Un mapa con casas repartidas parejo se
 juega igual en todos lados; con distritos aparece la pregunta de a dónde ir, y
@@ -360,8 +374,11 @@ Copiados de Fortnite. Hay **10 hongos** repartidos por el anillo del mapa (y en 
 puntito rojo). Pisar uno te lanza unos 400 px para donde ibas —o para donde apuntás, si estabas
 quieto— **por encima de lo que haya en el camino**: paredes, cajas, contenedores. Sirven para
 escapar de una pelea o de la zona. En el aire el muñeco se agranda como si subiera y suena un
-"boing". Al caer se resuelve la colisión como siempre (un test prueba los 10 hongos en 8
-direcciones: nadie queda adentro de nada).
+"boing". Si al caer quedás encima de algo, volvés por donde viniste, de a 8 px, hasta un lugar
+libre: empujar para afuera alcanza si caés rozando una caja, pero no en el medio de un montón
+(cada empujón te mete en la de al lado). Así sirve para cualquier mapa, no sólo para el que se
+probó a mano: un test tira de cada hongo de cada mapa en 32 direcciones y nadie queda adentro
+de nada.
 
 El salto vive en `stepPlayerMovement`, que es compartido: el cliente lo predice igual que el
 servidor, y el estado del salto viaja en el snapshot (la velocidad, sólo al dueño) para

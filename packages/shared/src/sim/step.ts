@@ -492,10 +492,10 @@ export function stepPlayerMovement(p: PlayerState, input: PlayerInput, arena: Ar
     p.vy = p.jumpVy;
     p.x += p.vx * DT;
     p.y += p.vy * DT;
-    if (p.jumpTicks === 0) resolveObstacles(p, arena);
     clampToArena(p.x, p.y, PLAYER_RADIUS, scratch);
     p.x = scratch.x;
     p.y = scratch.y;
+    if (p.jumpTicks === 0) land(p, arena);
     p.aim = input.aim;
     p.lastSeq = input.seq;
     return;
@@ -575,6 +575,36 @@ function resolveObstacles(p: PlayerState, arena: ArenaMap): void {
     }
     if (!moved) break;
   }
+}
+
+/** De a cuánto se vuelve para atrás al caer encima de algo. */
+const LAND_STEP = 8;
+
+/**
+ * Al caer de un salto. Empujar para afuera alcanza si cayó rozando algo, pero
+ * no en el medio de un montón de cajas: cada empujón lo mete en la de al lado.
+ * Así que primero vuelve por donde vino, de a poco, hasta un lugar libre: el
+ * hongo está despejado, así que siempre hay uno. Sirve para cualquier mapa,
+ * no sólo para los que se probaron a mano.
+ */
+function land(p: PlayerState, arena: ArenaMap): void {
+  const speed = Math.hypot(p.jumpVx, p.jumpVy) || 1;
+  const bx = (-p.jumpVx / speed) * LAND_STEP;
+  const by = (-p.jumpVy / speed) * LAND_STEP;
+  const maxSteps = Math.ceil((JUMP_SPEED * JUMP_TICKS * DT) / LAND_STEP) + 4;
+  for (let i = 0; i < maxSteps && overlapsObstacle(p.x, p.y, arena); i++) {
+    p.x += bx;
+    p.y += by;
+  }
+  resolveObstacles(p, arena);
+}
+
+function overlapsObstacle(x: number, y: number, arena: ArenaMap): boolean {
+  arena.grid.query(x, y, PLAYER_RADIUS, nearby);
+  for (let i = 0; i < nearby.length; i++) {
+    if (circleHitsBox(x, y, PLAYER_RADIUS, arena.obstacles[nearby[i]!]!)) return true;
+  }
+  return false;
 }
 
 /** ¿Está parado sobre un hongo saltarín? */

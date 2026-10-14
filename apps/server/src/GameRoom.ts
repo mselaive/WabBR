@@ -23,7 +23,8 @@ import {
   createPlayer,
   decodeClient,
   encodeServer,
-  getArena,
+  MAPS,
+  mapArena,
   concealedFrom,
   hasLineOfSight,
   packBullet,
@@ -144,7 +145,11 @@ export class GameRoom extends Server<Env> {
   private lastPumpAt = 0;
   /** Tiempo real todavía no convertido en ticks. */
   private accumulator = 0;
-  private readonly arena = getArena();
+  /** El mapa de la próxima partida (o de la que se juega): índice en MAPS. */
+  private mapIndex = 0;
+  /** 0 siempre el mismo mapa, 1 uno nuevo cada partida. */
+  private mapMode = 0;
+  private arena = mapArena(0);
 
   // ------------------------------------------------------------ conexiones
 
@@ -381,6 +386,16 @@ export class GameRoom extends Server<Env> {
         if (this.state.phase !== "lobby") return;
         if (typeof msg.rules !== "number" || !Number.isInteger(msg.rules) || msg.rules < 0 || msg.rules >= RULES.length) return;
         this.state.rules = msg.rules;
+        this.broadcastRoster();
+        return;
+      }
+
+      case "mapMode": {
+        if (seat.playerId !== this.hostId) return;
+        if (this.state.phase !== "lobby") return;
+        if (msg.mode !== 0 && msg.mode !== 1) return;
+        this.mapMode = msg.mode;
+        this.setMap(msg.mode === 1 ? this.otherMap() : 0);
         this.broadcastRoster();
         return;
       }
@@ -627,6 +642,11 @@ export class GameRoom extends Server<Env> {
     if (s.phase === "countdown" && s.phaseTicksLeft <= 0) {
       s.pairs = this.chosenPairs();
       s.championId = this.roomChampion();
+      // Los bots arrancan de cero: lo que recordaban (el camino, las cajas a las
+      // que no llegaban) era de la partida anterior, quizás de otro mapa.
+      for (const seat of this.seats.values()) {
+        if (seat.bot) seat.bot = { ...createBotMemory((Date.now() ^ (seat.playerId * 7919)) | 0), skill: seat.bot.skill };
+      }
       startMatch(s, (Date.now() ^ (this.seats.size << 16)) | 1, this.arena);
       this.broadcast(encodeServer({ t: "start", seed: s.rng }));
       this.broadcastItems();
@@ -872,7 +892,22 @@ export class GameRoom extends Server<Env> {
       seat.meta.ready = seat.bot !== null;
       seat.inputs.clear();
     }
+    if (this.mapMode === 1) this.setMap(this.otherMap());
     this.broadcastRoster();
+  }
+
+  /** Cambia el mapa. Sólo en el lobby: en partida, todos están parados en el de ahora. */
+  private setMap(index: number): void {
+    this.mapIndex = index;
+    this.arena = mapArena(index);
+    // La grilla de caminos tarda unos 30 ms: mejor ahora que en el primer tick.
+    if ([...this.seats.values()].some((s) => s.bot)) navGridFor(this.arena);
+  }
+
+  /** Un mapa al azar que no sea el de recién. */
+  private otherMap(): number {
+    const pick = Math.floor(Math.random() * (MAPS.length - 1));
+    return pick >= this.mapIndex ? pick + 1 : pick;
   }
 
   private removeSeat(playerId: number): void {
@@ -971,6 +1006,8 @@ export class GameRoom extends Server<Env> {
         botSkill: this.botSkill,
         night: this.state.night,
         rules: this.state.rules,
+        map: this.mapIndex,
+        mapMode: this.mapMode,
       }),
     );
   }

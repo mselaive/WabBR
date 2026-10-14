@@ -18,6 +18,28 @@ import { ObstacleGrid, type AABB } from "../sim/collision.js";
  */
 export const ARENA_SEED = 0x7ab_b12;
 
+/**
+ * Los mapas de "Nuevo cada partida". Son semillas del mismo generador, pero
+ * no cualquiera: cada una pasó por los tests del mapa (casas con entrada,
+ * apariciones libres, cajas a las que llegan los bots, saltos que no te dejan
+ * adentro de nada; ver sim/maps.test.ts). Al azar, una de cada diez deja alguna
+ * caja donde los bots no llegan. El primero es el de siempre.
+ */
+export const MAPS: readonly { name: string; seed: number }[] = [
+  { name: "Clásico", seed: ARENA_SEED },
+  { name: "Cerro Alto", seed: 2654435761 },
+  { name: "Llanura", seed: 1013904226 },
+  { name: "Encrucijada", seed: 3668339987 },
+  { name: "Laguna Seca", seed: 147926525 },
+  { name: "Quebrada", seed: 387276917 },
+  { name: "Pradera", seed: 3041712678 },
+  { name: "Meseta", seed: 1401181143 },
+  { name: "Cañada", seed: 2415085369 },
+  { name: "Estepa", seed: 774553834 },
+  { name: "Ribera", seed: 3428989595 },
+  { name: "Hondonada", seed: 1788458060 },
+];
+
 export type ObstacleKind =
   | "crate"
   | "wall"
@@ -954,12 +976,27 @@ export function bushAt(map: ArenaMap, x: number, y: number): boolean {
   return false;
 }
 
-let cached: ArenaMap | null = null;
+const cached = new Map<number, ArenaMap>();
 
-/** Mapa de la partida. Se genera una sola vez por proceso. */
-export function getArena(): ArenaMap {
-  if (!cached) cached = generateArena();
-  return cached;
+/**
+ * El mapa de una semilla (por defecto, el de siempre). Se genera una vez y se
+ * guarda: el mismo objeto sirve de llave para todo lo que se calcula por mapa
+ * (la grilla de caminos de los bots, los arbustos). Se guardan pocos, que con
+ * "Nuevo cada partida" la sala va pasando por todos.
+ */
+export function getArena(seed = ARENA_SEED): ArenaMap {
+  let arena = cached.get(seed);
+  if (!arena) {
+    arena = generateArena(seed);
+    if (cached.size >= 3) cached.delete(cached.keys().next().value!);
+    cached.set(seed, arena);
+  }
+  return arena;
+}
+
+/** El mapa número `index` de MAPS (el de siempre si no existe). */
+export function mapArena(index: number): ArenaMap {
+  return getArena(MAPS[index]?.seed ?? ARENA_SEED);
 }
 
 /**

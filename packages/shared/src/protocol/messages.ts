@@ -72,6 +72,12 @@ export interface RulesMsg {
   rules: number;
 }
 
+/** El host elige el mapa: 0 siempre el mismo, 1 uno nuevo cada partida. */
+export interface MapModeMsg {
+  t: "mapMode";
+  mode: number;
+}
+
 /** El host elige si la próxima partida es de noche. */
 export interface NightMsg {
   t: "night";
@@ -121,6 +127,7 @@ export type ClientMsg =
   | BotSkillMsg
   | NightMsg
   | RulesMsg
+  | MapModeMsg
   | PartnerMsg
   | EmoteMsg
   | MarkMsg;
@@ -261,6 +268,10 @@ export interface RosterMsg {
   night?: boolean;
   /** Las reglas especiales (índice en RULES). */
   rules?: number;
+  /** El mapa de la próxima partida (o de la que se está jugando): índice en MAPS. */
+  map?: number;
+  /** 0 siempre el mismo mapa, 1 uno nuevo cada partida. */
+  mapMode?: number;
 }
 
 export interface SnapshotMsg {

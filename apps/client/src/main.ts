@@ -35,6 +35,7 @@ const ui = new UI({
   onBotSkill: (skill) => game.setBotSkill(skill),
   onNight: (on) => game.setNight(on),
   onRules: (rules) => game.setRules(rules),
+  onMapMode: (mode) => game.setMapMode(mode),
   onLeave: () => {
     game.disconnect();
     ui.showScreen("menu");

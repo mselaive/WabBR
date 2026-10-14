@@ -19,12 +19,16 @@ const check = (ok, que) => {
   if (!ok) fallos.push(que);
 };
 
-const estado = { id: -1, roster: [], phase: "", kills: 0, res: null, alive: 0, vio: new Set(), winner: -1, campeon: null };
+const estado = { id: -1, roster: [], phase: "", kills: 0, res: null, alive: 0, vio: new Set(), winner: -1, campeon: null, mapa: 0, modoMapa: 0 };
 const ws = new WebSocket(`${WS}/parties/game-room/${ROOM}?name=Host&v=3`);
 ws.on("message", (raw) => {
   const m = JSON.parse(raw.toString());
   if (m.t === "welcome") estado.id = m.you;
   if (m.t === "welcome" || m.t === "roster") estado.roster = m.roster;
+  if (m.t === "roster") {
+    estado.mapa = m.map ?? 0;
+    estado.modoMapa = m.mapMode ?? 0;
+  }
   if (m.t === "s") {
     estado.phase = m.phase;
     estado.alive = m.alive;
@@ -53,6 +57,12 @@ await hasta(() => estado.roster.length === BOTS + 1, 5000);
 check(estado.roster.filter((p) => p.bot).length === BOTS, `el host agregó ${BOTS} bots`);
 check(estado.roster.filter((p) => p.bot).every((p) => p.ready), "los bots ya están listos");
 
+// Un mapa nuevo cada partida: la partida se juega en otro mapa, y los bots
+// tienen que poder jugarla igual (caminos, cajas, saltos).
+enviar({ t: "mapMode", mode: 1 });
+check(await hasta(() => estado.modoMapa === 1 && estado.mapa !== 0, 3000), "el host elige un mapa nuevo cada partida");
+const primerMapa = estado.mapa;
+
 enviar({ t: "ready", ready: true });
 check(await hasta(() => estado.phase === "playing", 15000), "arranca la partida");
 
@@ -75,6 +85,9 @@ check(killsSala === estado.kills, `y suma las kills (${killsSala} de ${estado.ki
 
 // La partida siguiente: con una sola ganada nadie domina la sala todavía, así
 // que no hay campeón a la vista (hacen falta 3 y 2 de ventaja).
+// De vuelta en el lobby, ya toca otro mapa.
+check(await hasta(() => estado.mapa !== primerMapa, 20000), `después de la partida cambia el mapa (${primerMapa} → ${estado.mapa})`);
+
 if (estado.winner >= 0) {
   await hasta(() => estado.phase === "lobby", 20000);
   estado.campeon = null;

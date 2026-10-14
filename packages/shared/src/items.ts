@@ -83,6 +83,8 @@ export interface WeaponDef {
    * explosión que la granada. El daño es todo de la explosión.
    */
   readonly explosive?: boolean;
+  /** Rareza mínima: el lanzacohetes sólo existe legendario. */
+  readonly minTier?: number;
 }
 
 export const WEAPONS: Record<WeaponId, WeaponDef> = {
@@ -184,10 +186,11 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     silent: true,
   },
   /**
-   * El arma rara: sale de los paquetes aéreos y muy de vez en cuando de una
-   * caja. El cohete es lento —se ve venir y se esquiva— y no pega de por sí:
-   * estalla. Un impacto de lleno deja a cualquiera con 10 de vida, nunca lo
-   * mata de un tiro (la regla de todas las armas). Te lastima a vos también.
+   * El arma rara: sólo legendaria, y sólo en algunos paquetes aéreos (ver
+   * AIRDROP_ROCKET_CHANCE). El cohete es lento —se ve venir y se esquiva— y no
+   * pega de por sí: estalla. Un impacto de lleno deja a cualquiera con 10 de
+   * vida, nunca lo mata de un tiro (la regla de todas las armas). Te lastima a
+   * vos también.
    */
   rocket: {
     id: "rocket",
@@ -200,8 +203,9 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     spread: 0.03,
     lifeTicks: 34,
     pellets: 1,
-    // La rareza sólo apura la recarga: el daño es de la explosión.
+    // Siempre legendario: es el premio del paquete, no un arma más.
     maxTier: 4,
+    minTier: 4,
     explosive: true,
   },
 };
@@ -244,8 +248,8 @@ export function weaponStats(index: number, tier: number): WeaponDef {
 
 /** Ninguna arma puede pasar de su techo, ni por loot ni por un cliente mentiroso. */
 export function clampTier(weaponIndex: number, tier: number): number {
-  const max = weaponAt(weaponIndex).maxTier;
-  return Math.max(0, Math.min(max, Math.floor(tier) || 0));
+  const def = weaponAt(weaponIndex);
+  return Math.max(def.minTier ?? 0, Math.min(def.maxTier, Math.floor(tier) || 0));
 }
 
 // ---------------------------------------------------------- consumibles

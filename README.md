@@ -273,8 +273,8 @@ mapa, y su id es su orden de aparición.
   para pelear de cerca: dos tiros matan hasta unos 100 px, y de ahí para afuera
   pierde contra el rifle. Su cono abría el doble y a 120 px entraban tres
   perdigones de ocho; hay tests que fijan las dos cosas.
-- **El lanzacohetes** es el arma rara: sale de los paquetes aéreos y muy de vez en cuando de
-  una caja. El cohete es lento (se ve venir, con su estela de humo, y se esquiva) y no pega:
+- **El lanzacohetes** es el arma rara: **sólo existe legendario** y sólo lo trae uno de cada
+  ~8 paquetes aéreos (en vez de la otra arma); nunca sale de una caja. El cohete es lento (se ve venir, con su estela de humo, y se esquiva) y no pega:
   estalla donde toca o al final de su alcance, con la misma explosión que la granada. De
   lleno deja a cualquiera con unos 10 de vida, nunca lo mata de un tiro; te lastima a vos si
   lo tirás pegado a alguien, y hace estallar barriles. Los bots lo usan de lejos y no lo

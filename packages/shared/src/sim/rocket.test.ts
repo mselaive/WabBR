@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { PLAYER_MAX_HP, WORLD_CENTER_X, WORLD_CENTER_Y } from "../constants.js";
-import { WEAPON_IDS, weaponStats } from "../items.js";
+import { ITEM_WEAPON, WEAPON_IDS, clampTier, weaponStats } from "../items.js";
+import { rollCrateContents } from "../map/loot.js";
 import type { ArenaMap, ObstacleKind } from "../map/arena.js";
 import { botInput, createBotMemory } from "./bot.js";
 import { ObstacleGrid } from "./collision.js";
@@ -105,5 +106,13 @@ describe("lanzacohetes", () => {
     };
     expect(shotsAt(90)).toBe(false);
     expect(shotsAt(350)).toBe(true);
+  });
+
+  it("sólo existe legendario y nunca sale de una caja", () => {
+    for (const tier of [0, 1, 2, 3, 4]) expect(clampTier(ROCKET, tier)).toBe(4);
+    for (let seed = 1; seed <= 400; seed++) {
+      const { items } = rollCrateContents(seed * 7919);
+      expect(items.some((i) => i.kind === ITEM_WEAPON && i.ref === ROCKET)).toBe(false);
+    }
   });
 });

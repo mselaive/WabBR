@@ -1411,8 +1411,14 @@ function outsideArena(x: number, y: number): boolean {
 
 // ------------------------------------------------------ paquetes aéreos
 
-/** Armas que puede traer un paquete: cualquiera menos la pistola, que es la de arranque. */
-const AIRDROP_WEAPONS = WEAPON_IDS.map((_, i) => i).filter((i) => i !== STARTING_WEAPON);
+/**
+ * Armas que puede traer un paquete: cualquiera menos la pistola, que es la de
+ * arranque, y el lanzacohetes, que va aparte: es más raro que el resto.
+ */
+const ROCKET = WEAPON_IDS.indexOf("rocket");
+const AIRDROP_WEAPONS = WEAPON_IDS.map((_, i) => i).filter((i) => i !== STARTING_WEAPON && i !== ROCKET);
+/** Uno de cada ~8 paquetes trae el lanzacohetes (legendario) en vez de otra arma. */
+const AIRDROP_ROCKET_CHANCE = 0.12;
 
 /**
  * Anuncia un paquete que va a caer dentro de la próxima zona. Se elige un punto
@@ -1560,8 +1566,10 @@ function stepAirdrops(state: GameState, events: SimEvent[]): void {
     }
     const r1 = nextRandom(state.rng);
     const r2 = nextRandom(r1.state);
-    state.rng = r2.state;
-    const weapon = AIRDROP_WEAPONS[Math.floor(r1.value * AIRDROP_WEAPONS.length)]!;
+    const r3 = nextRandom(r2.state);
+    state.rng = r3.state;
+    const weapon =
+      r3.value < AIRDROP_ROCKET_CHANCE ? ROCKET : AIRDROP_WEAPONS[Math.floor(r1.value * AIRDROP_WEAPONS.length)]!;
     const tier = clampTier(weapon, r2.value < 0.5 ? 3 : 4);
 
     const loot: Omit<GroundItem, "id" | "x" | "y">[] = [

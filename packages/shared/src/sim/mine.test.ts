@@ -116,8 +116,9 @@ describe("los bots y las minas", () => {
   it("un bot que va derecho hacia una mina rival que ve, la esquiva", () => {
     const state = scene();
     const bot = state.players[1]!;
-    // Un chaleco pesado que el bot quiere, con la mina del 1 justo en el medio.
-    state.items.push({ id: 50, kind: ITEM_ARMOR, ref: 1, tier: 3, x: bot.x - 130, y: bot.y, count: 1 });
+    // Un chaleco pesado que el bot quiere, con la mina del 1 justo en el medio
+    // (y lejos de ella: lo que está encima de una mina no se va a buscar).
+    state.items.push({ id: 50, kind: ITEM_ARMOR, ref: 1, tier: 3, x: bot.x - 170, y: bot.y, count: 1 });
     state.mines.push({ id: 99, ownerId: 1, team: 1, x: bot.x - 65, y: bot.y, armedAt: 0, ticksLeft: 1000 });
     state.players[0]!.x = bot.x - 1300;
     state.players[2]!.alive = false;
@@ -158,5 +159,23 @@ describe("los bots y las minas", () => {
     rival.y = mine.y;
     const events = run(state, 1);
     expect(events.find((e) => e.t === "kill")).toMatchObject({ targetId: 2, byId: 1, cause: CAUSE_MINE });
+  });
+
+  it("lo que está encima de una mina rival que ve no lo va a buscar (no se queda dando vueltas)", () => {
+    const state = scene();
+    const bot = state.players[1]!;
+    state.items.push({ id: 51, kind: ITEM_ARMOR, ref: 1, tier: 3, x: bot.x - 80, y: bot.y, count: 1 });
+    state.mines.push({ id: 98, ownerId: 1, team: 1, x: bot.x - 80, y: bot.y, armedAt: 0, ticksLeft: 5000 });
+    state.players[0]!.x = bot.x - 1300;
+    state.players[2]!.alive = false;
+    const memory = createBotMemory(4);
+    let near = 0;
+    for (let t = 1; t <= 300; t++) {
+      step(state, new Map([[2, [botInput(state, bot, memory, EMPTY)]]]), [], EMPTY);
+      if (Math.hypot(bot.x - (state.mines[0]?.x ?? 0), bot.y - (state.mines[0]?.y ?? 0)) < 120) near++;
+    }
+    // Se fue a otra cosa: no pasó la mayor parte del tiempo al lado de la mina.
+    expect(near).toBeLessThan(100);
+    expect(state.mines).toHaveLength(1);
   });
 });

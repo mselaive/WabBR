@@ -400,16 +400,22 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
   state.startTeams = teams;
   const firstOfTeam = new Map<number, { x: number; y: number }>();
   const teamCount = new Map<number, number>();
+  const teamSpots = new Map<number, { x: number; y: number }[]>();
   active.forEach((p) => {
     const slot = rank.get(p)!;
-    const team = Math.floor(slot / size);
+    // En dúos, de a dos seguidos (así quedan juntas las parejas elegidas). En
+    // tríos, repartidos: con 4 son 2 y 2, y no 3 contra 1.
+    const team = size === 3 ? slot % teams : Math.floor(slot / size);
     p.team = size > 1 ? -1 - team : p.id;
     const mate = firstOfTeam.get(team);
-    // El segundo al lado del primero; el tercero, del otro lado.
+    // El segundo al lado del primero; el tercero, del otro lado (y nunca donde
+    // ya hay alguien del equipo).
     const nth = teamCount.get(team) ?? 0;
     teamCount.set(team, nth + 1);
-    const sp = mate ? spawnBeside(mate, arena, (nth - 1) * 4) : spawnPoint(team, teams, seed, arena);
+    const taken = teamSpots.get(team) ?? [];
+    const sp = mate ? spawnBeside(mate, arena, (nth - 1) * 4, taken) : spawnPoint(team, teams, seed, arena);
     if (!mate) firstOfTeam.set(team, sp);
+    teamSpots.set(team, [...taken, sp]);
     p.x = sp.x;
     p.y = sp.y;
     p.vx = 0;

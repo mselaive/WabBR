@@ -86,8 +86,8 @@ describe("dúos", () => {
 
     const teams = new Map<number, typeof state.players>();
     for (const p of state.players) teams.set(p.team, [...(teams.get(p.team) ?? []), p]);
-    // 7 jugadores: dos de tres y el que sobra, solo.
-    expect([...teams.values()].map((t) => t.length).sort()).toEqual([1, 3, 3]);
+    // 7 jugadores: repartidos parejo (3, 2 y 2), no 3, 3 y uno solo.
+    expect([...teams.values()].map((t) => t.length).sort()).toEqual([2, 2, 3]);
     expect(state.startTeams).toBe(3);
     for (const team of teams.values()) {
       for (let a = 0; a < team.length; a++) {
@@ -95,6 +95,30 @@ describe("dúos", () => {
           const d = Math.hypot(team[a]!.x - team[b]!.x, team[a]!.y - team[b]!.y);
           expect(d).toBeLessThan(100);
           expect(d).toBeGreaterThan(20);
+        }
+      }
+    }
+  });
+
+  it("tríos con cuatro: dos contra dos, no tres contra uno", () => {
+    const state = createGameState(3);
+    state.teamSize = 3;
+    for (let i = 1; i <= 4; i++) state.players.push(createPlayer(i));
+    startMatch(state, 4242, generateArena());
+    const sizes = new Map<number, number>();
+    for (const p of state.players) sizes.set(p.team, (sizes.get(p.team) ?? 0) + 1);
+    expect([...sizes.values()].sort()).toEqual([2, 2]);
+  });
+
+  it("tríos: en ningún mapa ni semilla aparecen dos del equipo uno encima del otro", () => {
+    for (const seed of [1, 7, 42, 99, 1234, 4242]) {
+      const state = createGameState(3);
+      state.teamSize = 3;
+      for (let i = 1; i <= 12; i++) state.players.push(createPlayer(i));
+      startMatch(state, seed, generateArena());
+      for (const a of state.players) {
+        for (const b of state.players) {
+          if (a.id < b.id && a.team === b.team) expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThan(20);
         }
       }
     }

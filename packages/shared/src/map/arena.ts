@@ -1084,13 +1084,19 @@ function spawnClear(x: number, y: number, arena: ArenaMap): boolean {
  * Un lugar libre al lado de `at`, para el compañero en dúos: aparecen juntos.
  * Si alrededor no hay lugar, el mismo punto (los jugadores no chocan entre sí).
  */
-export function spawnBeside(at: { x: number; y: number }, arena: ArenaMap, from = 0): { x: number; y: number } {
+export function spawnBeside(
+  at: { x: number; y: number },
+  arena: ArenaMap,
+  from = 0,
+  /** Lugares ya ocupados (los otros del equipo): no se aparece encima. */
+  taken: readonly { x: number; y: number }[] = [],
+): { x: number; y: number } {
   for (let k = 0; k < 8; k++) {
     // Empezando por `from`: así el tercero de un trío no cae encima del segundo.
     const angle = (((from + k) % 8) / 8) * Math.PI * 2;
     const x = at.x + Math.cos(angle) * 44;
     const y = at.y + Math.sin(angle) * 44;
-    if (spawnClear(x, y, arena)) return { x, y };
+    if (spawnClear(x, y, arena) && !taken.some((t) => Math.hypot(t.x - x, t.y - y) < 30)) return { x, y };
   }
   return { ...at };
 }

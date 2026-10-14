@@ -8,6 +8,7 @@ import {
   GRENADE_FUSE_TICKS,
   GRENADE_MAX_STACK,
   GLIDE_SPEED,
+  MINE_SPOT,
   PLAYER_RADIUS,
   REVIVE_RANGE,
   MOLOTOV_MAX_STACK,
@@ -711,6 +712,9 @@ function nearestItem(
   for (const item of state.items) {
     const d2 = (item.x - me.x) ** 2 + (item.y - me.y) ** 2;
     if (d2 > radius * radius || (best && d2 >= best.d2) || !filter(item)) continue;
+    // Encima de una mina rival que se ve: no vale la pena (y la esquiva, así
+    // que se quedaría dando vueltas alrededor).
+    if (state.mines.some((m) => m.team !== me.team && Math.hypot(m.x - item.x, m.y - item.y) < MINE_AVOID && Math.hypot(m.x - me.x, m.y - me.y) <= MINE_SPOT)) continue;
     best = { item, d2 };
   }
   return best;
@@ -814,7 +818,7 @@ function steer(
     angle = Math.atan2(next.y - me.y, next.x - me.x);
   }
   if (angle === null) return;
-  angle = avoidMines(state, me, angle, arena);
+  angle = avoidMines(state, me, angle, map);
 
   const cos = Math.cos(angle);
   const sin = Math.sin(angle);

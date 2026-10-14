@@ -185,6 +185,8 @@ export class Game {
    * momento y desde cuándo hasta cuándo reproducirla (reloj local).
    */
   private replay: { buffer: SnapshotBuffer; from: number; to: number; startAt: number } | null = null;
+  /** La copia de cuando te tiraron (en equipos): por si después te terminan. */
+  private downedReplay: { buffer: SnapshotBuffer; from: number; to: number; startAt: number } | null = null;
   /** Cuándo arranca sola la próxima partida (performance.now()), o 0. */
   private nextMatchAt = 0;
   /** Por quién apostaste en esta partida, o -1. */
@@ -745,6 +747,7 @@ export class Game {
       this.deathNote = "";
       this.respawnAt = 0;
       this.myBet = -1;
+      this.downedReplay = null;
       this.recorded = false;
       this.announcedChampion = -1;
       this.announcedChicken = false;
@@ -992,9 +995,14 @@ export class Game {
           this.sound.reload();
           if (ev.byId === this.localId) this.ui.addNotice("Mina puesta: se arma en un segundo y medio");
           break;
-        case "finalTwo":
-          this.ui.addNotice(this.teamSize === 3 ? "¡Quedan dos equipos!" : this.teamSize === 2 ? "¡Quedan dos parejas!" : "¡Quedan dos!");
+        case "finalTwo": {
+          // Por cómo se armó la partida, no por lo elegido en el lobby: con
+          // pocos, "tríos" se juega todos contra todos.
+          const teams = [...this.standings.values()].map((s) => s.team);
+          const inTeams = new Set(teams).size < teams.length;
+          this.ui.addNotice(!inTeams ? "¡Quedan dos!" : this.teamSize === 3 ? "¡Quedan dos equipos!" : "¡Quedan dos parejas!");
           break;
+        }
         case "lightning":
           this.world.lightning();
           // El trueno llega después: la luz viaja más rápido.
@@ -1085,6 +1093,10 @@ export class Game {
           if (ev.targetId === this.localId) {
             this.sound.death();
             this.ui.addNotice("Caíste: tu compañero te puede levantar con E");
+            // Si después te terminan (desangrado, o rematado), la repetición
+            // que vale es la del tiro que te tiró, no la de vos arrastrándote.
+            const at = performance.now();
+            this.downedReplay = { buffer: this.snapshots.copy(), from: at - REPLAY_MS, to: at + 50, startAt: 0 };
           } else if (this.mates().has(ev.targetId)) {
             this.ui.addNotice(`${victim?.name ?? "Tu compañero"} cayó: andá a levantarlo con E`);
           }
@@ -1118,11 +1130,16 @@ export class Game {
           }
           if (ev.targetId === this.localId) {
             this.deathNote = deathNote(ev, killer?.name);
-            // Si te mató alguien, la repetición de los últimos segundos.
+            // Si te mató alguien, la repetición de los últimos segundos (o de
+            // cuando te tiró, si estabas caído).
             if (ev.byId >= 0 && ev.byId !== this.localId) {
               const at = performance.now();
-              this.replay = { buffer: this.snapshots.copy(), from: at - REPLAY_MS, to: at + 50, startAt: at + 700 };
+              this.replay =
+                this.lastLocal?.downed && this.downedReplay
+                  ? { ...this.downedReplay, startAt: at + 700 }
+                  : { buffer: this.snapshots.copy(), from: at - REPLAY_MS, to: at + 50, startAt: at + 700 };
             }
+            this.downedReplay = null;
             this.respawnAt = ev.respawn ? performance.now() + RESPAWN_TICKS * MS_PER_TICK : 0;
             // Si vuelve, el predictor se planta donde aparezca, sin arrastrar
             // inputs de antes de morir (ver onSnapshot).
@@ -1445,8 +1462,11 @@ export class Game {
     if (index < 0 && alive.length > 0) {
       // El que mirabas murió (o te mató la zona): se pasa al compañero si
       // sigue en pie, y si no al primero que quede.
+      // El compañero en pie antes que uno caído: el mismo con cuyos ojos te
+      // manda las cosas el servidor (eyesOf).
       const mates = this.mates();
-      index = Math.max(0, alive.findIndex((p) => mates.has(p.id)));
+      const standing = alive.findIndex((p) => mates.has(p.id) && !p.downed);
+      index = Math.max(0, standing >= 0 ? standing : alive.findIndex((p) => mates.has(p.id)));
       this.spectateId = alive[index]!.id;
     }
 
@@ -1921,8 +1941,14 @@ export class Game {
   private playReplay(now: number, dt: number, intents: SpectateIntent[]): boolean {
     const r = this.replay!;
     const t = r.from + Math.max(0, now - r.startAt) * REPLAY_SPEED;
+    // Mirando, como un espectador: el click o Espacio llegan como intenciones
+    // (y las teclas de acción no quedan pendientes para cuando vuelvas).
+    this.input.enabled = false;
+    this.input.watching = true;
     if (intents.length > 0 || t > r.to || this.phase !== "playing" || this.lastLocal?.alive) {
       this.replay = null;
+      // El click que la salteó no es además un "mirar a otro" o "cámara libre".
+      intents.length = 0;
       return false;
     }
     const shown = r.buffer.sample(t);

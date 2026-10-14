@@ -781,7 +781,10 @@ export class GameRoom extends Server<Env> {
    */
   private eyesOf(viewer: PlayerState | undefined): PlayerState | undefined {
     if (!viewer || viewer.alive) return viewer;
-    return this.state.players.find((p) => p.alive && p.team === viewer.team && p.id !== viewer.id) ?? viewer;
+    // El compañero en pie antes que uno caído (en tríos puede haber los dos):
+    // el que sigue jugando. El cliente mira primero al mismo (ver updateCamera).
+    const mates = this.state.players.filter((p) => p.alive && p.team === viewer.team && p.id !== viewer.id);
+    return mates.find((p) => !p.downed) ?? mates[0] ?? viewer;
   }
 
   /**

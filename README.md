@@ -63,7 +63,9 @@ Se juega acostado. Con el primer toque aparecen los controles táctiles (`apps/c
   mezclado. Es sólo hacia dónde apuntás: el servidor decide el tiro igual que siempre.
 - **El HUD se toca**: la ranura cambia de arma, cada fila de la mochila usa lo suyo (vendas,
   granada, humo…) y el cartel de "recoger" recoge (en paracaídas, "Bajar ya"). Más los botones
-  **Recargar**, **Tabla**, **¡GG!** y **Sonido** (silenciar: en el teléfono no hay M).
+  **Recargar**, **Tabla**, **¡GG!** y **Sonido** (silenciar: en el teléfono no hay M), de a dos para
+  no tapar la mochila. Las filas de lo que no tenés no aparecen: con siete cosas distintas para
+  cargar, la columna llegaba hasta los botones.
 - Muerto, tocar a un costado cambia a quién mirás.
 
 Usa eventos táctiles y no de puntero, porque cancelarlos es lo único que evita que el navegador

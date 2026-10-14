@@ -1388,13 +1388,15 @@ body.playing {
   display: none;
 }
 
+/* De a dos: en una columna, con los cuatro, tapaban las filas de la mochila. */
 body.touch .touch-buttons {
   position: absolute;
   right: 14px;
   top: 50%;
   transform: translateY(-50%);
   display: grid;
-  gap: 10px;
+  grid-template-columns: repeat(2, auto);
+  gap: 8px;
   pointer-events: auto;
 }
 
@@ -1431,6 +1433,11 @@ body.touch #slots .slot {
 
 body.touch #consumables .consumable {
   padding: 9px 11px;
+}
+
+/* Lo que no tenés no se toca: en el teléfono, las filas en cero no ocupan lugar. */
+body.touch #consumables .consumable.empty {
+  display: none;
 }
 
 /* El canvas no se desplaza ni hace zoom con los dedos: los dedos son del juego. */

@@ -57,9 +57,13 @@ Se juega acostado. Con el primer toque aparecen los controles táctiles (`apps/c
 - **Dedo izquierdo**: un stick que aparece donde apoyás el dedo. Mueve en ocho direcciones, igual
   que el teclado (el servidor sólo acepta -1, 0 o 1 por eje), y empujado a fondo corre.
 - **Dedo derecho**: otro stick que apunta. Empujado más de la mitad, dispara; menos, sólo apunta, y
-  al soltarlo la mira queda donde estaba.
+  al soltarlo la mira queda donde estaba. Tiene **ayuda de puntería**: si un rival a la vista está
+  casi en la línea (a menos de ~10° y de 700 px), la mira se corre la mayor parte del camino hacia
+  él (`aimAssist.ts`). Con el pulgar no se apunta como con el mouse, y entre amigos se juega
+  mezclado. Es sólo hacia dónde apuntás: el servidor decide el tiro igual que siempre.
 - **El HUD se toca**: la ranura cambia de arma, cada fila de la mochila usa lo suyo (vendas,
-  granada, humo…) y el cartel de "recoger" recoge. Más los botones **Recargar** y **Tabla**.
+  granada, humo…) y el cartel de "recoger" recoge (en paracaídas, "Bajar ya"). Más los botones
+  **Recargar**, **Tabla**, **¡GG!** y **Sonido** (silenciar: en el teléfono no hay M).
 - Muerto, tocar a un costado cambia a quién mirás.
 
 Usa eventos táctiles y no de puntero, porque cancelarlos es lo único que evita que el navegador

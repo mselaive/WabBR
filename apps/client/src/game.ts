@@ -71,6 +71,7 @@ import { WorldView } from "./render/world.js";
 import { Minimap, type Mark } from "./render/minimap.js";
 import { causeIconUrl } from "./render/textures.js";
 import { UI, type Award, type BetChoice, type ResultRow } from "./ui.js";
+import { assistAim } from "./aimAssist.js";
 import { Sound, type Spot } from "./audio.js";
 
 /** Cuánto tira la cámara hacia el cursor (0 = centrada en el jugador). */
@@ -162,6 +163,8 @@ export class Game {
   private deathNote = "";
   /** Cuándo volvés con la segunda oportunidad (performance.now()), o 0 si no. */
   private respawnAt = 0;
+  /** Rivales a la vista (interpolados), para la ayuda de puntería del stick. */
+  private assistTargets: { x: number; y: number }[] = [];
   /** El último latido de poca vida (performance.now()). */
   private lastHeartbeat = 0;
   /** Ya se avisó que quedan los dos últimos en esta partida. */
@@ -1128,6 +1131,8 @@ export class Game {
     const targets: { id: number; x: number; y: number }[] = frame.players.filter(
       (p) => p.alive && p.id !== this.localId && !mates.has(p.id) && p.airTicks === 0,
     );
+    // La ayuda de puntería del teléfono mira a los mismos (sin la gallina).
+    this.assistTargets = targets.slice();
     // La gallina también frena las balas propias, como en el servidor.
     if (frame.chicken) targets.push({ id: -1, x: frame.chicken.x, y: frame.chicken.y });
     this.shots.update(now, this.arena, targets, (x, y) => this.world.spawnImpact(x, y));
@@ -1306,11 +1311,12 @@ export class Game {
   /** Ángulo del jugador hacia el cursor, en coordenadas del mundo. */
   private currentAim(): number {
     if (!this.predictor) return 0;
-    const touchAim = this.input.touch.aim;
-    if (touchAim !== null) {
+    const stickAim = this.input.touch.aim;
+    if (stickAim !== null) {
       // Con el stick, el cursor es virtual y va adelante del muñeco: la mira y
       // el adelanto de la cámara lo siguen igual que al mouse.
       const me = this.lastDrawn ?? this.predictor.state;
+      const touchAim = assistAim(me, stickAim, this.assistTargets);
       const at = this.world.worldToScreen(me.x, me.y);
       this.input.mouseX = at.x + Math.cos(touchAim) * TOUCH_CURSOR_DISTANCE;
       this.input.mouseY = at.y + Math.sin(touchAim) * TOUCH_CURSOR_DISTANCE;

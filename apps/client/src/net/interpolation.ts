@@ -80,6 +80,8 @@ export interface InterpolatedFrame {
 }
 
 const MAX_FRAMES = 30;
+/** Más que esto entre dos snapshots no se camina ni se salta: es un teletransporte. */
+const TELEPORT_PX = 150;
 
 /**
  * Los snapshots llegan 20 veces por segundo y la pantalla dibuja 60: si
@@ -223,7 +225,10 @@ export class SnapshotBuffer {
     const players: UnpackedPlayer[] = [];
     for (const [id, target] of b.players) {
       const prev = a.players.get(id);
-      if (!prev) {
+      // Un salto que nadie puede dar en un snapshot (volvió con la segunda
+      // oportunidad, revivió en otro lado) se muestra de una: interpolado, se
+      // lo vería deslizarse vivo desde donde cayó.
+      if (!prev || prev.alive !== target.alive || Math.hypot(target.x - prev.x, target.y - prev.y) > TELEPORT_PX) {
         players.push(target);
         continue;
       }

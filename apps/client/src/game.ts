@@ -879,7 +879,6 @@ export class Game {
             this.deathNote = "";
             this.spectateId = -1;
             this.freeCam = null;
-            this.spawned = false;
             this.ui.setSpectating(null);
             this.ui.addNotice("¡Segunda oportunidad! Volviste con lo de arranque");
             this.sound.airdrop();
@@ -1007,6 +1006,9 @@ export class Game {
           if (ev.targetId === this.localId) {
             this.deathNote = deathNote(ev, killer?.name);
             this.respawnAt = ev.respawn ? performance.now() + RESPAWN_TICKS * MS_PER_TICK : 0;
+            // Si vuelve, el predictor se planta donde aparezca, sin arrastrar
+            // inputs de antes de morir (ver onSnapshot).
+            this.spawned = false;
             // En dúos se sigue mirando al compañero, que sigue jugando por los dos.
             const mate = [...this.mates()].find((id) => this.standings.get(id)?.alive);
             this.spectateId = mate ?? ev.byId;
@@ -1261,6 +1263,18 @@ export class Game {
       this.ui.setSpectating(null);
       this.watched = null;
       this.freeCam = null;
+      return;
+    }
+
+    // Esperando la segunda oportunidad, sin compañero en pie: la cámara se
+    // queda donde caíste. El servidor sólo te manda lo que se ve desde ahí
+    // (vas a volver a jugar), así que no hay a quién seguir.
+    const mateUp = [...this.mates()].some((id) => this.standings.get(id)?.alive);
+    if (this.respawnAt > 0 && this.phase === "playing" && this.lastLocal && !mateUp) {
+      this.world.setCamera(this.lastLocal.x, this.lastLocal.y);
+      this.watched = null;
+      this.freeCam = null;
+      this.ui.setSpectating({ title: "Esperando para volver", hint: "", note: this.spectateNote() });
       return;
     }
 

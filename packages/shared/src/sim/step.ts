@@ -463,6 +463,7 @@ function stepRespawns(state: GameState, arena: ArenaMap, events: SimEvent[]): vo
     }
     if (state.tick < p.respawnTick) continue;
     p.respawnTick = -1;
+    p.usedSecondChance = true;
 
     const random = (): number => {
       const r = nextRandom(state.rng);
@@ -483,7 +484,8 @@ function stepRespawns(state: GameState, arena: ArenaMap, events: SimEvent[]): vo
       p.trail[i * 2] = p.x;
       p.trail[i * 2 + 1] = p.y;
     }
-    events.push({ t: "respawn", id: p.id, x: p.x, y: p.y });
+    // Sin coordenadas: el evento le llega a todos, y dónde volvió no es público.
+    events.push({ t: "respawn", id: p.id });
   }
 }
 
@@ -1575,10 +1577,8 @@ function killPlayer(
 
   // Segunda oportunidad: si murió temprano, vuelve una vez.
   const respawn = secondChanceOpen(state) && !victim.usedSecondChance && victim.connected;
-  if (respawn) {
-    victim.usedSecondChance = true;
-    victim.respawnTick = state.tick + RESPAWN_TICKS;
-  }
+  // (Se marca como usada al volver: si se cancela, no volvió.)
+  if (respawn) victim.respawnTick = state.tick + RESPAWN_TICKS;
 
   // La recompensa por el más buscado: el que lo mata se cura entero.
   if (state.wanted?.id === victim.id) {
@@ -1905,12 +1905,25 @@ function stepBullets(state: GameState, arena: ArenaMap, events: SimEvent[]): voi
       // De lleno: estalla donde está el otro ahora, contra su costado. El impacto
       // se busca en el pasado (compensación de lag) pero el daño es del presente,
       // y si estallara donde estaba podría no tocarlo.
+      const speed = Math.max(1, Math.hypot(b.vx, b.vy));
       if (hitPlayer) {
-        const speed = Math.max(1, Math.hypot(b.vx, b.vy));
         applyExplosion(
           state,
           hitPlayer.x - (b.vx / speed) * PLAYER_RADIUS,
           hitPlayer.y - (b.vy / speed) * PLAYER_RADIUS,
+          b.ownerId,
+          arena,
+          events,
+          -1,
+          b.weapon,
+        );
+      } else if (hitChicken && state.chicken) {
+        // Lo mismo con la gallina, que corre más que nadie.
+        const c = state.chicken;
+        applyExplosion(
+          state,
+          c.x - (b.vx / speed) * CHICKEN_RADIUS,
+          c.y - (b.vy / speed) * CHICKEN_RADIUS,
           b.ownerId,
           arena,
           events,

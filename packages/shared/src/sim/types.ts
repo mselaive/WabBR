@@ -469,7 +469,7 @@ export type SimEvent =
   /** Alguien mató al más buscado y cobró la recompensa. */
   | { t: "bounty"; byId: number; targetId: number }
   /** Volvió con la segunda oportunidad. */
-  | { t: "respawn"; id: number; x: number; y: number }
+  | { t: "respawn"; id: number }
   /**
    * Una pasada del radar de alguien: dónde estaban los rivales cercanos. Sólo
    * le llega a su equipo (el servidor lo filtra).

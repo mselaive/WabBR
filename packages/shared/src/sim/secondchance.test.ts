@@ -70,8 +70,8 @@ describe("segunda oportunidad", () => {
     expect(victim.hp).toBe(PLAYER_MAX_HP);
     expect(victim.slots).toEqual([0, -1]);
     expect(victim.kills).toBe(2);
-    const back = later.find((e) => e.t === "respawn");
-    expect(back).toMatchObject({ id: 2, x: victim.x, y: victim.y });
+    // El evento no dice dónde: le llega a todos.
+    expect(later.find((e) => e.t === "respawn")).toEqual({ t: "respawn", id: 2 });
     // Adentro de la zona.
     const z = state.zone;
     expect(Math.hypot(victim.x - z.x, victim.y - z.y)).toBeLessThan(z.radius);
@@ -135,6 +135,8 @@ describe("segunda oportunidad", () => {
     expect(state.phase).toBe("ended");
     expect(state.winnerId).toBe(1);
     expect(state.players[1]!.place).toBe(2);
+    // No volvió: no cuenta como vuelta (ni para el título de "Gato").
+    expect(state.players[1]!.usedSecondChance).toBe(false);
   });
 
   it("vuelve lejos del que lo mató", () => {

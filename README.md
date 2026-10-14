@@ -491,15 +491,19 @@ con la pistola de arranque, no: sería regalarle otra kill.
 
 Copiado de Warzone (Resurgimiento), y opcional: lo prende el host. El que muere temprano —antes de
 que la zona empiece a cerrarse por segunda vez— **vuelve una vez**, a los 8 segundos, con lo de
-arranque. Mientras espera mira al que lo mató con una cuenta regresiva ("Segunda oportunidad: volvés
-en 6 s"), pero su minimapa sigue siendo el de un vivo: si no, volvería sabiendo dónde está cada uno.
+arranque. Mientras espera, la cámara se queda donde cayó con una cuenta regresiva ("Segunda
+oportunidad: volvés en 6 s"), y el servidor le manda sólo lo que se ve desde ahí, como a un vivo: si
+lo dejara espectear a todos, volvería sabiendo dónde está cada uno. (En dúos, con el compañero en
+pie, mira con sus ojos, como cualquier muerto de la pareja.)
 
 - Suelta todo al morir, como cualquiera: matarlo sigue valiendo la pena, y quien lo mató se anota
   la kill. Las suyas, el daño y el resto de sus números siguen contando.
 - Vuelve adentro de la zona (de la próxima, si se está cerrando) y lejos de los rivales: de seis
   lugares libres al azar, el que tenga al rival más cercano más lejos.
-- La partida no termina mientras alguien espera para volver, y su equipo no queda afuera. El que
-  se desconecta mientras espera la pierde.
+- La partida no termina mientras alguien espera para volver, y su equipo no queda afuera. Si se le
+  corta la conexión mientras espera, la cuenta se frena; si no vuelve a tiempo, la pierde (y no
+  cuenta como vuelta).
+- El aviso de que volvió llega a todos, pero sin dónde: eso sólo lo ve quien lo tiene a la vista.
 - Todos se enteran ("X volvió con su segunda oportunidad"), y al final se lleva el título **Gato:
   volvió de la muerte** si no ganó otro.
 

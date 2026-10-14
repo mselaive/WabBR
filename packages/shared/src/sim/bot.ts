@@ -320,11 +320,18 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
     const hen = chickenInSight(state, me, arena);
     if (hen) {
       // Sin nadie a la vista y con la gallina dorada a tiro: a cazarla.
+      // Con las mismas precauciones que contra alguien: un cohete a quemarropa
+      // o un barril al lado en la línea de tiro estallarían encima suyo.
       const dx = hen.x - me.x;
       const dy = hen.y - me.y;
+      const dist = Math.hypot(dx, dy);
+      const weapon = me.slots[me.activeSlot] ?? -1;
+      const explosive = weapon >= 0 && weaponStats(weapon, me.slotTier[me.activeSlot] ?? 0).explosive === true;
+      const tooClose = explosive && dist < EXPLOSION_RADIUS + 40;
       input.aim = Math.atan2(dy, dx) + mem.aimError;
-      input.shoot = Math.hypot(dx, dy) < 450;
-      goal = { x: hen.x, y: hen.y };
+      input.shoot = dist < 450 && !tooClose && !barrelInTheWay(state, me, hen, arena);
+      // Con el lanzacohetes se la persigue de lejos: acercarse es volarse con ella.
+      goal = explosive && dist < EXPLOSION_RADIUS + 80 ? null : { x: hen.x, y: hen.y };
     } else {
       // Armado y sin nadie a la vista: a cazar al más buscado, si está cerca.
       goal = campfireGoal(state, me, arena) ?? huntWanted(state, me) ?? pickGoal(state, me, mem, crates);
@@ -511,7 +518,7 @@ const segmentScratch: number[] = [];
  * lo alcanzaría? Sin esto los bots se volaban solos: en ocho partidas de seis,
  * 27 veces se lastimaron con un barril que tenían al lado, y 4 se murieron.
  */
-function barrelInTheWay(state: GameState, me: PlayerState, target: PlayerState, arena: ArenaMap): boolean {
+function barrelInTheWay(state: GameState, me: PlayerState, target: { x: number; y: number }, arena: ArenaMap): boolean {
   const dx = target.x - me.x;
   const dy = target.y - me.y;
   arena.grid.querySegment(me.x, me.y, target.x, target.y, segmentScratch);

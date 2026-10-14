@@ -656,6 +656,15 @@ export class GameRoom extends Server<Env> {
       inputs.set(seat.playerId, seat.inputs.take());
     }
 
+    // El que espera su segunda oportunidad con la conexión cortada no vuelve
+    // mientras tanto: la cuenta se frena. Si no reconecta a tiempo, removeSeat
+    // lo marca desconectado y la pierde (stepRespawns).
+    for (const seat of this.seats.values()) {
+      if (seat.goneAt === 0) continue;
+      const p = findPlayer(s, seat.playerId);
+      if (p && !p.alive && p.respawnTick >= 0) p.respawnTick++;
+    }
+
     const wasPlaying = s.phase === "playing";
     const before = this.events.length;
     step(s, inputs, this.events, this.arena);
@@ -698,10 +707,20 @@ export class GameRoom extends Server<Env> {
     return this.state.players.find((p) => p.alive && p.team === viewer.team && p.id !== viewer.id) ?? viewer;
   }
 
+  /**
+   * El que mira sin filtro: el espectador de verdad (o nadie, en el lobby). El
+   * que espera su segunda oportunidad no: va a volver a jugar, así que ve lo
+   * que se ve desde donde cayó, como si siguiera ahí.
+   */
+  private seesAll(viewer: PlayerState | undefined): boolean {
+    return !viewer || (!viewer.alive && viewer.respawnTick < 0);
+  }
+
   private canSee(viewer: PlayerState | undefined, target: PlayerState): boolean {
     // Sin observador vivo (espectador, lobby) se ve todo: ya está muerto y así
     // mirar la partida sigue teniendo sentido.
-    if (!viewer || !viewer.alive) return true;
+    if (this.seesAll(viewer)) return true;
+    if (!viewer) return true;
     if (viewer.id === target.id) return true;
     // Al compañero se lo ve siempre, detrás de una pared o en un arbusto.
     if (viewer.team === target.team) return true;
@@ -789,14 +808,14 @@ export class GameRoom extends Server<Env> {
 
       const bullets: SnapBullet[] = [];
       for (const b of s.bullets) {
-        if (!viewer?.alive || hasLineOfSight(viewer.x, viewer.y, b.x, b.y, this.arena)) {
+        if (this.seesAll(viewer) || hasLineOfSight(viewer!.x, viewer!.y, b.x, b.y, this.arena)) {
           bullets.push(packBullet(b));
         }
       }
 
       const grenades: SnapGrenade[] = [];
       for (const gr of s.grenades) {
-        if (!viewer?.alive || hasLineOfSight(viewer.x, viewer.y, gr.x, gr.y, this.arena)) {
+        if (this.seesAll(viewer) || hasLineOfSight(viewer!.x, viewer!.y, gr.x, gr.y, this.arena)) {
           grenades.push(packGrenade(gr));
         }
       }
@@ -855,7 +874,7 @@ export class GameRoom extends Server<Env> {
   private visibleEvents(viewer: PlayerState | undefined): SimEvent[] {
     // Las pasadas del radar son del equipo que lo levantó: a nadie más.
     const events = this.events.filter((e) => e.t !== "radar" || e.team === viewer?.team);
-    if (!viewer?.alive) return events;
+    if (!viewer || this.seesAll(viewer)) return events;
     return events.filter((e) => {
       // El disparo silencioso sólo le sirve al que tiró (para emparejar su
       // bala): a los demás les diría dónde está, y la ballesta no delata.

@@ -141,4 +141,39 @@ describe("la gallina dorada", () => {
     expect(input.shoot).toBe(true);
     expect(Math.abs(input.aim - Math.atan2(c.y - bot.y, c.x - bot.x))).toBeLessThan(0.2);
   });
+
+  it("un bot con el lanzacohetes no le tira de cerca: se volaría con ella", () => {
+    const state = match();
+    const bot = state.players[0]!;
+    bot.slots = [WEAPON_IDS.indexOf("rocket"), -1];
+    bot.slotTier = [4, 0];
+    bot.slotAmmo = [1, 0];
+    chickenAt(state, bot.x + 90, bot.y);
+    state.players[1]!.x = bot.x - 1400;
+    state.players[2]!.alive = false;
+    expect(botInput(state, bot, createBotMemory(5), EMPTY).shoot).toBe(false);
+  });
+
+  it("un cohete de lleno estalla donde está ahora, no donde la veía el que tiró", () => {
+    // Se la veía 80 px más atrás (la bala se prueba contra eso), pero el daño
+    // es del presente: estallando donde estaba, apenas la rozaría.
+    const state = match();
+    const c = chickenAt(state, WORLD_CENTER_X, WORLD_CENTER_Y);
+    for (let i = 0; i < c.trail.length; i += 2) c.trail[i] = c.x - 80;
+    state.bullets.push({
+      id: 1,
+      ownerId: 1,
+      damage: 0,
+      weapon: WEAPON_IDS.indexOf("rocket"),
+      x: c.x - 200,
+      y: c.y,
+      vx: 480,
+      vy: 0,
+      life: 30,
+      rewind: 8,
+      team: 1,
+    });
+    const events = run(state, 7);
+    expect(events.some((e) => e.t === "chicken")).toBe(true);
+  });
 });

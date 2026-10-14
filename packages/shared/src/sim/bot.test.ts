@@ -76,6 +76,18 @@ describe("bots", () => {
     expect(Math.abs(botInput(state, state.players[0]!, mem, EMPTY).aim)).toBeLessThan(0.3);
   });
 
+  it("el difícil reacciona antes que el fácil", () => {
+    const firstShot = (skill: number): number => {
+      const state = duel(250, 0);
+      const mem = { ...createBotMemory(9), skill };
+      for (let t = 0; t < 60; t++) if (botInput(state, state.players[0]!, mem, EMPTY).shoot) return t;
+      return 60;
+    };
+    expect(firstShot(2)).toBeLessThan(firstShot(0));
+    expect(firstShot(2)).toBeLessThanOrEqual(8);
+    expect(firstShot(0)).toBeGreaterThanOrEqual(14);
+  });
+
   it("no le tira al que está detrás de una pared", () => {
     const state = duel(250, 0);
     const wall = arenaWith("wall", WORLD_CENTER_X + 100, WORLD_CENTER_Y - 100, 30, 200);

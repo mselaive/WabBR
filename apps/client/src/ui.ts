@@ -13,6 +13,7 @@ export interface UICallbacks {
   onAddBot: () => void;
   onMode: (teamSize: number) => void;
   onPartner: (id: number) => void;
+  onBotSkill: (skill: number) => void;
 }
 
 const NAME_KEY = "wabbr:name";
@@ -183,6 +184,9 @@ export class UI {
     this.btnAddBot.addEventListener("click", () => this.cb.onAddBot());
     this.modeSolo.addEventListener("click", () => this.cb.onMode(1));
     this.modeDuos.addEventListener("click", () => this.cb.onMode(2));
+    for (const b of el("botSkillRow").querySelectorAll<HTMLButtonElement>("[data-skill]")) {
+      b.addEventListener("click", () => this.cb.onBotSkill(Number(b.dataset.skill)));
+    }
     el("btnLeave").addEventListener("click", () => this.cb.onLeave());
 
     this.roomCode.addEventListener("click", () => this.copyInvite());
@@ -430,6 +434,21 @@ export class UI {
       button.disabled = !isHost;
     }
     this.modeDuos.title = "Las parejas se sortean al empezar";
+  }
+
+  /**
+   * La dificultad de los bots. Se muestra sólo si hay algún bot en la sala; la
+   * cambia el host.
+   */
+  setBotSkill(skill: number, isHost: boolean, hasBots: boolean): void {
+    const row = el("botSkillRow");
+    row.hidden = !hasBots;
+    for (const b of row.querySelectorAll<HTMLButtonElement>("[data-skill]")) {
+      const on = Number(b.dataset.skill) === skill;
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-checked", String(on));
+      b.disabled = !isHost;
+    }
   }
 
   // ----------------------------------------------------------------- HUD

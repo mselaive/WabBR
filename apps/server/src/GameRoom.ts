@@ -126,6 +126,8 @@ export class GameRoom extends Server<Env> {
   private events: SimEvent[] = [];
   private nextPlayerId = 1;
   private hostId = -1;
+  /** Dificultad de los bots de la sala: 0 fácil, 1 normal, 2 difícil. */
+  private botSkill = 1;
   /**
    * Nombres echados por el host, en minúsculas. Bloqueo blando: sin cuentas no
    * hay identidad estable, así que cambiando el nombre se puede volver a entrar.
@@ -367,6 +369,16 @@ export class GameRoom extends Server<Env> {
         if (this.seats.size < MIN_PLAYERS) return;
         this.state.phase = "countdown";
         this.state.phaseTicksLeft = COUNTDOWN_TICKS;
+        return;
+      }
+
+      case "botSkill": {
+        if (seat.playerId !== this.hostId) return;
+        if (this.state.phase !== "lobby") return;
+        if (msg.skill !== 0 && msg.skill !== 1 && msg.skill !== 2) return;
+        this.botSkill = msg.skill;
+        for (const s of this.seats.values()) if (s.bot) s.bot.skill = msg.skill;
+        this.broadcastRoster();
         return;
       }
 
@@ -887,7 +899,7 @@ export class GameRoom extends Server<Env> {
       inputs: new InputQueue(),
       lastMarkAt: 0,
       lastEmoteAt: 0,
-      bot: createBotMemory((Date.now() ^ (playerId * 7919)) | 0),
+      bot: { ...createBotMemory((Date.now() ^ (playerId * 7919)) | 0), skill: this.botSkill },
     });
     this.state.players.push(createPlayer(playerId));
     this.broadcastRoster();
@@ -921,7 +933,13 @@ export class GameRoom extends Server<Env> {
 
   private broadcastRoster(): void {
     this.broadcast(
-      encodeServer({ t: "roster", roster: this.roster(), hostId: this.hostId, teamSize: this.state.teamSize }),
+      encodeServer({
+        t: "roster",
+        roster: this.roster(),
+        hostId: this.hostId,
+        teamSize: this.state.teamSize,
+        botSkill: this.botSkill,
+      }),
     );
   }
 

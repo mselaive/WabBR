@@ -93,6 +93,10 @@ ocho partidas de seis bots, el daño que se hacían solos bajó de 1536 a 109. C
 vida tiran **humo** entre ellos y el que les dispara (simulado igual, para que la nube
 quede en la línea entre los dos), se alejan y, sin nadie a la vista, se curan.
 
+**Dificultad**: con algún bot en la sala, el host elige *Fácil*, *Normal* o *Difícil* (`BOT_SKILLS`).
+Cambia cuánto tardan en reaccionar al verte (fácil 14-25 ticks, normal 7-15, difícil 3-7), cuánto
+tiembla su puntería y si tiran granadas (los fáciles, no).
+
 Encuentran el camino con A* sobre una grilla de 10 px (`sim/nav.ts`). Yendo en
 línea recta se trababan contra la primera pared, y como casi todas las cajas están
 adentro de casas, se quedaban encerrados cuando cerraba la zona: un tercio moría

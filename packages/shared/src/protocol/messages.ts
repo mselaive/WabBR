@@ -66,6 +66,12 @@ export interface ModeMsg {
   teamSize: number;
 }
 
+/** El host elige la dificultad de los bots (0 fácil, 1 normal, 2 difícil). */
+export interface BotSkillMsg {
+  t: "botSkill";
+  skill: number;
+}
+
 /**
  * Elegir con quién jugar en dúos (o -1 para no elegir). La pareja es mutua:
  * hace falta que el otro también te elija. Los bots aceptan solos.
@@ -100,6 +106,7 @@ export type ClientMsg =
   | KickMsg
   | AddBotMsg
   | ModeMsg
+  | BotSkillMsg
   | PartnerMsg
   | EmoteMsg
   | MarkMsg;
@@ -230,6 +237,8 @@ export interface RosterMsg {
   hostId: number;
   /** Modo elegido para la próxima partida: 1 todos contra todos, 2 dúos. */
   teamSize?: number;
+  /** Dificultad de los bots: 0 fácil, 1 normal, 2 difícil. */
+  botSkill?: number;
 }
 
 export interface SnapshotMsg {

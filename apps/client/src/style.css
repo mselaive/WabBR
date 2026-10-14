@@ -1488,3 +1488,15 @@ body.touch #consumables .consumable {
   80% { opacity: 1; }
   100% { opacity: 0; transform: translateX(-50%) translateY(-14px); }
 }
+
+/* La fila de dificultad de los bots: como la del modo, con su etiqueta. */
+.bot-skill-row[hidden] {
+  display: none;
+}
+
+.bot-skill-row .mode-label {
+  align-self: center;
+  padding: 0 8px;
+  font-size: 13px;
+  color: var(--muted);
+}

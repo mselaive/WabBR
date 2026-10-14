@@ -32,6 +32,7 @@ const ui = new UI({
   onAddBot: () => game.addBot(),
   onMode: (teamSize) => game.setMode(teamSize),
   onPartner: (id) => game.setPartner(id),
+  onBotSkill: (skill) => game.setBotSkill(skill),
   onLeave: () => {
     game.disconnect();
     ui.showScreen("menu");

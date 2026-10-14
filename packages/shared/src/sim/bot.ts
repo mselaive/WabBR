@@ -93,7 +93,21 @@ export interface BotMemory {
   grenadeHold: number;
   /** Ticks en que se aleja del blanco: tiró humo para irse a curar. */
   retreat: number;
+  /** 0 fácil, 1 normal, 2 difícil (ver BOT_SKILLS). Lo elige el host en el lobby. */
+  skill: number;
 }
+
+/**
+ * Lo que cambia con la dificultad: cuánto tarda en reaccionar al verte (ticks
+ * fijos más un extra al azar), cuánto tiembla la puntería y si tira granadas.
+ * Fácil es para el que recién empieza; difícil reacciona en 3-7 ticks y
+ * apunta con la mitad del error.
+ */
+export const BOT_SKILLS = [
+  { name: "Fácil", reaction: 14, reactionJitter: 12, aimNoise: 0.09, grenades: false },
+  { name: "Normal", reaction: 7, reactionJitter: 9, aimNoise: 0.05, grenades: true },
+  { name: "Difícil", reaction: 3, reactionJitter: 5, aimNoise: 0.025, grenades: true },
+] as const;
 
 /** A qué distancia ve y pelea. Más que la pantalla no tiene sentido. */
 const SIGHT = 700;
@@ -131,6 +145,7 @@ export function createBotMemory(seed: number): BotMemory {
     throwCd: 0,
     grenadeHold: 0,
     retreat: 0,
+    skill: 1,
   };
 }
 
@@ -214,11 +229,12 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
       mem.targetId = target.id;
       // Un instante para reaccionar: si dispara en el mismo tick en que te ve,
       // no hay forma de ganarle.
-      mem.reaction = 7 + Math.floor(mem.random() * 9);
+      const skill = BOT_SKILLS[mem.skill] ?? BOT_SKILLS[1];
+      mem.reaction = skill.reaction + Math.floor(mem.random() * skill.reactionJitter);
     }
     if (mem.reaction > 0) mem.reaction--;
 
-    mem.aimError = mem.aimError * 0.92 + (mem.random() - 0.5) * 0.05;
+    mem.aimError = mem.aimError * 0.92 + (mem.random() - 0.5) * (BOT_SKILLS[mem.skill] ?? BOT_SKILLS[1]).aimNoise;
     const dx = target.x - me.x;
     const dy = target.y - me.y;
     const dist = Math.hypot(dx, dy);
@@ -244,7 +260,7 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
       input.aim = smoke;
       mem.throwCd = 60;
       mem.retreat = 80;
-    } else if (mem.reaction === 0 && mem.throwCd === 0 && canThrow(me)) {
+    } else if (mem.reaction === 0 && mem.throwCd === 0 && canThrow(me) && (BOT_SKILLS[mem.skill] ?? BOT_SKILLS[1]).grenades) {
       const aim = grenadeAim(me, target, arena);
       if (aim !== null) {
         input.act = ACT_THROW;

@@ -444,6 +444,7 @@ export class Game {
         this.teamSize = msg.teamSize ?? 1;
         this.setRoster(msg.roster);
         this.ui.setMode(this.teamSize, this.hostId === this.localId);
+        this.ui.setBotSkill(msg.botSkill ?? 1, this.hostId === this.localId, msg.roster.some((p) => p.bot));
         return;
 
       case "start":
@@ -1464,6 +1465,11 @@ export class Game {
     if (mine === undefined) return mates;
     for (const [id, s] of this.standings) if (id !== this.localId && s.team === mine) mates.add(id);
     return mates;
+  }
+
+  /** Dificultad de los bots. El servidor comprueba que seas el host. */
+  setBotSkill(skill: number): void {
+    this.net?.send({ t: "botSkill", skill });
   }
 
   /** Elegir pareja para dúos (-1 para no elegir). */

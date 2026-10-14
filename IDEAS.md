@@ -69,6 +69,7 @@ está en `main`.
 | Minimapa sin radar | Ya no muestra rivales fuera de la pantalla (lo de los puntitos desde el arbusto) | Captura |
 | Rachas | "¡Doble kill!", "¡Triple kill!", "¡Imparable!" | Captura del cartel |
 | Frases rápidas | 6-9: ¡GG!, Jajaja, ¡Cuidado!, Perdón, sólo para los que te ven | `scripts/marks.mjs` + captura |
+| Dificultad de los bots | Fácil / Normal / Difícil en el lobby: reacción, puntería y granadas | Test + captura del lobby |
 | Molotov | `J`: charco de fuego 6 s que quema al que lo pisa | 7 tests + captura |
 
 ## Ideas que quedaron, en el orden en que las haría

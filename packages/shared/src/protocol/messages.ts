@@ -66,6 +66,12 @@ export interface ModeMsg {
   teamSize: number;
 }
 
+/** El host elige si la próxima partida es de noche. */
+export interface NightMsg {
+  t: "night";
+  on: boolean;
+}
+
 /** El host elige la dificultad de los bots (0 fácil, 1 normal, 2 difícil). */
 export interface BotSkillMsg {
   t: "botSkill";
@@ -107,6 +113,7 @@ export type ClientMsg =
   | AddBotMsg
   | ModeMsg
   | BotSkillMsg
+  | NightMsg
   | PartnerMsg
   | EmoteMsg
   | MarkMsg;
@@ -239,6 +246,8 @@ export interface RosterMsg {
   teamSize?: number;
   /** Dificultad de los bots: 0 fácil, 1 normal, 2 difícil. */
   botSkill?: number;
+  /** Si la partida (la próxima, o la que se está jugando) es de noche. */
+  night?: boolean;
 }
 
 export interface SnapshotMsg {

@@ -33,6 +33,7 @@ const ui = new UI({
   onMode: (teamSize) => game.setMode(teamSize),
   onPartner: (id) => game.setPartner(id),
   onBotSkill: (skill) => game.setBotSkill(skill),
+  onNight: (on) => game.setNight(on),
   onLeave: () => {
     game.disconnect();
     ui.showScreen("menu");

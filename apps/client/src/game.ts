@@ -445,6 +445,8 @@ export class Game {
         this.setRoster(msg.roster);
         this.ui.setMode(this.teamSize, this.hostId === this.localId);
         this.ui.setBotSkill(msg.botSkill ?? 1, this.hostId === this.localId, msg.roster.some((p) => p.bot));
+        this.ui.setNight(msg.night === true, this.hostId === this.localId);
+        this.world.setNight(msg.night === true);
         return;
 
       case "start":
@@ -1465,6 +1467,11 @@ export class Game {
     if (mine === undefined) return mates;
     for (const [id, s] of this.standings) if (id !== this.localId && s.team === mine) mates.add(id);
     return mates;
+  }
+
+  /** De día o de noche. El servidor comprueba que seas el host. */
+  setNight(on: boolean): void {
+    this.net?.send({ t: "night", on });
   }
 
   /** Dificultad de los bots. El servidor comprueba que seas el host. */

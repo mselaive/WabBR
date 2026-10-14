@@ -6,7 +6,7 @@ import {
   Sprite,
   Text,
   TilingSprite,
-  type Texture,
+  Texture,
 } from "pixi.js";
 import {
   PLAYER_RADIUS,
@@ -37,6 +37,11 @@ import {
 } from "@wabbr/shared";
 import { getTextures, ART_SCALE, type TexturePack } from "./textures.js";
 import type { InterpolatedFrame } from "../net/interpolation.js";
+
+/** La oscuridad de noche se pinta a esta fracción de la pantalla: la luz no necesita detalle. */
+const NIGHT_DOWNSCALE = 4;
+/** Hasta dónde ves de noche alrededor tuyo. */
+const NIGHT_LIGHT = 230;
 
 /** Altura del mundo visible, en unidades del mundo. Fija el zoom de la cámara. */
 const VIEW_HEIGHT = 640;
@@ -155,6 +160,15 @@ export class WorldView {
   private readonly barrelSprites = new Map<number, Sprite>();
   private readonly effects: Effect[] = [];
 
+  /**
+   * La oscuridad de las partidas de noche: un lienzo chico (un cuarto de la
+   * pantalla, la luz no necesita detalle) pintado de azul noche con agujeros
+   * suaves donde hay luz, estirado sobre el mundo y debajo del HUD.
+   */
+  private night = false;
+  private readonly nightCanvas = document.createElement("canvas");
+  private nightTexture: Texture | null = null;
+  private readonly nightSprite = new Sprite();
   /** Última bocanada de estela de cohete (performance.now()), para no llenar de humo. */
   private lastPuff = 0;
   /** Cajas doradas de la partida, las cajas ya abiertas y el último destello. */
@@ -213,7 +227,8 @@ export class WorldView {
       this.zoneArrow,
     );
     this.zoneArrow.visible = false;
-    this.app.stage.addChild(this.camera, this.screenLayer);
+    this.app.stage.addChild(this.camera, this.nightSprite, this.screenLayer);
+    this.nightSprite.visible = false;
     this.screenLayer.addChild(this.markLayer, this.arcLayer, this.crosshair, this.markerLayer);
 
     this.buildGround();
@@ -413,6 +428,63 @@ export class WorldView {
       ring.addChild(block);
     }
     this.groundLayer.addChild(ring);
+  }
+
+  /** Prende o apaga la noche. */
+  setNight(on: boolean): void {
+    this.night = on;
+    this.nightSprite.visible = on;
+  }
+
+  /**
+   * Las luces de la noche: alrededor tuyo (o del que mirás), las fogatas, el
+   * fuego de las molotov, los fogonazos y las explosiones. Disparar de noche
+   * te delata: el fogonazo ilumina.
+   */
+  private updateNight(frame: InterpolatedFrame, light: { x: number; y: number }): void {
+    if (!this.night) return;
+    const sw = this.app.screen.width;
+    const sh = this.app.screen.height;
+    const w = Math.max(1, Math.ceil(sw / NIGHT_DOWNSCALE));
+    const h = Math.max(1, Math.ceil(sh / NIGHT_DOWNSCALE));
+    if (this.nightCanvas.width !== w || this.nightCanvas.height !== h || !this.nightTexture) {
+      this.nightCanvas.width = w;
+      this.nightCanvas.height = h;
+      this.nightTexture?.destroy(true);
+      this.nightTexture = Texture.from(this.nightCanvas);
+      this.nightSprite.texture = this.nightTexture;
+    }
+    const ctx = this.nightCanvas.getContext("2d")!;
+    ctx.globalCompositeOperation = "source-over";
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = "rgba(3, 7, 18, 0.93)";
+    ctx.fillRect(0, 0, w, h);
+    ctx.globalCompositeOperation = "destination-out";
+    const hole = (x: number, y: number, radius: number): void => {
+      const s = this.worldToScreen(x, y);
+      const cx = s.x / NIGHT_DOWNSCALE;
+      const cy = s.y / NIGHT_DOWNSCALE;
+      const r = (radius * this.scale) / NIGHT_DOWNSCALE;
+      if (cx < -r || cy < -r || cx > w + r || cy > h + r) return;
+      const g = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, r);
+      g.addColorStop(0, "rgba(0, 0, 0, 1)");
+      g.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+    };
+    const t = performance.now() / 1000;
+    hole(light.x, light.y, NIGHT_LIGHT);
+    for (const f of this.arena.campfires ?? []) hole(f.x, f.y, 200 + 12 * Math.sin(t * 7 + f.x));
+    for (const f of frame.fires) hole(f.x, f.y, 150);
+    for (const fx of this.effects) {
+      if (fx.kind === "flash") hole(fx.node.x, fx.node.y, 150);
+      else if (fx.kind === "blast") hole(fx.node.x, fx.node.y, 280 * (fx.life / fx.maxLife));
+    }
+    this.nightTexture.source.update();
+    this.nightSprite.width = sw;
+    this.nightSprite.height = sh;
   }
 
   /** Un globito con la frase rápida arriba del muñeco, por unos segundos. */
@@ -975,6 +1047,7 @@ export class WorldView {
     this.updateAirdrops(frame);
     this.updateStrikes(frame);
     this.updateFires(frame);
+    this.updateNight(frame, localOverride ?? this.cameraCenter());
     this.updateZone(frame);
     this.sparkleGolden();
     this.updateCampfires();

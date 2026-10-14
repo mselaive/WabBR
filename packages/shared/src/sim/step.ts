@@ -214,6 +214,7 @@ export function createGameState(seed = 1): GameState {
     teamSize: 1,
     pairs: [],
     championId: -1,
+    night: false,
     airdrops: [],
     nextAirdropId: 1,
     strikes: [],

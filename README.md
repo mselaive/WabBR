@@ -142,6 +142,12 @@ bloqueo blando y a propósito: sin cuentas no hay identidad estable, así que ca
 igual. Cubre lo que molesta —el que reentra de un clic— y no pretende ser más que eso. Sólo funciona
 en el lobby: en partida, echar sería un arma más.
 
+**De noche.** El host elige *De día* o *De noche*. De noche ves unos 230 px alrededor tuyo y el
+resto queda en penumbra azul; iluminan las fogatas, el fuego de las molotov, las explosiones y
+los fogonazos, así que **disparar de noche te delata**. Los bots también ven menos (330 px en vez
+de 700). Es sólo de cómo se dibuja (`updateNight`: un lienzo a un cuarto de la resolución con
+agujeros de luz suaves) más la vista de los bots: el servidor sigue mandando lo mismo.
+
 **Dúos.** Arriba de la lista, el host elige *Todos contra todos* o *Dúos*. En dúos cada
 fila tiene un botón **Pareja**: si dos se eligen entre sí juegan juntos (al otro le
 aparece "Aceptar pareja"; un bot acepta solo). Los que no eligieron se emparejan por

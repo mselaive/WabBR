@@ -372,6 +372,15 @@ export class GameRoom extends Server<Env> {
         return;
       }
 
+      case "night": {
+        if (seat.playerId !== this.hostId) return;
+        if (this.state.phase !== "lobby") return;
+        if (typeof msg.on !== "boolean") return;
+        this.state.night = msg.on;
+        this.broadcastRoster();
+        return;
+      }
+
       case "botSkill": {
         if (seat.playerId !== this.hostId) return;
         if (this.state.phase !== "lobby") return;
@@ -939,6 +948,7 @@ export class GameRoom extends Server<Env> {
         hostId: this.hostId,
         teamSize: this.state.teamSize,
         botSkill: this.botSkill,
+        night: this.state.night,
       }),
     );
   }

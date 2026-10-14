@@ -306,6 +306,8 @@ export interface GameState {
    * empezar), o -1. Como desventaja, todos lo ven en el minimapa.
    */
   championId: number;
+  /** Partida de noche: se ve poco alrededor (los bots también ven menos). */
+  night: boolean;
   /** Parejas elegidas en el lobby (ids). Los demás se emparejan por sorteo. */
   pairs: [number, number][];
   airdrops: AirdropState[];

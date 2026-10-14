@@ -71,6 +71,7 @@ está en `main`.
 | Frases rápidas | 6-9: ¡GG!, Jajaja, ¡Cuidado!, Perdón, sólo para los que te ven | `scripts/marks.mjs` + captura |
 | Dificultad de los bots | Fácil / Normal / Difícil en el lobby: reacción, puntería y granadas | Test + captura del lobby |
 | Revólver y ametralladora | Dos armas más: la pistola pesada y la de 60 balas | Tests de todas las armas + íconos revisados |
+| De noche | Opción del host: ves poco alrededor; fogatas, fuego, explosiones y fogonazos iluminan | Capturas |
 | Molotov | `J`: charco de fuego 6 s que quema al que lo pisa | 7 tests + captura |
 
 ## Ideas que quedaron, en el orden en que las haría

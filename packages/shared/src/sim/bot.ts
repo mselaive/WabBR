@@ -111,6 +111,8 @@ export const BOT_SKILLS = [
 
 /** A qué distancia ve y pelea. Más que la pantalla no tiene sentido. */
 const SIGHT = 700;
+/** De noche, lo que alcanza la luz alrededor de uno (ver la partida de noche). */
+const NIGHT_SIGHT = 330;
 /** Distancia que le gusta para pelear con cada arma, por índice. */
 const PREFERRED_RANGE = [260, 230, 320, 110, 480, 380, 420, 330, 280];
 /**
@@ -501,7 +503,8 @@ function nearestEnemy(state: GameState, me: PlayerState, arena: ArenaMap): Playe
     // En dúos, al compañero no se le tira.
     if (!p.alive || p.team === me.team) continue;
     const d2 = (p.x - me.x) ** 2 + (p.y - me.y) ** 2;
-    if (d2 >= SIGHT * SIGHT) continue;
+    const sight = state.night ? NIGHT_SIGHT : SIGHT;
+    if (d2 >= sight * sight) continue;
     // Uno caído pesa menos: primero el que todavía le puede tirar.
     const score = p.downed ? d2 * 4 : d2;
     if (score >= bestScore) continue;

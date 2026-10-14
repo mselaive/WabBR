@@ -15,8 +15,10 @@ import {
   WORLD_RADIUS,
   AIRDROP_FALL_TICKS,
   ITEM_ARMOR,
+  GRENADE_MOLOTOV,
   GRENADE_SMOKE,
   ITEM_GRENADE,
+  FIRE_RADIUS,
   CAMPFIRE_RADIUS,
   SMOKE_RADIUS,
   STRIKE_RADIUS,
@@ -132,6 +134,8 @@ export class WorldView {
   private readonly airdropGround = new Graphics();
   /** Los bombardeos: un círculo rojo en el piso. */
   private readonly strikeLayer = new Graphics();
+  /** Los charcos de fuego de las molotov. */
+  private readonly fireLayer = new Graphics();
   /** Lo que está en el aire, por encima de todo. */
   private readonly skyLayer = new Container();
   private readonly airdropSprites = new Map<number, Sprite>();
@@ -201,6 +205,7 @@ export class WorldView {
       this.airdropGround,
       this.shadowLayer,
       this.entityLayer,
+      this.fireLayer,
       this.bulletLayer,
       this.effectLayer,
       this.smokeLayer,
@@ -969,6 +974,7 @@ export class WorldView {
     this.updateSmokes(frame, localOverride);
     this.updateAirdrops(frame);
     this.updateStrikes(frame);
+    this.updateFires(frame);
     this.updateZone(frame);
     this.sparkleGolden();
     this.updateCampfires();
@@ -1023,7 +1029,9 @@ export class WorldView {
     if (item.kind === ITEM_ARMOR) {
       return this.tex.itemArmor[item.ref] ?? this.tex.itemArmor[0]!;
     }
-    if (item.kind === ITEM_GRENADE) return item.ref === GRENADE_SMOKE ? this.tex.itemSmoke : this.tex.itemGrenade;
+    if (item.kind === ITEM_GRENADE) {
+      return item.ref === GRENADE_SMOKE ? this.tex.itemSmoke : item.ref === GRENADE_MOLOTOV ? this.tex.itemMolotov : this.tex.itemGrenade;
+    }
     return item.ref === 0
       ? this.tex.itemBandage
       : item.ref === 1
@@ -1037,7 +1045,9 @@ export class WorldView {
       seen.add(g.id);
       let sprite = this.grenadeSprites.get(g.id);
       if (!sprite) {
-        sprite = new Sprite(g.kind === GRENADE_SMOKE ? this.tex.smokeGrenade : this.tex.grenade);
+        sprite = new Sprite(
+          g.kind === GRENADE_SMOKE ? this.tex.smokeGrenade : g.kind === GRENADE_MOLOTOV ? this.tex.molotov : this.tex.grenade,
+        );
         sprite.anchor.set(0.5, 0.8);
         sprite.scale.set(ART_SCALE);
         this.bulletLayer.addChild(sprite);
@@ -1112,6 +1122,32 @@ export class WorldView {
    * en el piso, un anillo que late donde va a caer y una sombra que crece a
    * medida que se acerca.
    */
+  /**
+   * El fuego de las molotov: un charco naranja y lenguas que suben y bajan,
+   * encima de los jugadores (que están adentro, quemándose). Se achica en el
+   * último segundo para que se vea que se apaga.
+   */
+  private updateFires(frame: InterpolatedFrame): void {
+    const g = this.fireLayer;
+    g.clear();
+    const t = performance.now() / 1000;
+    for (const f of frame.fires) {
+      const fade = Math.min(1, f.ticksLeft / 20);
+      const r = FIRE_RADIUS * (0.6 + 0.4 * fade);
+      g.circle(f.x, f.y, r).fill({ color: 0xff5a1a, alpha: 0.3 * fade });
+      g.circle(f.x, f.y, r * 0.6).fill({ color: 0xff9a3c, alpha: 0.25 * fade });
+      for (let i = 0; i < 14; i++) {
+        const a = (i / 14) * Math.PI * 2 + f.id;
+        const d = r * (0.15 + 0.7 * ((i * 37) % 10) / 10);
+        const x = f.x + Math.cos(a) * d;
+        const y = f.y + Math.sin(a) * d;
+        const h = (20 + 9 * Math.sin(t * 10 + i * 1.7)) * fade;
+        g.poly([x - 8, y, x, y - h, x + 8, y]).fill({ color: 0xff6a1a, alpha: 0.92 });
+        g.poly([x - 4, y, x, y - h * 0.6, x + 4, y]).fill({ color: 0xffd257, alpha: 0.95 });
+      }
+    }
+  }
+
   /**
    * Los bombardeos: un círculo rojo que late mientras avisa, más rápido cuanto
    * menos falta, y se pone fuerte cuando caen las bombas.
@@ -1491,6 +1527,7 @@ export class WorldView {
   reset(): void {
     this.markLayer.clear();
     this.strikeLayer.clear();
+    this.fireLayer.clear();
     for (const view of this.players.values()) view.root.visible = false;
     this.zoneArrow.visible = false;
     for (const [id, sprite] of this.bullets) {

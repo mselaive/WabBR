@@ -1,9 +1,11 @@
 import {
   ACT_NONE,
+  ACT_MOLOTOV,
   ACT_SMOKE,
   ACT_THROW,
-  GRENADE_FRAG,
+  GRENADE_MOLOTOV,
   GRENADE_SMOKE,
+  throwKind,
   PLAYER_MAX_HP,
   activeTier,
   applySelfAction,
@@ -120,11 +122,12 @@ export class Predictor {
    */
   private step(input: PlayerInput, arena: ArenaMap): number {
     stepPlayerMovement(this.state, input, arena);
-    if (input.act === ACT_THROW || input.act === ACT_SMOKE) {
+    if (input.act === ACT_THROW || input.act === ACT_SMOKE || input.act === ACT_MOLOTOV) {
       // El mismo orden que el servidor: después de moverse, antes del arma.
-      const kind = input.act === ACT_SMOKE ? GRENADE_SMOKE : GRENADE_FRAG;
+      const kind = throwKind(input.act);
       if (canThrow(this.state, kind)) {
         if (kind === GRENADE_SMOKE) this.state.smokes--;
+        else if (kind === GRENADE_MOLOTOV) this.state.molotovs--;
         else this.state.grenades--;
         if (!this.replaying) this.thrown = { seq: input.seq, kind, launch: grenadeLaunch(this.state) };
       }
@@ -170,6 +173,7 @@ export class Predictor {
     s.useIndex = server.useIndex;
     s.grenades = server.grenades;
     s.smokes = server.smokes;
+    s.molotovs = server.molotovs;
     // Caído se arrastra y no dispara: la predicción tiene que saberlo.
     s.downed = server.downed;
     s.fireCd = server.fireCd;

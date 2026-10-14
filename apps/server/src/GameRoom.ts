@@ -669,6 +669,9 @@ export class GameRoom extends Server<Env> {
       ...(s.airdrops.length > 0 ? { ad: packAirdrops(s) } : {}),
       ...(s.smokes.length > 0 ? { sm: packSmokes(s) } : {}),
       ...(s.strikes.length > 0 ? { rz: packStrikes(s) } : {}),
+      ...(s.fires.length > 0
+        ? { fi: s.fires.map((f) => [f.id, Math.round(f.x), Math.round(f.y), f.ticksLeft] as [number, number, number, number]) }
+        : {}),
       ...(s.wanted ? { mw: [s.wanted.id, Math.round(s.wanted.x), Math.round(s.wanted.y)] as [number, number, number] } : {}),
       ...this.championPosition(),
     };
@@ -816,6 +819,7 @@ export class GameRoom extends Server<Env> {
     s.bullets = [];
     s.grenades = [];
     s.smokes = [];
+    s.fires = [];
     s.strikes = [];
     s.wanted = null;
     s.winnerId = -1;

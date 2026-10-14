@@ -82,6 +82,17 @@ export const SMOKE_FADE_TICKS = 40;
 /** Más cerca que esto se ven igual adentro del humo: lo tenés encima. */
 export const SMOKE_SPOT_DISTANCE = 70;
 
+/**
+ * Molotov: rueda como las otras y al romperse deja un charco de fuego que
+ * quema al que lo pisa (al que la tiró también; a su compañero no). Sirve para
+ * sacar a alguien de atrás de una caja o cerrar una puerta. Se tira con J.
+ */
+export const MOLOTOV_MAX_STACK = 2;
+export const FIRE_RADIUS = 72;
+export const FIRE_TICKS = 6 * 20;
+/** Daño por segundo parado en el fuego: en seis segundos saca 72. */
+export const FIRE_DPS = 12;
+
 // -------------------------------------------------------- paquetes aéreos
 
 /**

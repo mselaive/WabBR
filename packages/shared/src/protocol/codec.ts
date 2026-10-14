@@ -36,6 +36,7 @@ import {
   SP_SLOT_1_TIER,
   SP_GRENADES,
   SP_SMOKES,
+  SP_MOLOTOVS,
   SP_REVIVE_TICKS,
   SP_REVIVING,
   SP_STAMINA,
@@ -149,6 +150,7 @@ export function packPlayer(p: PlayerState, own = false): SnapPlayer {
     p.smokes,
     p.reviving,
     p.reviveTicks,
+    p.molotovs,
   ];
   if (own) packed.push(p.fireCd, p.reloadCd);
   return packed;
@@ -267,6 +269,7 @@ export interface UnpackedPlayer {
   staminaDelay: number;
   grenades: number;
   smokes: number;
+  molotovs: number;
   /** Caído en dúos. */
   downed: boolean;
   /** A quién está levantando (-1 si a nadie) y cuánto le falta. */
@@ -326,6 +329,7 @@ export function unpackPlayer(s: SnapPlayer): UnpackedPlayer {
     staminaDelay: s[SP_STAMINA_DELAY] ?? 0,
     grenades: s[SP_GRENADES] ?? 0,
     smokes: s[SP_SMOKES] ?? 0,
+    molotovs: s[SP_MOLOTOVS] ?? 0,
     downed: (flags & FLAG_DOWNED) !== 0,
     reviving: s[SP_REVIVING] ?? -1,
     reviveTicks: s[SP_REVIVE_TICKS] ?? 0,

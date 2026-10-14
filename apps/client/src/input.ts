@@ -2,6 +2,7 @@ import {
   ACT_NONE,
   ACT_PICKUP,
   ACT_SMOKE,
+  ACT_MOLOTOV,
   ACT_SLOT_0,
   ACT_SLOT_1,
   ACT_THROW,
@@ -14,6 +15,7 @@ const ACTION_KEYS: Record<string, number> = {
   KeyE: ACT_PICKUP,
   KeyG: ACT_THROW,
   KeyH: ACT_SMOKE,
+  KeyJ: ACT_MOLOTOV,
   Digit1: ACT_SLOT_0,
   Digit2: ACT_SLOT_1,
   Digit3: ACT_USE_BASE + 0, // vendas

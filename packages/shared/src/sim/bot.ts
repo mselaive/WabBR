@@ -1,6 +1,7 @@
 import {
   CAMPFIRE_RADIUS,
   DT,
+  FIRE_RADIUS,
   EXPLOSION_MAX_DAMAGE,
   EXPLOSION_RADIUS,
   GRENADE_FRICTION,
@@ -39,6 +40,7 @@ import {
   ACT_THROW,
   ACT_USE_BASE,
   GRENADE_FRAG,
+  GRENADE_MOLOTOV,
   GRENADE_SMOKE,
   type GameState,
   type PlayerInput,
@@ -302,7 +304,7 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
 
   // Una granada a punto de estallar al lado: correr, aunque sea afuera de la
   // zona. Dos segundos de zona duelen menos que una granada.
-  const flee = grenadeEscape(state, me) ?? strikeEscape(state, me);
+  const flee = grenadeEscape(state, me) ?? strikeEscape(state, me) ?? fireEscape(state, me);
   if (flee) {
     goal = flee;
     input.sprint = me.stamina > 0;
@@ -420,6 +422,20 @@ function huntWanted(state: GameState, me: PlayerState): { x: number; y: number }
   return armed ? { x: w.x, y: w.y } : null;
 }
 
+/** Si está parado en un charco de fuego: afuera, por el lado más corto. */
+function fireEscape(state: GameState, me: PlayerState): { x: number; y: number } | null {
+  for (const f of state.fires) {
+    const dx = me.x - f.x;
+    const dy = me.y - f.y;
+    const d = Math.hypot(dx, dy);
+    if (d > FIRE_RADIUS + 15) continue;
+    const ux = d > 1 ? dx / d : 1;
+    const uy = d > 1 ? dy / d : 0;
+    return { x: f.x + ux * (FIRE_RADIUS + 60), y: f.y + uy * (FIRE_RADIUS + 60) };
+  }
+  return null;
+}
+
 /**
  * A dónde ir si está adentro de un bombardeo anunciado o en curso: afuera del
  * círculo, por el lado más corto. Meterse en una casa también salva, pero
@@ -521,6 +537,8 @@ export function wants(me: PlayerState, item: GroundItem): boolean {
     return def !== undefined && (me.consumables[item.ref] ?? 0) < def.maxStack;
   }
   if (item.kind === ITEM_GRENADE && item.ref === GRENADE_SMOKE) return me.smokes < SMOKE_MAX_STACK;
+  // La molotov no la usan: juntarla sería sólo sacársela a otro.
+  if (item.kind === ITEM_GRENADE && item.ref === GRENADE_MOLOTOV) return false;
   if (item.kind === ITEM_GRENADE) return me.grenades < GRENADE_MAX_STACK;
   if (item.kind === ITEM_ARMOR) return (ARMORS[item.ref]?.shield ?? 0) > me.shield;
   return false;

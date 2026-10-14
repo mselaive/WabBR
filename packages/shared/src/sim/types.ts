@@ -37,11 +37,14 @@ export const ACT_USE_BASE = 4;
 export const ACT_THROW = 7;
 /** Tirar una granada de humo. */
 export const ACT_SMOKE = 8;
+/** Tirar una molotov. */
+export const ACT_MOLOTOV = 9;
 
 /** Causas de muerte que no son un arma, para el kill feed. */
 export const CAUSE_ZONE = -1;
 export const CAUSE_EXPLOSION = -2;
 export const CAUSE_STRIKE = -3;
+export const CAUSE_FIRE = -4;
 
 export function emptyInput(seq = 0): PlayerInput {
   return {
@@ -98,6 +101,8 @@ export interface PlayerState {
   grenades: number;
   /** Granadas de humo. */
   smokes: number;
+  /** Molotovs. */
+  molotovs: number;
   /**
    * Caído en dúos: sigue en el mapa (`alive`) pero se arrastra y se desangra;
    * su `hp` es lo que le queda antes de morir. Ver DOWNED_*.
@@ -225,6 +230,16 @@ export interface StrikeState {
 
 export const GRENADE_FRAG = 0;
 export const GRENADE_SMOKE = 1;
+export const GRENADE_MOLOTOV = 2;
+
+/** Un charco de fuego de molotov (ver FIRE_*). */
+export interface FireState {
+  id: number;
+  ownerId: number;
+  x: number;
+  y: number;
+  ticksLeft: number;
+}
 
 /** Granada en vuelo o rodando. Rebota contra las paredes y estalla por tiempo. */
 export interface GrenadeState {
@@ -282,6 +297,8 @@ export interface GameState {
   nextGrenadeId: number;
   /** Nubes de humo que tapan la vista. */
   smokes: SmokeState[];
+  /** Charcos de fuego. */
+  fires: FireState[];
   /** 1 todos contra todos, 2 dúos. Lo elige el host en el lobby. */
   teamSize: number;
   /**
@@ -388,6 +405,8 @@ export type SimEvent =
   | { t: "throw"; byId: number; seq: number; grenade: number; kind: number }
   /** Una granada de humo soltó su nube. */
   | { t: "smoke"; x: number; y: number }
+  /** Una molotov se rompió y dejó fuego. */
+  | { t: "fire"; x: number; y: number }
   /** Cayó (dúos): no murió, lo puede levantar el compañero. */
   | { t: "down"; targetId: number; byId: number; cause: number }
   /** Lo levantó el compañero. */

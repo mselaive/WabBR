@@ -1,4 +1,4 @@
-import { GRENADE_SMOKE, advanceGrenade, type ArenaMap, type UnpackedGrenade } from "@wabbr/shared";
+import { GRENADE_FRAG, advanceGrenade, type ArenaMap, type UnpackedGrenade } from "@wabbr/shared";
 
 /** Una granada tuya tirada desde acá, sin esperar al servidor. */
 interface LocalGrenade {
@@ -40,8 +40,8 @@ export class LocalGrenades {
 
   /**
    * Un tick de simulación, al mismo ritmo que los inputs. Devuelve dónde
-   * estallaron las que estallaron, para dibujar la explosión. Las de humo no
-   * se devuelven: su nube la manda el servidor, que es quien decide qué tapa.
+   * estallaron las que estallaron, para dibujar la explosión. Las de humo y las
+   * molotov no se devuelven: la nube y el fuego los manda el servidor.
    */
   tick(arena: ArenaMap): { x: number; y: number }[] {
     const blasts: { x: number; y: number }[] = [];
@@ -49,7 +49,8 @@ export class LocalGrenades {
       g.prevX = g.x;
       g.prevY = g.y;
       if (advanceGrenade(g, arena)) return true;
-      if (g.kind !== GRENADE_SMOKE) blasts.push({ x: g.x, y: g.y });
+      // Sólo la que estalla: el humo y el fuego los manda el servidor.
+      if (g.kind === GRENADE_FRAG) blasts.push({ x: g.x, y: g.y });
       return false;
     });
     return blasts;

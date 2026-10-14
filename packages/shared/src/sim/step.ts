@@ -17,6 +17,10 @@ import {
   REVIVE_RANGE,
   REVIVE_TICKS,
   SMOKE_MAX_STACK,
+  MOLOTOV_MAX_STACK,
+  FIRE_DPS,
+  FIRE_RADIUS,
+  FIRE_TICKS,
   STRIKE_BOMB_EVERY,
   STRIKE_FIRST_PHASE,
   STRIKE_LAST_PHASE,
@@ -85,9 +89,12 @@ import {
   ACT_SLOT_0,
   ACT_THROW,
   ACT_SMOKE,
+  ACT_MOLOTOV,
   ACT_SLOT_1,
   CAUSE_EXPLOSION,
   CAUSE_STRIKE,
+  CAUSE_FIRE,
+  GRENADE_MOLOTOV,
   CAUSE_ZONE,
   ACT_USE_BASE,
   GRENADE_FRAG,
@@ -138,6 +145,7 @@ export function createPlayer(id: number, x = 0, y = 0): PlayerState {
     staminaDelay: 0,
     grenades: 0,
     smokes: 0,
+    molotovs: 0,
     downed: false,
     downedBy: -1,
     downedCause: 0,
@@ -201,6 +209,7 @@ export function createGameState(seed = 1): GameState {
     grenades: [],
     nextGrenadeId: 1,
     smokes: [],
+    fires: [],
     teamSize: 1,
     pairs: [],
     championId: -1,
@@ -233,6 +242,7 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
   state.grenades = [];
   state.nextGrenadeId = 1;
   state.smokes = [];
+  state.fires = [];
   state.airdrops = [];
   state.nextAirdropId = 1;
   state.strikes = [];
@@ -324,6 +334,7 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
     p.staminaDelay = 0;
     p.grenades = 0;
     p.smokes = 0;
+    p.molotovs = 0;
     p.downed = false;
     p.downedBy = -1;
     p.downedCause = 0;
@@ -558,6 +569,12 @@ function takeItem(
     return true;
   }
 
+  if (item.kind === ITEM_GRENADE && item.ref === GRENADE_MOLOTOV) {
+    if (p.molotovs >= MOLOTOV_MAX_STACK) return false;
+    p.molotovs = Math.min(MOLOTOV_MAX_STACK, p.molotovs + item.count);
+    return true;
+  }
+
   if (item.kind === ITEM_GRENADE) {
     if (p.grenades >= GRENADE_MAX_STACK) return false;
     p.grenades = Math.min(GRENADE_MAX_STACK, p.grenades + item.count);
@@ -697,9 +714,9 @@ function autoPickup(state: GameState, p: PlayerState, events: SimEvent[]): void 
 /** ¿Entra todo el montón en la mochila? */
 function fitsWhole(p: PlayerState, item: GroundItem): boolean {
   if (item.kind === ITEM_GRENADE) {
-    return item.ref === GRENADE_SMOKE
-      ? p.smokes + item.count <= SMOKE_MAX_STACK
-      : p.grenades + item.count <= GRENADE_MAX_STACK;
+    if (item.ref === GRENADE_SMOKE) return p.smokes + item.count <= SMOKE_MAX_STACK;
+    if (item.ref === GRENADE_MOLOTOV) return p.molotovs + item.count <= MOLOTOV_MAX_STACK;
+    return p.grenades + item.count <= GRENADE_MAX_STACK;
   }
   const def = consumableAt(item.ref);
   return def !== undefined && (p.consumables[item.ref] ?? 0) + item.count <= def.maxStack;
@@ -732,10 +749,11 @@ function handleAction(
     return;
   }
 
-  if (act === ACT_THROW || act === ACT_SMOKE) {
-    const kind = act === ACT_SMOKE ? GRENADE_SMOKE : GRENADE_FRAG;
+  if (act === ACT_THROW || act === ACT_SMOKE || act === ACT_MOLOTOV) {
+    const kind = throwKind(act);
     if (!canThrow(p, kind)) return;
     if (kind === GRENADE_SMOKE) p.smokes--;
+    else if (kind === GRENADE_MOLOTOV) p.molotovs--;
     else p.grenades--;
     p.thrown++;
     state.grenades.push({ id: state.nextGrenadeId++, ownerId: p.id, kind, ...grenadeLaunch(p) });
@@ -1104,6 +1122,10 @@ function killPlayer(
     dropItem(state, victim, ITEM_GRENADE, GRENADE_SMOKE, 0, victim.smokes, events);
     victim.smokes = 0;
   }
+  if (victim.molotovs > 0) {
+    dropItem(state, victim, ITEM_GRENADE, GRENADE_MOLOTOV, 0, victim.molotovs, events);
+    victim.molotovs = 0;
+  }
   for (let i = 0; i < victim.consumables.length; i++) {
     const count = victim.consumables[i] ?? 0;
     if (count > 0) dropItem(state, victim, ITEM_CONSUMABLE, i, i, count, events);
@@ -1255,7 +1277,13 @@ function grenadeBlocked(x: number, y: number, arena: ArenaMap): boolean {
 /** ¿Puede tirar una granada (o una de humo)? Curándose no: tiene las manos ocupadas. */
 export function canThrow(p: PlayerState, kind: number = GRENADE_FRAG): boolean {
   // Caído tampoco: el servidor ni llega acá, pero la predicción del cliente sí.
-  return (kind === GRENADE_SMOKE ? p.smokes : p.grenades) > 0 && p.useCd === 0 && !p.downed;
+  const have = kind === GRENADE_SMOKE ? p.smokes : kind === GRENADE_MOLOTOV ? p.molotovs : p.grenades;
+  return have > 0 && p.useCd === 0 && !p.downed;
+}
+
+/** Qué arrojable tira cada acción. */
+export function throwKind(act: number): number {
+  return act === ACT_SMOKE ? GRENADE_SMOKE : act === ACT_MOLOTOV ? GRENADE_MOLOTOV : GRENADE_FRAG;
 }
 
 /** Dónde aparece y con qué velocidad sale una granada tirada ahora. */
@@ -1311,6 +1339,9 @@ function stepGrenades(state: GameState, arena: ArenaMap, events: SimEvent[]): vo
       if (g.kind === GRENADE_SMOKE) {
         state.smokes.push({ id: g.id, x: g.x, y: g.y, ticksLeft: SMOKE_TICKS });
         events.push({ t: "smoke", x: g.x, y: g.y });
+      } else if (g.kind === GRENADE_MOLOTOV) {
+        state.fires.push({ id: g.id, ownerId: g.ownerId, x: g.x, y: g.y, ticksLeft: FIRE_TICKS });
+        events.push({ t: "fire", x: g.x, y: g.y });
       } else {
         applyExplosion(state, g.x, g.y, g.ownerId, arena, events, g.id);
       }
@@ -1320,6 +1351,28 @@ function stepGrenades(state: GameState, arena: ArenaMap, events: SimEvent[]): vo
   }
 
   state.grenades = kept;
+}
+
+/**
+ * El fuego quema a los que están adentro, a cuenta del que tiró la molotov.
+ * Sin eventos "hit" por tick (serían veinte por segundo): se ve en la vida que
+ * baja y en las llamas.
+ */
+function stepFires(state: GameState, events: SimEvent[]): void {
+  if (state.fires.length === 0) return;
+  for (const f of state.fires) {
+    f.ticksLeft--;
+    const team = findPlayer(state, f.ownerId)?.team;
+    for (const p of state.players) {
+      if (!p.alive) continue;
+      if (p.id !== f.ownerId && p.team === team) continue;
+      const dx = p.x - f.x;
+      const dy = p.y - f.y;
+      if (dx * dx + dy * dy > FIRE_RADIUS * FIRE_RADIUS) continue;
+      applyDamage(state, p, FIRE_DPS * DT, f.ownerId, CAUSE_FIRE, events);
+    }
+  }
+  state.fires = state.fires.filter((f) => f.ticksLeft > 0);
 }
 
 function stepSmokes(state: GameState): void {
@@ -1828,6 +1881,7 @@ export function step(
 
   stepDowned(state, events);
   stepSmokes(state);
+  stepFires(state, events);
   stepGrenades(state, arena, events);
   stepBullets(state, arena, events);
   stepZone(state, arena, events);

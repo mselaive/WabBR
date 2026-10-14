@@ -40,6 +40,7 @@ import {
   weaponAt,
   CAUSE_EXPLOSION,
   CAUSE_STRIKE,
+  CAUSE_FIRE,
   CAUSE_ZONE,
   type ArenaMap,
   type GroundItem,
@@ -755,6 +756,9 @@ export class Game {
           this.ui.addNotice("¡Bombardeo! Salí de la zona roja o metete en una casa");
           this.sound.siren();
           break;
+        case "fire":
+          this.defer(() => this.sound.fire(this.spot(ev.x, ev.y)));
+          break;
         case "smoke":
           // Junto con la nube, que se dibuja en el reloj atrasado.
           this.defer(() => this.sound.smoke(this.spot(ev.x, ev.y)));
@@ -1238,6 +1242,7 @@ export class Game {
       // Las granadas no ocupan ranura: van en la misma columna, con su tecla.
       { key: "G", name: "Granadas", count: shown?.grenades ?? 0 },
       { key: "H", name: "Humo", count: shown?.smokes ?? 0 },
+      { key: "J", name: "Molotov", count: shown?.molotovs ?? 0 },
     ]);
 
     this.updatePickupPrompt(me, localPredicted, frame.players);
@@ -1503,6 +1508,7 @@ const MIN_SHOTS_FOR_ACCURACY = 20;
 function deathNote(ev: Extract<SimEvent, { t: "kill" }>, killerName: string | undefined): string {
   if (ev.cause === CAUSE_ZONE) return "Te terminó la zona.";
   if (ev.cause === CAUSE_STRIKE) return "Te alcanzó el bombardeo.";
+  if (ev.cause === CAUSE_FIRE) return ev.byId === ev.targetId ? "Te quemaste con tu propia molotov." : `Te quemó la molotov de ${killerName ?? "alguien"}.`;
   if (ev.byId === ev.targetId) return "Te mataste solo.";
   const how = ev.cause === CAUSE_EXPLOSION ? "con una explosión" : `con ${weaponArticle(ev.cause)}`;
   const who = killerName ?? "alguien";

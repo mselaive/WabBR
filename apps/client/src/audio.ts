@@ -138,6 +138,14 @@ export class Sound {
     this.tone(out, { freq: 70, endFreq: 35, decay: 0.5, gain: 1, type: "sine" });
   }
 
+  /** Una molotov se rompe: vidrio y una llamarada. */
+  fire(at?: Spot): void {
+    const out = this.voice(at, 0.7);
+    if (!out) return;
+    this.noiseBurst(out, { type: "highpass", freq: 5000, decay: 0.08, gain: 0.8 });
+    this.noiseBurst(out, { type: "lowpass", freq: 900, endFreq: 300, decay: 0.8, gain: 1, delay: 0.05 });
+  }
+
   /** Una granada de humo se abre: un siseo largo que baja. */
   smoke(at?: Spot): void {
     const out = this.voice(at, 0.5);

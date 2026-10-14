@@ -40,6 +40,7 @@ Con dos jugadores listos arranca la partida.
 | `Shift` | correr (gasta estamina) |
 | `G` | tirar una granada |
 | `H` | tirar una granada de humo |
+| `J` | tirar una molotov |
 | `F` / click en el minimapa | marcar un lugar para tu compañero (dúos) |
 | `6` `7` `8` `9` | frases rápidas: ¡GG!, Jajaja, ¡Cuidado!, Perdón |
 | `Tab` | tabla de posiciones |
@@ -405,6 +406,12 @@ tiró** — es lo que hace que tirarla a los pies de alguien que te está corrie
 sea una decisión y no un botón gratis. Una pared frena la esquirla: la explosión
 usa la misma `hasLineOfSight` que la visión, así que no se puede granadear a
 través de una casa.
+
+**Molotov** (`J`): rueda igual y al romperse deja un charco de fuego de 72 px por 6 segundos
+que quema 12 por segundo al que esté adentro —al que la tiró también, a su compañero no—, a
+cuenta del que la tiró. Sirve para sacar a alguien de atrás de una caja o cerrar una puerta. No
+hay un "hit" por tick (serían veinte por segundo): se ve en la vida que baja y en las llamas. Los
+bots salen del fuego y no la juntan.
 
 **Humo** (`H`): rueda igual que la granada y a los 2 segundos suelta una nube de
 115 px de radio que dura 10 segundos. Tapa la vista, no las balas: nadie ve a

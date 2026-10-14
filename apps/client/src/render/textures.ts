@@ -518,6 +518,8 @@ export interface TexturePack {
   itemGrenade: Texture;
   smokeGrenade: Texture;
   itemSmoke: Texture;
+  molotov: Texture;
+  itemMolotov: Texture;
   smokePuff: Texture;
   pump: Texture;
   campfire: Texture;
@@ -571,6 +573,8 @@ export function getTextures(): TexturePack {
     itemGrenade: grenadeIcon(),
     smokeGrenade: smokeGrenade(),
     itemSmoke: smokeIcon(),
+    molotov: molotov(),
+    itemMolotov: molotovIcon(),
     smokePuff: smokePuff(),
     pump: pump(),
     campfire: campfireLogs(),
@@ -810,6 +814,28 @@ function grenadeIcon(): Texture {
   });
 }
 
+/** La molotov: una botella verde con el trapo prendido. */
+function molotov(): Texture {
+  return make(8, 14, (ctx) => {
+    rect(ctx, 2, 6, 5, 7, "#3f7a4a");
+    rect(ctx, 2, 6, 2, 7, "#5fa36b");
+    rect(ctx, 3, 3, 3, 3, "#3f7a4a");
+    rect(ctx, 3, 1, 3, 2, "#e8dcc0");
+    rect(ctx, 4, 0, 2, 1, "#ff9a3c");
+    outline(ctx, 1, 2, 7, 12, "#1a2412");
+  });
+}
+
+function molotovIcon(): Texture {
+  return plate((ctx) => {
+    rect(ctx, 6, 7, 5, 6, "#3f7a4a");
+    rect(ctx, 6, 7, 2, 6, "#5fa36b");
+    rect(ctx, 7, 4, 3, 3, "#3f7a4a");
+    rect(ctx, 7, 2, 3, 2, "#e8dcc0");
+    rect(ctx, 8, 1, 2, 1, "#ff9a3c");
+  });
+}
+
 /** La de humo: un tarro gris con banda blanca, para que no se confunda con la otra. */
 function smokeGrenade(): Texture {
   return make(10, 12, (ctx) => {
@@ -907,6 +933,12 @@ export function causeIconUrl(cause: number): string {
       ellipse(ctx, 7, 8, 2.5, 2.5, "#51733c");
       rect(ctx, 4, 8, 8, 1, "#2c3f21");
       rect(ctx, 7, 4, 2, 3, "#8a8f95");
+    }));
+    // Fuego: una llama.
+    causeIcons.set(-4, iconUrl(16, 16, (ctx) => {
+      ellipse(ctx, 8, 10, 4, 5, "#ff7a2a");
+      ellipse(ctx, 8, 11, 2, 3, "#ffd257");
+      rect(ctx, 7, 3, 2, 3, "#ff7a2a");
     }));
     // Bombardeo: una bomba con aletas.
     causeIcons.set(-3, iconUrl(16, 16, (ctx) => {

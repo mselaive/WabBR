@@ -46,6 +46,7 @@ function snapshotOf(p: PlayerState, lastSeq: number): UnpackedPlayer {
     staminaDelay: 0,
     grenades: 0,
     smokes: 0,
+    molotovs: 0,
     downed: false,
     reviving: -1,
     reviveTicks: 0,

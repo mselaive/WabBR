@@ -27,6 +27,7 @@ export interface Frame {
   airdrops: Map<number, UnpackedAirdrop>;
   smokes: Map<number, SmokeState>;
   strikes: UnpackedStrike[];
+  fires: { id: number; x: number; y: number; ticksLeft: number }[];
   zone: UnpackedZone;
 }
 
@@ -70,6 +71,8 @@ export interface InterpolatedFrame {
   smokes: SmokeState[];
   /** Bombardeos anunciados o en curso. */
   strikes: UnpackedStrike[];
+  /** Charcos de fuego de molotov. */
+  fires: { id: number; x: number; y: number; ticksLeft: number }[];
   zone: UnpackedZone;
 }
 
@@ -101,6 +104,7 @@ export class SnapshotBuffer {
       airdrops: new Map((msg.ad ?? []).map(unpackAirdrop).map((a) => [a.id, a])),
       smokes: new Map((msg.sm ?? []).map(unpackSmoke).map((s) => [s.id, s])),
       strikes: (msg.rz ?? []).map(unpackStrike),
+      fires: (msg.fi ?? []).map(([id, x, y, ticksLeft]) => ({ id, x, y, ticksLeft })),
       zone: unpackZone(msg.zone),
     });
     if (this.frames.length > MAX_FRAMES) this.frames.shift();
@@ -177,6 +181,7 @@ export class SnapshotBuffer {
         airdrops: [...last.airdrops.values()],
         smokes: [...last.smokes.values()],
         strikes: last.strikes,
+        fires: last.fires,
         zone: last.zone,
       };
     }
@@ -189,6 +194,7 @@ export class SnapshotBuffer {
         airdrops: [...first.airdrops.values()],
         smokes: [...first.smokes.values()],
         strikes: first.strikes,
+        fires: first.fires,
         zone: first.zone,
       };
     }
@@ -253,6 +259,7 @@ export class SnapshotBuffer {
       airdrops,
       smokes,
       strikes: b.strikes,
+      fires: b.fires,
       zone: {
         ...b.zone,
         x: lerp(a.zone.x, b.zone.x, t),

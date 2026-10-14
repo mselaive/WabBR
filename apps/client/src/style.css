@@ -618,6 +618,19 @@ input:focus {
   flex: none;
 }
 
+/* El tuyo se toca para cambiar de color. */
+.swatch-mine {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  cursor: pointer;
+  border-color: #fff6;
+}
+
+.swatch-mine:hover {
+  border-color: #fff;
+}
+
 .player-row .who {
   flex: 1;
   /* Sin esto el nombre no se achica y la fila se sale del panel en el teléfono. */

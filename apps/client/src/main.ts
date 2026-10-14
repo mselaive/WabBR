@@ -40,6 +40,7 @@ const ui = new UI({
   onBet: (id) => game.bet(id),
   onVolume: (volume) => game.setVolume(volume),
   onSkydive: (on) => game.setSkydive(on),
+  onColor: () => game.nextColor(),
   onLeave: () => {
     game.disconnect();
     ui.showScreen("menu");

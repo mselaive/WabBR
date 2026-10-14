@@ -22,6 +22,7 @@ export interface UICallbacks {
   onBet: (id: number) => void;
   onVolume: (volume: number) => void;
   onSkydive: (on: boolean) => void;
+  onColor: () => void;
 }
 
 /** La apuesta del espectador: por quién se puede apostar, o por quién apostaste. */
@@ -387,9 +388,15 @@ export class UI {
         const li = document.createElement("li");
         li.className = "player-row";
 
-        const swatch = document.createElement("span");
-        swatch.className = "swatch";
+        // El tuyo es un botón: tocarlo pasa al siguiente color libre.
+        const swatch = document.createElement(p.id === localId ? "button" : "span");
+        swatch.className = p.id === localId ? "swatch swatch-mine" : "swatch";
         swatch.style.background = hex(playerColor(p.colorIndex));
+        if (p.id === localId) {
+          swatch.title = "Cambiar de color";
+          swatch.setAttribute("aria-label", "Cambiar de color");
+          swatch.addEventListener("click", () => this.cb.onColor());
+        }
 
         const who = document.createElement("span");
         who.className = "who";

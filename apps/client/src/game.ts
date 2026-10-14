@@ -165,6 +165,8 @@ export class Game {
   private respawnAt = 0;
   /** Rivales a la vista (interpolados), para la ayuda de puntería del stick. */
   private assistTargets: { x: number; y: number }[] = [];
+  /** Cambiaste de color en esta sala: el que te toque se guarda. */
+  private colorChosen = false;
   /** El último latido de poca vida (performance.now()). */
   private lastHeartbeat = 0;
   /** Ya se avisó que quedan los dos últimos en esta partida. */
@@ -378,6 +380,7 @@ export class Game {
       room,
       name,
       hat: selectedHat(),
+      color: storedColor(),
       onMessage: (msg) => this.onMessage(msg),
       onClose: (code) => {
         if (this.localId === -1) return;
@@ -500,8 +503,10 @@ export class Game {
         return;
       }
 
-      case "roster":
+      case "roster": {
         this.nextMatchAt = msg.nextIn ? performance.now() + msg.nextIn : 0;
+        const mine = msg.roster.find((p) => p.id === this.localId);
+        if (mine && this.colorChosen) storeColor(mine.colorIndex);
         if ((msg.map ?? 0) !== this.mapIndex) this.changeMap(msg.map ?? 0);
         this.ui.setMap(msg.mapMode ?? 0, MAPS[this.mapIndex]?.name ?? "", msg.hostId === this.localId);
         this.mapMode = msg.mapMode ?? 0;
@@ -518,6 +523,7 @@ export class Game {
         this.night = msg.night === true;
         this.world.setNight(msg.night === true);
         return;
+      }
 
       case "start":
         // Arranca la ronda: el predictor se re-sincroniza con el primer snapshot.
@@ -1763,6 +1769,12 @@ export class Game {
     this.net?.send({ t: "rules", rules });
   }
 
+  /** El siguiente color libre. Se recuerda para la próxima sala. */
+  nextColor(): void {
+    this.net?.send({ t: "color" });
+    this.colorChosen = true;
+  }
+
   /** Empezar en paracaídas. El servidor comprueba que seas el host. */
   setSkydive(on: boolean): void {
     this.net?.send({ t: "skydive", on });
@@ -1980,4 +1992,25 @@ function formatTime(seconds: number): string {
   const mm = Math.floor(s / 60);
   const ss = s % 60;
   return `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+}
+
+const COLOR_KEY = "wabbr:color";
+
+/** El color que elegiste la última vez (índice en la paleta), o null. */
+function storedColor(): number | null {
+  try {
+    const raw = localStorage.getItem(COLOR_KEY);
+    const n = raw === null ? NaN : Number(raw);
+    return Number.isInteger(n) && n >= 0 ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+function storeColor(index: number): void {
+  try {
+    localStorage.setItem(COLOR_KEY, String(index));
+  } catch {
+    // Sin almacenamiento, vale para esta sala nada más.
+  }
 }

@@ -148,6 +148,9 @@ apretar nada. El que quiere esperar se desmarca y se espera como siempre; el hos
 cambiar las opciones o forzar el arranque. El que tiene la conexión cortada no queda listo (si no,
 la siguiente lo dejaría afuera sin saberlo).
 
+**Tu color.** En tu fila, el cuadradito de color es un botón: tocarlo te pasa al siguiente color
+que nadie tenga. Se recuerda en el navegador y se pide al entrar a otra sala (si está libre).
+
 Arriba de la lista, **lo mejor de la noche** en la sala: quién ganó más partidas, quién hizo más
 kills y quién acertó más apuestas (sólo el que va primero solo; empatados, nadie).
 

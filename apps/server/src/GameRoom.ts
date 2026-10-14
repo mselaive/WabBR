@@ -208,6 +208,9 @@ export class GameRoom extends Server<Env> {
 
     const name = sanitizeName(url.searchParams.get("name"));
     const hat = sanitizeHat(url.searchParams.get("hat"));
+    // El color que eligió la última vez, si está libre; si no, el primero libre.
+    const wanted = Number(url.searchParams.get("color"));
+    const color = Number.isInteger(wanted) && wanted >= 0 && wanted < PLAYER_COLORS.length && this.colorFree(wanted) ? wanted : this.freeColorIndex();
 
     if (this.kicked.has(name.trim().toLowerCase())) {
       this.sendTo(conn, {
@@ -225,7 +228,7 @@ export class GameRoom extends Server<Env> {
       connId: conn.id,
       token,
       goneAt: 0,
-      meta: { id: playerId, name, colorIndex: this.freeColorIndex(), ready: false, hat },
+      meta: { id: playerId, name, colorIndex: color, ready: false, hat },
       inputs: new InputQueue(),
       lastMarkAt: 0,
       lastEmoteAt: 0,
@@ -413,6 +416,20 @@ export class GameRoom extends Server<Env> {
         this.mapMode = msg.mode;
         this.setMap(msg.mode === 1 ? this.otherMap() : 0);
         this.broadcastRoster();
+        return;
+      }
+
+      case "color": {
+        // En el lobby, el siguiente color que nadie tenga.
+        if (this.state.phase !== "lobby") return;
+        for (let k = 1; k < PLAYER_COLORS.length; k++) {
+          const next = (seat.meta.colorIndex + k) % PLAYER_COLORS.length;
+          if (this.colorFree(next, seat.playerId)) {
+            seat.meta.colorIndex = next;
+            this.broadcastRoster();
+            return;
+          }
+        }
         return;
       }
 
@@ -1136,6 +1153,11 @@ export class GameRoom extends Server<Env> {
     this.state.players.push(createPlayer(playerId));
     this.broadcastRoster();
     this.ensureLoop();
+  }
+
+  private colorFree(index: number, except = -1): boolean {
+    for (const seat of this.seats.values()) if (seat.playerId !== except && seat.meta.colorIndex === index) return false;
+    return true;
   }
 
   private freeColorIndex(): number {

@@ -93,6 +93,11 @@ export interface BetMsg {
   id: number;
 }
 
+/** Pasar al siguiente color libre (en el lobby). */
+export interface ColorMsg {
+  t: "color";
+}
+
 /** El host prende o apaga el paracaídas del principio. */
 export interface SkydiveMsg {
   t: "skydive";
@@ -151,6 +156,7 @@ export type ClientMsg =
   | MapModeMsg
   | SecondChanceMsg
   | SkydiveMsg
+  | ColorMsg
   | BetMsg
   | PartnerMsg
   | EmoteMsg

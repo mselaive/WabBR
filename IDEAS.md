@@ -95,6 +95,7 @@ está en `main`.
 | Bengala | Objeto raro: al levantarla pide un paquete aéreo a tu lado, que todos ven venir | Test + captura del ícono |
 | Latido y "¡Quedan dos!" | Con poca vida suena un latido; aviso cuando quedan los dos últimos | Typecheck (sin prueba en navegador) |
 | Ayuda de puntería en el teléfono | Con el stick, la mira se corre hacia un rival casi en la línea | 3 tests |
+| Elegir tu color | Tocar tu cuadradito en el lobby pasa al siguiente color libre; se recuerda | Prueba en el navegador (cambia, saltea los usados, vuelve en otra sala) |
 | La próxima arranca sola | Después de una partida seguís listo y la siguiente arranca a los 12 s, salvo que alguien se desmarque | Partida por socket: arrancó sola a los 11,7 s; desmarcado, no |
 | Lo mejor de la noche | En el lobby: más ganadas, más kills y mejor apostador de la sala | Captura después de una partida |
 | Cuarta revisión | El que esperaba la segunda oportunidad veía a todos; bots volándose con la gallina a cohetazos; el aviso de vuelta decía dónde; cortarse no la hacía perder; cohete a la gallina estallando donde estaba; la vuelta se deslizaba | Tests nuevos con mutaciones + partida en el navegador |

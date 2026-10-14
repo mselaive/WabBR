@@ -17,6 +17,7 @@ import {
   WORLD_RADIUS,
   WEAPON_IDS,
   ZONE_PHASES,
+  EMOTES,
   DOWNED_BLEED_TICKS,
   DOWNED_HP,
   REVIVE_RANGE,
@@ -477,6 +478,11 @@ export class Game {
         this.onSnapshot(msg);
         return;
 
+      case "emote":
+        this.world.showEmote(msg.by, EMOTES[msg.id] ?? "");
+        this.sound.pickup();
+        return;
+
       case "mark": {
         const now = performance.now();
         const color = playerColor(this.everyone.get(msg.by)?.colorIndex ?? 0);
@@ -877,6 +883,8 @@ export class Game {
     // Se leen siempre, aunque no se esté mirando: si no, lo apretado en otro
     // momento se aplicaría de golpe al morir.
     const intents = this.input.takeSpectateIntents();
+    const emote = this.input.takeEmote();
+    if (emote >= 0 && this.phase === "playing") this.net?.send({ t: "emote", id: emote });
     if (this.input.takeMark()) {
       this.markAt(this.world.screenToWorld(this.input.mouseX, this.input.mouseY));
     }

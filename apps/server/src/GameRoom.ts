@@ -6,6 +6,7 @@ import {
   COUNTDOWN_TICKS,
   EMPTY_ROOM_SHUTDOWN_TICKS,
   InputQueue,
+  EMOTES,
   MAX_PLAYERS,
   WORLD_CENTER_X,
   WORLD_CENTER_Y,
@@ -79,6 +80,8 @@ interface Seat {
   bot: BotMemory | null;
   /** Cuándo marcó el mapa por última vez (Date.now()), para no inundar. */
   lastMarkAt: number;
+  /** Cuándo dijo su última frase rápida. */
+  lastEmoteAt: number;
 }
 
 /** Cada cuánto se le da una oportunidad de correr al loop (no es el ritmo del tick). */
@@ -93,6 +96,8 @@ const MAX_TICKS_PER_PUMP = 5;
 const SIGHT_GRACE_TICKS = 6;
 /** Entre una marca y la siguiente del mismo jugador. */
 const MARK_INTERVAL_MS = 500;
+/** Entre una frase rápida y la siguiente. */
+const EMOTE_INTERVAL_MS = 1000;
 
 /** Nombres para los bots: cortos, para que entren en la tabla. */
 const BOT_NAMES = [
@@ -194,6 +199,7 @@ export class GameRoom extends Server<Env> {
       meta: { id: playerId, name, colorIndex: this.freeColorIndex(), ready: false },
       inputs: new InputQueue(),
       lastMarkAt: 0,
+      lastEmoteAt: 0,
       bot: null,
     };
     this.seats.set(playerId, seat);
@@ -431,6 +437,24 @@ export class GameRoom extends Server<Env> {
 
       case "ping": {
         this.sendTo(conn, { t: "pong", c: msg.c, s: Date.now() });
+        return;
+      }
+
+      case "emote": {
+        // En partida, vivo y de a una por segundo: es un globito, no un chat.
+        if (this.state.phase !== "playing") return;
+        if (typeof msg.id !== "number" || !Number.isInteger(msg.id) || msg.id < 0 || msg.id >= EMOTES.length) return;
+        const now = Date.now();
+        if (now - seat.lastEmoteAt < EMOTE_INTERVAL_MS) return;
+        seat.lastEmoteAt = now;
+        const from = findPlayer(this.state, seat.playerId);
+        if (!from?.alive) return;
+        // Sólo a los que lo ven: si no, un "¡Cuidado!" diría dónde está.
+        const out = encodeServer({ t: "emote", by: from.id, id: msg.id });
+        for (const c of this.getConnections<ConnState>()) {
+          const viewer = c.state ? findPlayer(this.state, c.state.playerId) : undefined;
+          if (this.canSee(this.eyesOf(viewer), from)) c.send(out);
+        }
         return;
       }
 
@@ -854,6 +878,7 @@ export class GameRoom extends Server<Env> {
       meta: { id: playerId, name, colorIndex: this.freeColorIndex(), ready: true, bot: true },
       inputs: new InputQueue(),
       lastMarkAt: 0,
+      lastEmoteAt: 0,
       bot: createBotMemory((Date.now() ^ (playerId * 7919)) | 0),
     });
     this.state.players.push(createPlayer(playerId));

@@ -41,6 +41,9 @@ export interface TouchState {
   shooting: boolean;
 }
 
+/** Las frases rápidas, en el orden de EMOTES. */
+const EMOTE_KEYS = ["Digit6", "Digit7", "Digit8", "Digit9"];
+
 /** Teclas de movimiento: WASD y flechas, más el layout francés por si acaso. */
 const UP = new Set(["KeyW", "ArrowUp", "KeyZ"]);
 const DOWN = new Set(["KeyS", "ArrowDown"]);
@@ -92,6 +95,8 @@ export class InputController {
   private spectateIntents: SpectateIntent[] = [];
   /** Se apretó F: marcar donde apunta el cursor. Se consume con takeMark(). */
   private markQueued = false;
+  /** Frase rápida pedida (índice en EMOTES), o -1. */
+  private emoteQueued = -1;
   /** Estado de los controles táctiles. Se suma al del teclado y el mouse. */
   readonly touch: TouchState = { moveX: 0, moveY: 0, sprint: false, aim: null, shooting: false };
 
@@ -130,6 +135,9 @@ export class InputController {
       }
       // Marcar se puede también muerto, mirando: el compañero sigue jugando.
       if (e.code === "KeyF" && !e.repeat) this.markQueued = true;
+      // Frases rápidas: 6, 7, 8 y 9.
+      const emote = EMOTE_KEYS.indexOf(e.code);
+      if (emote >= 0 && !e.repeat && this.enabled) this.emoteQueued = emote;
       if (!this.enabled) return;
       if (e.code === "KeyR") this.reloadQueued = true;
       // Sólo en el keydown: repetir la acción mientras la tecla está apretada
@@ -194,6 +202,18 @@ export class InputController {
       window.removeEventListener("mouseup", onMouseUp);
       window.removeEventListener("blur", onBlur);
     };
+  }
+
+  /** Una frase rápida pedida desde afuera (el botón táctil). */
+  queueEmote(id: number): void {
+    if (this.enabled) this.emoteQueued = id;
+  }
+
+  /** La frase rápida pedida desde el último cuadro, o -1. */
+  takeEmote(): number {
+    const e = this.emoteQueued;
+    this.emoteQueued = -1;
+    return e;
   }
 
   /** ¿Se pidió marcar desde el último cuadro? */

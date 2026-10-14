@@ -28,7 +28,7 @@ const check = (ok, que) => {
 };
 
 function cliente(room, name) {
-  const c = { id: -1, phase: "", teams: new Map(), marks: [] };
+  const c = { id: -1, phase: "", teams: new Map(), marks: [], emotes: [] };
   c.ws = new WebSocket(`${WS}/parties/game-room/${room}?name=${name}&v=2`);
   c.ws.on("message", (raw) => {
     const m = JSON.parse(raw.toString());
@@ -38,6 +38,7 @@ function cliente(room, name) {
       for (const s of m.st) c.teams.set(s[0], s[4]);
     }
     if (m.t === "mark") c.marks.push(m);
+    if (m.t === "emote") c.emotes.push(m);
   });
   c.send = (msg) => c.ws.send(JSON.stringify(msg));
   return c;
@@ -62,6 +63,12 @@ async function ronda() {
   await esperar(500);
   check(host.marks.length === 1 && host.marks[0].by === host.id, "al que marca le vuelve su marca");
   check(guest.marks.length === (mates ? 1 : 0), mates ? "al compañero le llega" : "al rival no le llega");
+
+  // Una frase rápida: le vuelve al que la dijo; dos seguidas, la segunda no.
+  host.send({ t: "emote", id: 0 });
+  host.send({ t: "emote", id: 1 });
+  await esperar(400);
+  check(host.emotes.length === 1 && host.emotes[0].id === 0, "la frase rápida vuelve, y de a una por segundo");
 
   // Dos seguidas: la segunda se descarta (a lo sumo dos por segundo).
   host.send({ t: "mark", x: 1600, y: 1400 });

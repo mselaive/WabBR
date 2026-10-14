@@ -75,6 +75,15 @@ export interface PartnerMsg {
   id: number;
 }
 
+/** Las frases rápidas, por índice: lo que viaja es el número. */
+export const EMOTES = ["¡GG!", "Jajaja", "¡Cuidado!", "Perdón"] as const;
+
+/** Decir una frase rápida (índice en EMOTES): un globito arriba de tu muñeco. */
+export interface EmoteMsg {
+  t: "emote";
+  id: number;
+}
+
 /** Marcar un lugar del mapa para el compañero ("acá hay alguien", "vamos para allá"). */
 export interface MarkMsg {
   t: "mark";
@@ -92,6 +101,7 @@ export type ClientMsg =
   | AddBotMsg
   | ModeMsg
   | PartnerMsg
+  | EmoteMsg
   | MarkMsg;
 
 export const BTN_SHOOT = 1;
@@ -282,6 +292,13 @@ export interface PongMsg {
   s: number;
 }
 
+/** Alguien dijo una frase rápida. Sólo le llega a los que lo ven. */
+export interface EmotedMsg {
+  t: "emote";
+  by: number;
+  id: number;
+}
+
 /** Una marca de alguien de tu equipo (o tuya). Sólo le llega a la pareja. */
 export interface MarkedMsg {
   t: "mark";
@@ -304,4 +321,5 @@ export type ServerMsg =
   | MatchStartMsg
   | PongMsg
   | MarkedMsg
+  | EmotedMsg
   | ErrorMsg;

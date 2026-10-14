@@ -42,6 +42,7 @@ export class TouchControls {
     this.buttons.append(
       this.button("Recargar", () => this.input.queueReload()),
       this.button("Tabla", () => this.input.setScoreboard(!this.input.scoreboardOpen)),
+      this.button("¡GG!", () => this.input.queueEmote(0)),
     );
   }
 

@@ -88,6 +88,9 @@ function project(x: number, y: number, lx: number, ly: number): { x: number; y: 
 
 interface PlayerView {
   root: Container;
+  /** El globito de la última frase rápida, y hasta cuándo se ve (performance.now()). */
+  bubble: Container | null;
+  bubbleUntil: number;
   body: Sprite;
   shirt: Sprite;
   gun: Sprite;
@@ -405,6 +408,32 @@ export class WorldView {
       ring.addChild(block);
     }
     this.groundLayer.addChild(ring);
+  }
+
+  /** Un globito con la frase rápida arriba del muñeco, por unos segundos. */
+  showEmote(playerId: number, text: string): void {
+    const view = this.players.get(playerId);
+    if (!view || !text) return;
+    view.bubble?.destroy({ children: true });
+    const bubble = new Container();
+    const label = new Text({
+      text,
+      style: { fontFamily: "ui-sans-serif, system-ui, sans-serif", fontSize: 13, fontWeight: "700", fill: 0x12161b },
+    });
+    label.resolution = 2;
+    label.anchor.set(0.5);
+    const w = label.width + 14;
+    const h = label.height + 8;
+    const bg = new Graphics()
+      .roundRect(-w / 2, -h / 2, w, h, 6)
+      .fill({ color: 0xffffff, alpha: 0.95 })
+      .poly([-5, h / 2 - 1, 5, h / 2 - 1, 0, h / 2 + 6])
+      .fill({ color: 0xffffff, alpha: 0.95 });
+    bubble.addChild(bg, label);
+    bubble.position.set(0, -PLAYER_RADIUS - 44);
+    view.root.addChild(bubble);
+    view.bubble = bubble;
+    view.bubbleUntil = performance.now() + 2500;
   }
 
   /**
@@ -839,7 +868,7 @@ export class WorldView {
     root.addChild(shadow, gun, flash, body, shirt, hpBar, label);
     this.entityLayer.addChild(root);
 
-    const view: PlayerView = { root, body, shirt, gun, flash, label, hpBar, lastAmmo: -1 };
+    const view: PlayerView = { root, body, shirt, gun, flash, label, hpBar, lastAmmo: -1, bubble: null, bubbleUntil: 0 };
     this.players.set(id, view);
     return view;
   }
@@ -926,8 +955,13 @@ export class WorldView {
       }
     }
 
+    const now = performance.now();
     for (const [id, view] of this.players) {
       if (!seen.has(id)) view.root.visible = false;
+      if (view.bubble && now > view.bubbleUntil) {
+        view.bubble.destroy({ children: true });
+        view.bubble = null;
+      }
     }
 
     this.updateBullets(frame);

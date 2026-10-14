@@ -41,6 +41,7 @@ Con dos jugadores listos arranca la partida.
 | `G` | tirar una granada |
 | `H` | tirar una granada de humo |
 | `F` / click en el minimapa | marcar un lugar para tu compañero (dúos) |
+| `6` `7` `8` `9` | frases rápidas: ¡GG!, Jajaja, ¡Cuidado!, Perdón |
 | `Tab` | tabla de posiciones |
 | `M` | silenciar el sonido |
 | Click / `←` `→` (muerto) | mirar a otro jugador |
@@ -161,6 +162,10 @@ arrastran lejos del que les tira, prefieren tirarle al que todavía les puede de
 tiros y, sin nadie a la vista, van a levantar al suyo. Todo vive en la simulación
 compartida (`downed`, `stepDowned`, `downOrKill`): `downed` viaja en el snapshot, así la
 predicción del cliente también se arrastra y no dispara.
+
+**Frases rápidas.** Con `6` a `9` (o el botón "¡GG!" en el teléfono) aparece un globito arriba
+de tu muñeco por dos segundos y medio: "¡GG!", "Jajaja", "¡Cuidado!" o "Perdón". Le llega sólo a
+los que te ven —un "¡Cuidado!" no puede decir dónde estás— y a lo sumo una por segundo.
 
 **Marcas.** En dúos, `F` marca donde apunta el cursor y un click (o un toque) en el
 minimapa marca ese lugar: a tu compañero le aparece un rombo del color tuyo encima del

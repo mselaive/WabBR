@@ -154,6 +154,8 @@ export class Game {
   private items = new Map<number, GroundItem>();
   /** Cajas ya abiertas. Igual que el loot: llega al entrar y se mantiene por eventos. */
   private openedCrates = new Set<number>();
+  /** Las cajas doradas de la partida. */
+  private goldenCrates: number[] = [];
   /** Cajas del mapa, en el mismo orden que las numera el servidor. */
   private readonly crates = lootCrates(getArena());
   /** Ya recibimos la posición de spawn autoritativa de esta ronda. */
@@ -454,6 +456,8 @@ export class Game {
         this.items = new Map(msg.items.map(unpackItem).map((item) => [item.id, item]));
         this.openedCrates = new Set(msg.crates);
         this.world.resetCrates();
+        this.goldenCrates = msg.golden ?? [];
+        this.world.setGoldenCrates(this.goldenCrates);
         for (const id of this.openedCrates) this.world.setCrateOpen(id);
         for (const index of msg.barrels ?? []) this.world.setBarrelExploded(index);
         return;
@@ -912,7 +916,12 @@ export class Game {
     this.marks = this.marks.filter((m) => m.until > now);
     this.world.drawMarks(this.marks);
     // Al espectear, el punto destacado del minimapa es el que estás mirando.
-    this.minimap.draw(frame, this.roster, this.watched?.id ?? this.localId, mates, this.marks, this.wanted);
+    const gold = this.goldenCrates
+      .filter((id) => !this.openedCrates.has(id))
+      .map((id) => this.crates[id])
+      .filter((c) => c !== undefined)
+      .map((c) => ({ x: c.x + c.w / 2, y: c.y + c.h / 2 }));
+    this.minimap.draw(frame, this.roster, this.watched?.id ?? this.localId, mates, this.marks, this.wanted, gold);
     this.updateHud(frame, localPredicted);
 
     this.world.setCrosshair(this.input.mouseX, this.input.mouseY, this.phase === "playing");

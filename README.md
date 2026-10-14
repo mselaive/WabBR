@@ -312,6 +312,14 @@ no puedan discrepar. Las acciones (recoger, cambiar de arma, curarse) viajan en
 el campo `act` del mensaje de input que ya se manda 20 veces por segundo: no
 agregan ni un mensaje nuevo, que es lo que importa para la factura de Cloudflare.
 
+## Cajas doradas
+
+En cada partida se sortean **3 cajas doradas** entre todas las del mapa (distintas cada vez, con
+su propio azar, así no cambia nada más del reparto). Son de oro, largan destellos y aparecen
+como un cuadradito dorado en el minimapa mientras sigan cerradas. Traen botín de paquete aéreo:
+un arma épica o legendaria (nunca el lanzacohetes), el chaleco pesado y un botiquín. Son una
+razón para ir a un lugar y no a otro, y donde hay una dorada suele haber pelea.
+
 ## Paquetes aéreos
 
 Cuando la zona empieza a cerrarse en las dos primeras fases, cae un paquete con

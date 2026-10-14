@@ -846,6 +846,7 @@ export class GameRoom extends Server<Env> {
       t: "items",
       items: this.state.items.map(packItem),
       crates: [...this.state.openedCrates],
+      golden: [...this.state.goldenCrates],
       barrels: [...this.state.explodedBarrels],
     };
   }

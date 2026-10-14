@@ -147,6 +147,10 @@ export class WorldView {
 
   /** Última bocanada de estela de cohete (performance.now()), para no llenar de humo. */
   private lastPuff = 0;
+  /** Cajas doradas de la partida, las cajas ya abiertas y el último destello. */
+  private golden = new Set<number>();
+  private openedIds = new Set<number>();
+  private lastSparkle = 0;
   /** Sacudón pendiente, en píxeles. Se apaga solo. */
   private shake = 0;
   /** Marca de acierto sobre la mira: segundos que le quedan. */
@@ -460,7 +464,34 @@ export class WorldView {
   /** Cambia la tapa de una caja al sprite abierto. Idempotente. */
   setCrateOpen(crateId: number): void {
     const sprite = this.crateSprites.get(crateId);
-    if (sprite) sprite.texture = this.tex.lootCrate[1]!;
+    if (sprite) sprite.texture = (this.golden.has(crateId) ? this.tex.goldenCrate : this.tex.lootCrate)[1]!;
+    this.openedIds.add(crateId);
+  }
+
+  /** Las cajas doradas de la partida: se tiñen de oro y largan destellos mientras estén cerradas. */
+  setGoldenCrates(ids: readonly number[]): void {
+    this.golden = new Set(ids);
+    for (const [id, sprite] of this.crateSprites) {
+      sprite.texture = (this.golden.has(id) ? this.tex.goldenCrate : this.tex.lootCrate)[this.openedIds.has(id) ? 1 : 0]!;
+    }
+  }
+
+  /** Un destello de vez en cuando sobre cada dorada cerrada. */
+  private sparkleGolden(): void {
+    const now = performance.now();
+    if (now - this.lastSparkle < 220) return;
+    this.lastSparkle = now;
+    for (const id of this.golden) {
+      if (this.openedIds.has(id)) continue;
+      const sprite = this.crateSprites.get(id);
+      if (!sprite) continue;
+      const g = new Graphics();
+      g.moveTo(-4, 0).lineTo(4, 0).moveTo(0, -4).lineTo(0, 4).stroke({ width: 2, color: 0xfff3b0 });
+      // Un punto al azar de la caja: el sprite está anclado abajo al medio.
+      g.position.set(sprite.x + (Math.random() - 0.5) * sprite.width, sprite.y - Math.random() * sprite.height);
+      this.effectLayer.addChild(g);
+      this.effects.push({ node: g, life: 0.5, maxLife: 0.5, vx: 0, vy: 0, kind: "spark" });
+    }
   }
 
   /** Vuelve a cerrar todas: se llama al empezar una ronda nueva. */
@@ -468,6 +499,8 @@ export class WorldView {
     for (const sprite of this.crateSprites.values()) {
       sprite.texture = this.tex.lootCrate[0]!;
     }
+    this.golden = new Set();
+    this.openedIds = new Set();
     // Lo mismo con los barriles: la ronda nueva arranca con todos enteros.
     for (const sprite of this.barrelSprites.values()) sprite.texture = this.tex.barrel;
   }
@@ -858,6 +891,7 @@ export class WorldView {
     this.updateAirdrops(frame);
     this.updateStrikes(frame);
     this.updateZone(frame);
+    this.sparkleGolden();
     this.updateEffects(dt);
     // El sacudón se apaga rápido: si dura, marea en vez de comunicar.
     this.shake *= Math.exp(-dt / 0.09);

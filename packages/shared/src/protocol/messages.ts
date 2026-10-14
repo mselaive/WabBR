@@ -260,6 +260,8 @@ export interface ItemsMsg {
   crates: number[];
   /** Barriles que ya estallaron (índice de obstáculo), para dibujarlos quemados. */
   barrels?: number[];
+  /** Las cajas doradas de esta partida. */
+  golden?: number[];
 }
 
 export interface MatchStartMsg {

@@ -305,6 +305,8 @@ export interface GameState {
    * cajas son parte del mapa, que las dos puntas generan igual.
    */
   openedCrates: number[];
+  /** Las cajas doradas de esta partida (ids), sorteadas al empezar. */
+  goldenCrates: number[];
   zone: ZoneState;
   nextBulletId: number;
   rng: number;

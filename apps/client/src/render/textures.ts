@@ -191,11 +191,12 @@ function crate(variant: number): Texture {
  * o la gente va a perder tiempo apretando E contra madera: por eso los flejes
  * dorados y el candado.
  */
-function lootCrate(open: boolean): Texture {
+function lootCrate(open: boolean, golden = false): Texture {
   return make(26, 28, (ctx) => {
-    const wood = open ? "#6b4a26" : "#a3743c";
-    const dark = open ? "#4e351a" : "#75512a";
-    const gold = open ? "#8a6f2c" : "#e8b53f";
+    // La dorada es toda de oro, no de madera: se tiene que distinguir de lejos.
+    const wood = golden ? (open ? "#8a6a1c" : "#f2c230") : open ? "#6b4a26" : "#a3743c";
+    const dark = golden ? (open ? "#5e4710" : "#b8871a") : open ? "#4e351a" : "#75512a";
+    const gold = golden ? (open ? "#b89a4a" : "#fff3b0") : open ? "#8a6f2c" : "#e8b53f";
 
     rect(ctx, 1, 2, 24, 22, wood);
     rect(ctx, 1, 24, 24, 3, dark);
@@ -217,6 +218,12 @@ function lootCrate(open: boolean): Texture {
     if (!open) {
       rect(ctx, 11, 11, 4, 5, gold);
       rect(ctx, 12, 13, 2, 2, "#3a2a10");
+    }
+    // Un brillo en la esquina de la dorada.
+    if (golden && !open) {
+      rect(ctx, 3, 5, 2, 2, "#ffffff");
+      rect(ctx, 4, 4, 1, 4, "#fffbe0");
+      rect(ctx, 2, 6, 4, 1, "#fffbe0");
     }
     outline(ctx, 0, 1, 26, 27);
   });
@@ -500,6 +507,7 @@ export interface TexturePack {
   wallTile: Texture[];
   floor: Texture[];
   lootCrate: Texture[];
+  goldenCrate: Texture[];
   districtGround: Texture[];
   water: Texture;
   silo: Texture;
@@ -551,6 +559,7 @@ export function getTextures(): TexturePack {
     floor: [floorTexture(0), floorTexture(1)],
     // [cerrada, abierta]
     lootCrate: [lootCrate(false), lootCrate(true)],
+    goldenCrate: [lootCrate(false, true), lootCrate(true, true)],
     districtGround: [0, 1, 2, 3].map(districtGround),
     water: waterTexture(),
     silo: silo(),

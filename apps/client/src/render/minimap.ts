@@ -77,6 +77,7 @@ export class Minimap {
     mates: ReadonlySet<number> = new Set(),
     marks: readonly Mark[] = [],
     wanted: { id: number; x: number; y: number } | null = null,
+    golden: readonly { x: number; y: number }[] = [],
   ): void {
     const ctx = this.ctx;
     const cx = this.tx(WORLD_CENTER_X);
@@ -243,6 +244,15 @@ export class Minimap {
         ctx.arc(this.tx(p.x), this.ty(p.y), 5, 0, Math.PI * 2);
         ctx.stroke();
       }
+    }
+
+    // Cajas doradas sin abrir: un cuadradito de oro, como un paquete chiquito.
+    for (const c of golden) {
+      ctx.fillStyle = "#ffd34a";
+      ctx.strokeStyle = "#000000aa";
+      ctx.lineWidth = 1;
+      ctx.fillRect(this.tx(c.x) - 2.5, this.ty(c.y) - 2.5, 5, 5);
+      ctx.strokeRect(this.tx(c.x) - 3, this.ty(c.y) - 3, 6, 6);
     }
 
     // El más buscado: una estrella dorada donde se lo vio por última vez.

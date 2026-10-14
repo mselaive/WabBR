@@ -116,6 +116,13 @@ export const STRIKE_BOMB_EVERY = 10;
  * todos y un precio a ir ganando.
  */
 export const WANTED_MIN_KILLS = 3;
+
+/**
+ * Cajas doradas: en cada partida unas pocas cajas, distintas cada vez, traen
+ * botín de paquete aéreo (arma épica o legendaria, chaleco pesado, botiquín).
+ * Brillan de lejos: son una razón para ir a un lugar y no a otro.
+ */
+export const GOLDEN_CRATES = 3;
 export const WANTED_REVEAL_TICKS = 5 * TICK_RATE;
 
 /**

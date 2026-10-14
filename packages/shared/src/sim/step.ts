@@ -23,6 +23,7 @@ import {
   STRIKE_RADIUS,
   STRIKE_TICKS,
   STRIKE_WARN_TICKS,
+  GOLDEN_CRATES,
   WANTED_MIN_KILLS,
   WANTED_REVEAL_TICKS,
   SMOKE_TICKS,
@@ -208,6 +209,7 @@ export function createGameState(seed = 1): GameState {
     items: [],
     nextItemId: 1,
     openedCrates: [],
+    goldenCrates: [],
     zone: createZone(),
     nextBulletId: 1,
     rng: seed | 0,
@@ -241,6 +243,14 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
   state.items = spawnLoot(seed, arena);
   state.nextItemId = state.items.length + 1;
   state.openedCrates = [];
+  // Las doradas, sorteadas con su propio azar: no cambian nada más del reparto.
+  const crateCount = lootCrates(arena).length;
+  const pickGold = makeRng(seed ^ 0x601d);
+  state.goldenCrates = [];
+  while (state.goldenCrates.length < Math.min(GOLDEN_CRATES, crateCount)) {
+    const id = Math.floor(pickGold() * crateCount);
+    if (!state.goldenCrates.includes(id)) state.goldenCrates.push(id);
+  }
 
   // Qué lugar del anillo le toca a cada uno, sorteado. Sin esto el orden de
   // llegada a la sala decidía al lado de quién aparecías, siempre igual.
@@ -573,7 +583,7 @@ function openCrate(
 ): void {
   state.openedCrates.push(crateId);
 
-  const rolled = rollCrateContents(state.rng);
+  const rolled = state.goldenCrates.includes(crateId) ? rollGolden(state) : rollCrateContents(state.rng);
   state.rng = rolled.state;
 
   const cx = crate.x + crate.w / 2;
@@ -1430,6 +1440,21 @@ const ROCKET = WEAPON_IDS.indexOf("rocket");
 const AIRDROP_WEAPONS = WEAPON_IDS.map((_, i) => i).filter((i) => i !== STARTING_WEAPON && i !== ROCKET);
 /** Uno de cada ~8 paquetes trae el lanzacohetes (legendario) en vez de otra arma. */
 const AIRDROP_ROCKET_CHANCE = 0.12;
+
+/** Lo de una caja dorada: como un paquete aéreo, sin el lanzacohetes. */
+function rollGolden(state: GameState): { state: number; items: { kind: number; ref: number; tier: number; count: number }[] } {
+  const r1 = nextRandom(state.rng);
+  const r2 = nextRandom(r1.state);
+  const weapon = AIRDROP_WEAPONS[Math.floor(r1.value * AIRDROP_WEAPONS.length)]!;
+  return {
+    state: r2.state,
+    items: [
+      { kind: ITEM_WEAPON, ref: weapon, tier: clampTier(weapon, r2.value < 0.6 ? 3 : 4), count: 1 },
+      { kind: ITEM_ARMOR, ref: ARMORS.length - 1, tier: 3, count: 1 },
+      { kind: ITEM_CONSUMABLE, ref: 1, tier: 3, count: 1 },
+    ],
+  };
+}
 
 /**
  * Anuncia un paquete que va a caer dentro de la próxima zona. Se elige un punto

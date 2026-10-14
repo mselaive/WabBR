@@ -776,6 +776,11 @@ input:focus {
   font-size: 13px;
 }
 
+/* Novedades: el título en dorado, para que se vea que hay algo nuevo. */
+.help.news > summary {
+  color: var(--gold);
+}
+
 .help ul {
   margin: 8px 0 0;
   padding-left: 18px;

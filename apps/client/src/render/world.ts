@@ -17,6 +17,7 @@ import {
   ITEM_ARMOR,
   GRENADE_SMOKE,
   ITEM_GRENADE,
+  CAMPFIRE_RADIUS,
   SMOKE_RADIUS,
   STRIKE_RADIUS,
   smokeRadius,
@@ -131,6 +132,8 @@ export class WorldView {
   /** Lo que está en el aire, por encima de todo. */
   private readonly skyLayer = new Container();
   private readonly airdropSprites = new Map<number, Sprite>();
+  /** Las llamas de las fogatas, que se redibujan cada cuadro. */
+  private readonly flames: Graphics[] = [];
   /** Capa en coordenadas de pantalla (mira). */
   private readonly screenLayer = new Container();
   private readonly crosshair = new Graphics();
@@ -208,6 +211,7 @@ export class WorldView {
     this.buildGround();
     this.buildWallRing();
     this.buildObstacles();
+    this.buildCampfires();
     this.buildDecor();
     this.drawCrosshair();
   }
@@ -401,6 +405,44 @@ export class WorldView {
       ring.addChild(block);
     }
     this.groundLayer.addChild(ring);
+  }
+
+  /**
+   * Las fogatas: troncos en la capa ordenada por Y, un círculo tibio en el piso
+   * que marca hasta dónde llega el calor, y una llama que se mueve (ver
+   * updateCampfires).
+   */
+  private buildCampfires(): void {
+    for (const f of this.arena.campfires ?? []) {
+      const glow = new Graphics();
+      glow.circle(f.x, f.y, CAMPFIRE_RADIUS).fill({ color: 0xff9a3c, alpha: 0.08 });
+      glow.circle(f.x, f.y, CAMPFIRE_RADIUS).stroke({ width: 2, color: 0xffb457, alpha: 0.25 });
+      this.terrain.addChild(glow);
+      const logs = new Sprite(this.tex.campfire);
+      logs.anchor.set(0.5, 0.7);
+      logs.scale.set(ART_SCALE);
+      logs.position.set(f.x, f.y);
+      logs.zIndex = f.y;
+      this.entityLayer.addChild(logs);
+      const flame = new Graphics();
+      flame.position.set(f.x, f.y - 6);
+      flame.zIndex = f.y + 1;
+      this.entityLayer.addChild(flame);
+      this.flames.push(flame);
+    }
+  }
+
+  /** La llama de cada fogata: dos lenguas que suben y bajan a destiempo. */
+  private updateCampfires(): void {
+    const t = performance.now() / 1000;
+    this.flames.forEach((g, i) => {
+      g.clear();
+      const a = 1 + 0.25 * Math.sin(t * 9 + i);
+      const b = 1 + 0.25 * Math.sin(t * 11 + i * 2);
+      g.poly([-10, 0, 0, -26 * a, 10, 0]).fill({ color: 0xff7a2a, alpha: 0.95 });
+      g.poly([-6, 0, -1, -18 * b, 5, 0]).fill({ color: 0xffd257, alpha: 0.95 });
+      g.circle(0, -2, 4).fill({ color: 0xfff3c4, alpha: 0.9 });
+    });
   }
 
   private buildObstacles(): void {
@@ -892,6 +934,7 @@ export class WorldView {
     this.updateStrikes(frame);
     this.updateZone(frame);
     this.sparkleGolden();
+    this.updateCampfires();
     this.updateEffects(dt);
     // El sacudón se apaga rápido: si dura, marea en vez de comunicar.
     this.shake *= Math.exp(-dt / 0.09);

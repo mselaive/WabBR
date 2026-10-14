@@ -24,6 +24,7 @@ import {
   bushAt,
   segmentBoxT,
   smokeRadius,
+  nearCampfire,
   consumableAt,
   getArena,
   itemName,
@@ -893,6 +894,12 @@ export class Game {
       frame.smokes.some((s) => Math.hypot(localPredicted.x - s.x, localPredicted.y - s.y) < smokeRadius(s) * 0.9);
     const hidden = inBush || inSmoke;
     this.ui.setHidden(inSmoke ? "en el humo" : inBush ? "en el arbusto" : null);
+    this.ui.setNearFire(
+      localPredicted !== null &&
+        (this.lastLocal?.hp ?? 100) < 100 &&
+        !this.lastLocal?.downed &&
+        nearCampfire(this.arena, localPredicted.x, localPredicted.y),
+    );
     this.world.update(
       { ...frame, bullets, grenades },
       this.roster,

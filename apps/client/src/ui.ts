@@ -528,6 +528,12 @@ export class UI {
     );
   }
 
+  /** Aviso de que estás al lado de una fogata (y te falta vida). */
+  setNearFire(near: boolean): void {
+    const tag = el("fireTag");
+    if (tag.hidden !== !near) tag.hidden = !near;
+  }
+
   /** Aviso de que estás escondido: dónde ("en el arbusto", "en el humo"), o null. */
   setHidden(where: string | null): void {
     if (this.hiddenTag.hidden !== (where === null)) this.hiddenTag.hidden = where === null;

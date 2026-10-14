@@ -520,6 +520,7 @@ export interface TexturePack {
   itemSmoke: Texture;
   smokePuff: Texture;
   pump: Texture;
+  campfire: Texture;
 }
 
 let pack: TexturePack | null = null;
@@ -572,6 +573,7 @@ export function getTextures(): TexturePack {
     itemSmoke: smokeIcon(),
     smokePuff: smokePuff(),
     pump: pump(),
+    campfire: campfireLogs(),
   };
   return pack;
 }
@@ -840,6 +842,20 @@ function smokePuff(): Texture {
     ellipse(ctx, 16, 15, 13, 12, "#b4bac0");
     ellipse(ctx, 13, 12, 8, 7, "#cdd2d6");
     ellipse(ctx, 11, 10, 3, 3, "#e1e4e7");
+  });
+}
+
+/** Los troncos de la fogata, sin fuego: la llama se dibuja aparte y se mueve. */
+function campfireLogs(): Texture {
+  return make(24, 14, (ctx) => {
+    ellipse(ctx, 12, 9, 11, 4.5, "#3a3f46");
+    ellipse(ctx, 12, 9, 8, 3, "#2a2420");
+    rect(ctx, 3, 7, 18, 3, "#6b4423");
+    rect(ctx, 3, 7, 18, 1, "#8a5a30");
+    rect(ctx, 8, 4, 3, 8, "#5a3a1e");
+    rect(ctx, 14, 4, 3, 8, "#5a3a1e");
+    rect(ctx, 6, 11, 2, 2, "#8a929b");
+    rect(ctx, 17, 11, 2, 2, "#8a929b");
   });
 }
 

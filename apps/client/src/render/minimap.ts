@@ -246,6 +246,14 @@ export class Minimap {
       }
     }
 
+    // Fogatas: un puntito naranja, para saber dónde ir a curarse.
+    for (const f of this.arena.campfires ?? []) {
+      ctx.fillStyle = "#ff9a3c";
+      ctx.beginPath();
+      ctx.arc(this.tx(f.x), this.ty(f.y), 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     // Cajas doradas sin abrir: un cuadradito de oro, como un paquete chiquito.
     for (const c of golden) {
       ctx.fillStyle = "#ffd34a";

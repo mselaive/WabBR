@@ -1,4 +1,5 @@
 import {
+  CAMPFIRE_RADIUS,
   DT,
   EXPLOSION_MAX_DAMAGE,
   EXPLOSION_RADIUS,
@@ -28,7 +29,7 @@ import { makeRng } from "../math.js";
 import { segmentBoxT } from "./collision.js";
 import { findPath, navGridFor, walkableLine } from "./nav.js";
 import { concealedFrom, hasLineOfSight } from "./sight.js";
-import { advanceGrenade, canThrow, grenadeLaunch } from "./step.js";
+import { advanceGrenade, canThrow, grenadeLaunch, nearCampfire } from "./step.js";
 import {
   ACT_NONE,
   ACT_PICKUP,
@@ -288,7 +289,7 @@ export function botInput(state: GameState, me: PlayerState, mem: BotMemory, aren
       if (act >= ACT_USE_BASE) return input;
     }
     // Armado y sin nadie a la vista: a cazar al más buscado, si está cerca.
-    goal = huntWanted(state, me) ?? pickGoal(state, me, mem, crates);
+    goal = campfireGoal(me, arena) ?? huntWanted(state, me) ?? pickGoal(state, me, mem, crates);
     if (goal) input.aim = Math.atan2(goal.y - me.y, goal.x - me.x);
   }
 
@@ -379,6 +380,28 @@ function smokeAim(me: PlayerState, target: PlayerState, arena: ArenaMap): number
     if (off < SMOKE_RADIUS * 0.6) return aim;
   }
   return null;
+}
+
+/**
+ * Herido y sin nada con qué curarse: a la fogata más cercana, y quedarse ahí
+ * hasta llenarse. Con vendas o botiquín, mejor usarlos (lo hace idleAction).
+ */
+function campfireGoal(me: PlayerState, arena: ArenaMap): { x: number; y: number } | null {
+  if (me.reviving >= 0 || me.hp >= 95) return null;
+  const hasMeds = (me.consumables[0] ?? 0) > 0 || (me.consumables[1] ?? 0) > 0;
+  if (hasMeds || (me.hp >= 70 && !nearCampfire(arena, me.x, me.y))) return null;
+  let best: { x: number; y: number } | null = null;
+  let bestD = 700;
+  for (const f of arena.campfires ?? []) {
+    const d = Math.hypot(f.x - me.x, f.y - me.y);
+    if (d < bestD) {
+      best = f;
+      bestD = d;
+    }
+  }
+  if (!best) return null;
+  // Ya al calor: quieto, que moverse no cura más rápido.
+  return bestD < CAMPFIRE_RADIUS - 20 ? { x: me.x, y: me.y } : best;
 }
 
 /**

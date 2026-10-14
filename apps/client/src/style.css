@@ -1452,3 +1452,9 @@ body.touch #consumables .consumable {
   color: var(--gold);
   font-weight: 600;
 }
+
+.fire-tag {
+  border-color: #ff9a3c;
+  color: #ffd2a0;
+  background: rgba(40, 20, 8, 0.85);
+}

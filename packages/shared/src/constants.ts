@@ -123,6 +123,16 @@ export const WANTED_MIN_KILLS = 3;
  * Brillan de lejos: son una razón para ir a un lugar y no a otro.
  */
 export const GOLDEN_CRATES = 3;
+
+/**
+ * Fogatas (de Fortnite): a menos de CAMPFIRE_RADIUS de una, y sin haber
+ * recibido daño en los últimos CAMPFIRE_CALM_TICKS, se recupera vida hasta
+ * llenarla. Lento a propósito: es para el respiro entre peleas, no para
+ * curarse en medio de una.
+ */
+export const CAMPFIRE_RADIUS = 70;
+export const CAMPFIRE_HEAL_PER_S = 3;
+export const CAMPFIRE_CALM_TICKS = 3 * TICK_RATE;
 export const WANTED_REVEAL_TICKS = 5 * TICK_RATE;
 
 /**

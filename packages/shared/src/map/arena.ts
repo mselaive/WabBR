@@ -110,6 +110,8 @@ export interface ArenaMap {
   ponds: Pond[];
   districts: District[];
   grid: ObstacleGrid;
+  /** Fogatas: al lado de una, sin que te peguen, te curás de a poco. Una por distrito. */
+  campfires?: { x: number; y: number }[];
 }
 
 /** Los colliders de árboles/rocas son más chicos que el sprite: se camina "por debajo" de la copa. */
@@ -844,7 +846,41 @@ export function generateArena(seed = ARENA_SEED): ArenaMap {
     decor.push({ kind, x, y, variant: Math.floor(rnd() * 3), scale: 0.85 + rnd() * 0.4 });
   }
 
-  return { obstacles, decor, buildings, paths, ponds, districts, grid: new ObstacleGrid(obstacles) };
+  const campfires = placeCampfires(seed, districts, buildings, obstacles);
+  return { obstacles, decor, buildings, paths, ponds, districts, grid: new ObstacleGrid(obstacles), campfires };
+}
+
+/** Cuántas fogatas hay: más y las curaciones dejarían de valer algo. */
+const CAMPFIRES = 6;
+
+/**
+ * Una fogata en cada uno de los distritos más grandes, en un lugar despejado y
+ * al aire libre. Va al final y con su propio azar: así no mueve nada de lo que
+ * el mapa ya tenía (cambiar el generador movería el mapa de todos).
+ */
+function placeCampfires(
+  seed: number,
+  districts: readonly District[],
+  buildings: readonly Building[],
+  obstacles: readonly Obstacle[],
+): { x: number; y: number }[] {
+  const rnd = makeRng(seed ^ 0x0f1a3e);
+  const fires: { x: number; y: number }[] = [];
+  const biggest = [...districts].sort((a, b) => b.radius - a.radius).slice(0, CAMPFIRES);
+  for (const d of biggest) {
+    for (let attempt = 0; attempt < 200; attempt++) {
+      const a = rnd() * Math.PI * 2;
+      const r = Math.sqrt(rnd()) * d.radius * 0.9;
+      const x = d.x + Math.cos(a) * r;
+      const y = d.y + Math.sin(a) * r;
+      if (Math.hypot(x - WORLD_CENTER_X, y - WORLD_CENTER_Y) > WORLD_RADIUS - 160) continue;
+      if (buildings.some((b) => x > b.x - 40 && x < b.x + b.w + 40 && y > b.y - 40 && y < b.y + b.h + 40)) continue;
+      if (obstacles.some((o) => x > o.x - 40 && x < o.x + o.w + 40 && y > o.y - 40 && y < o.y + o.h + 40)) continue;
+      fires.push({ x, y });
+      break;
+    }
+  }
+  return fires;
 }
 
 /**

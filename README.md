@@ -312,6 +312,15 @@ no puedan discrepar. Las acciones (recoger, cambiar de arma, curarse) viajan en
 el campo `act` del mensaje de input que ya se manda 20 veces por segundo: no
 agregan ni un mensaje nuevo, que es lo que importa para la factura de Cloudflare.
 
+## Fogatas
+
+Copiadas de Fortnite. Hay **6 fogatas** en el mapa, una en cada uno de los distritos más
+grandes, al aire libre (un puntito naranja en el minimapa). Quedándote a menos de 70 px de una,
+y si no te pegaron en los últimos 3 segundos, recuperás 3 de vida por segundo hasta llenarte.
+Lento a propósito: es para el respiro entre peleas, no para curarte en medio de una. El HUD avisa
+"Al calor de la fogata". Los bots heridos y sin curaciones van a la más cercana. Se ubican al
+final del generador del mapa y con su propio azar, así el resto del mapa queda idéntico.
+
 ## Cajas doradas
 
 En cada partida se sortean **3 cajas doradas** entre todas las del mapa (distintas cada vez, con

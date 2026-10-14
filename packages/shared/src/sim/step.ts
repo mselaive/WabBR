@@ -24,6 +24,9 @@ import {
   STRIKE_TICKS,
   STRIKE_WARN_TICKS,
   GOLDEN_CRATES,
+  CAMPFIRE_CALM_TICKS,
+  CAMPFIRE_HEAL_PER_S,
+  CAMPFIRE_RADIUS,
   WANTED_MIN_KILLS,
   WANTED_REVEAL_TICKS,
   SMOKE_TICKS,
@@ -139,6 +142,7 @@ export function createPlayer(id: number, x = 0, y = 0): PlayerState {
     downedBy: -1,
     downedCause: 0,
     longestKill: 0,
+    lastHurtTick: -1000,
     healed: 0,
     selfDamage: 0,
     traveled: 0,
@@ -323,6 +327,7 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
     p.downedBy = -1;
     p.downedCause = 0;
     p.longestKill = 0;
+    p.lastHurtTick = -1000;
     p.healed = 0;
     p.selfDamage = 0;
     p.traveled = 0;
@@ -965,6 +970,7 @@ function applyDamage(
   // Lo que de verdad entra: un tiro de 64 a alguien con 10 de vida hizo 10.
   const landed = Math.min(amount, target.shield + Math.max(0, target.hp));
   target.damageTaken += landed;
+  target.lastHurtTick = state.tick;
   if (byId === target.id) target.selfDamage += landed;
   if (byId !== target.id) {
     const attacker = byId >= 0 ? findPlayer(state, byId) : undefined;
@@ -1550,6 +1556,30 @@ function reveal(state: GameState, p: PlayerState): void {
   state.wanted = { id: p.id, x: p.x, y: p.y, seenTick: state.tick };
 }
 
+/** Cura de a poco al que está tranquilo al lado de una fogata. */
+function stepCampfires(state: GameState, arena: ArenaMap): void {
+  const fires = arena.campfires;
+  if (!fires || fires.length === 0) return;
+  for (const p of state.players) {
+    if (!p.alive || p.downed || p.hp >= PLAYER_MAX_HP) continue;
+    if (state.tick - p.lastHurtTick < CAMPFIRE_CALM_TICKS) continue;
+    if (!nearCampfire(arena, p.x, p.y)) continue;
+    const before = p.hp;
+    p.hp = Math.min(PLAYER_MAX_HP, p.hp + CAMPFIRE_HEAL_PER_S * DT);
+    p.healed += p.hp - before;
+  }
+}
+
+/** ¿Está al alcance del calor de alguna fogata? */
+export function nearCampfire(arena: ArenaMap, x: number, y: number): boolean {
+  for (const f of arena.campfires ?? []) {
+    const dx = f.x - x;
+    const dy = f.y - y;
+    if (dx * dx + dy * dy <= CAMPFIRE_RADIUS * CAMPFIRE_RADIUS) return true;
+  }
+  return false;
+}
+
 /** ¿El punto está bajo techo? Ahí no cae ninguna bomba. */
 function underRoof(x: number, y: number, arena: ArenaMap): boolean {
   return arena.buildings.some((b) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h);
@@ -1697,6 +1727,7 @@ function stepZone(state: GameState, arena: ArenaMap, events: SimEvent[]): void {
       p.useIndex = -1;
     }
     p.reviving = -1;
+    p.lastHurtTick = state.tick;
     if (p.hp <= 0) downOrKill(state, p, -1, CAUSE_ZONE, events);
   }
 }
@@ -1799,6 +1830,7 @@ export function step(
   stepGrenades(state, arena, events);
   stepBullets(state, arena, events);
   stepZone(state, arena, events);
+  stepCampfires(state, arena);
   stepStrikes(state, arena, events);
   stepWanted(state, events);
   stepAirdrops(state, events);

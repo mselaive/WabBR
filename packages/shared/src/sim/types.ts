@@ -106,6 +106,8 @@ export interface PlayerState {
   /** Quién lo tiró y con qué: si se desangra, la kill es de ése. */
   downedBy: number;
   downedCause: number;
+  /** Último tick en que recibió daño: la fogata sólo cura al que está tranquilo. */
+  lastHurtTick: number;
   /** La kill más lejana de la partida, en px (para el premio y los récords). */
   longestKill: number;
   /** Más números para los premios de cada uno: vida curada, daño que se hizo solo, px caminados y granadas tiradas. */

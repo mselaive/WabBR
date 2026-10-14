@@ -209,6 +209,13 @@
           <button id="btnLeave" class="btn btn-ghost">Salir</button>
         </div>
         <p id="lobbyHint" class="hint"></p>
+        <div class="lobby-chat">
+          <ol id="chatLog" class="chat-log" aria-live="polite"></ol>
+          <form id="chatForm" class="chat-form">
+            <input id="chatInput" maxlength="80" placeholder="Escribile algo a la sala" autocomplete="off" />
+            <button class="btn btn-small" type="submit">Mandar</button>
+          </form>
+        </div>
         <p id="nextMatch" class="next-match" hidden></p>
       </section>
 

@@ -47,6 +47,7 @@ const ui = new UI({
   onVolume: (volume) => game.setVolume(volume),
   onSkydive: (on) => game.setSkydive(on),
   onColor: () => game.nextColor(),
+  onChat: (text) => game.chat(text),
   onLeave: () => {
     game.disconnect();
     ui.showScreen("menu");

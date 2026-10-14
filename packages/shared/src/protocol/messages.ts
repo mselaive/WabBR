@@ -93,6 +93,12 @@ export interface BetMsg {
   id: number;
 }
 
+/** Un mensaje para el chat del lobby. */
+export interface ChatMsg {
+  t: "chat";
+  text: string;
+}
+
 /** Pasar al siguiente color libre (en el lobby). */
 export interface ColorMsg {
   t: "color";
@@ -157,6 +163,7 @@ export type ClientMsg =
   | SecondChanceMsg
   | SkydiveMsg
   | ColorMsg
+  | ChatMsg
   | BetMsg
   | PartnerMsg
   | EmoteMsg
@@ -399,6 +406,13 @@ export interface EmotedMsg {
   id: number;
 }
 
+/** Un mensaje del chat del lobby, para todos. */
+export interface ChattedMsg {
+  t: "chat";
+  by: number;
+  text: string;
+}
+
 /** Alguien apostó: va a todos, que es parte de la gracia. */
 export interface BetPlacedMsg {
   t: "bet";
@@ -430,4 +444,5 @@ export type ServerMsg =
   | MarkedMsg
   | EmotedMsg
   | BetPlacedMsg
+  | ChattedMsg
   | ErrorMsg;

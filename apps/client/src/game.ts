@@ -391,6 +391,7 @@ export class Game {
 
   connect(room: string, name: string): void {
     this.disconnect();
+    this.ui.clearChat();
     this.colorPending = 0;
     this.myColor = -1;
     this.ui.showScreen("connecting");
@@ -604,6 +605,13 @@ export class Game {
         this.world.showEmote(msg.by, EMOTES[msg.id] ?? "");
         this.sound.pickup();
         return;
+
+      case "chat": {
+        const who = this.everyone.get(msg.by);
+        this.ui.addChat(who?.name ?? "Alguien", cssColor(playerColor(who?.colorIndex ?? 0)), msg.text);
+        this.sound.pickup();
+        return;
+      }
 
       case "bet": {
         const by = this.everyone.get(msg.by)?.name ?? "Alguien";
@@ -1823,6 +1831,11 @@ export class Game {
   /** Las reglas especiales. El servidor comprueba que seas el host. */
   setRules(rules: number): void {
     this.net?.send({ t: "rules", rules });
+  }
+
+  /** Un mensaje al chat del lobby. El servidor lo limpia y lo frena si son muchos. */
+  chat(text: string): void {
+    this.net?.send({ t: "chat", text });
   }
 
   /** La próxima sala que se cree es para practicar (ver onPractice). */

@@ -42,6 +42,7 @@ import {
   packResults,
   packSnapshotArrays,
   sanitizeName,
+  sanitizeChat,
   sanitizeHat,
   HAT_COUNT,
   sanitizeToken,
@@ -95,6 +96,8 @@ interface Seat {
   bet: number;
   /** Ticks seguidos sin inputs mientras vuela (ver tick()). */
   starved: number;
+  /** Cuándo mandó su último mensaje al chat del lobby. */
+  lastChatAt: number;
 }
 
 /** Cada cuánto se le da una oportunidad de correr al loop (no es el ritmo del tick). */
@@ -115,6 +118,8 @@ const EMOTE_INTERVAL_MS = 1000;
 const BOT_EMOTE_CHANCE = 0.3;
 /** Cuánto se espera después de una partida antes de arrancar la siguiente sola. */
 const NEXT_MATCH_MS = 12_000;
+/** De a un mensaje cada esto en el chat del lobby. */
+const CHAT_INTERVAL_MS = 1200;
 /** Volando, cuántos ticks sin inputs se esperan antes de seguir la caída sin él. */
 const STARVED_FLYING_TICKS = 10;
 /** Para ser el campeón de la sala (y que todos te vean): ganadas, y ventaja sobre el segundo. */
@@ -242,6 +247,7 @@ export class GameRoom extends Server<Env> {
       lastEmoteAt: 0,
       bet: -1,
       starved: 0,
+      lastChatAt: 0,
       bot: null,
     };
     this.seats.set(playerId, seat);
@@ -549,6 +555,18 @@ export class GameRoom extends Server<Env> {
 
       case "ping": {
         this.sendTo(conn, { t: "pong", c: msg.c, s: Date.now() });
+        return;
+      }
+
+      case "chat": {
+        // Fuera de partida (en el lobby y en el resultado), de a uno cada tanto.
+        if (this.state.phase === "playing" || this.state.phase === "countdown") return;
+        const now = Date.now();
+        if (now - seat.lastChatAt < CHAT_INTERVAL_MS) return;
+        const text = sanitizeChat(msg.text);
+        if (!text) return;
+        seat.lastChatAt = now;
+        this.broadcast(encodeServer({ t: "chat", by: seat.playerId, text }));
         return;
       }
 
@@ -1196,6 +1214,7 @@ export class GameRoom extends Server<Env> {
       lastEmoteAt: 0,
       bet: -1,
       starved: 0,
+      lastChatAt: 0,
       bot: { ...createBotMemory((Date.now() ^ (playerId * 7919)) | 0), skill: this.botSkill },
     });
     this.state.players.push(createPlayer(playerId));

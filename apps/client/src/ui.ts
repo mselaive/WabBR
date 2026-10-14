@@ -25,6 +25,7 @@ export interface UICallbacks {
   onSkydive: (on: boolean) => void;
   onColor: () => void;
   onPractice: (name: string) => void;
+  onChat: (text: string) => void;
 }
 
 /** La apuesta del espectador: por quién se puede apostar, o por quién apostaste. */
@@ -191,6 +192,13 @@ export class UI {
     this.btnCreate.addEventListener("click", () => {
       this.hideError();
       this.cb.onCreate(this.playerName());
+    });
+    el("chatForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const input = el("chatInput") as HTMLInputElement;
+      const text = input.value.trim();
+      if (text) this.cb.onChat(text);
+      input.value = "";
     });
     this.btnPractice.addEventListener("click", () => {
       this.hideError();
@@ -584,6 +592,22 @@ export class UI {
     const el = this.roomBest;
     el.hidden = parts.length === 0;
     el.textContent = parts.length > 0 ? `La noche · ${parts.join(" · ")}` : "";
+  }
+
+  /** Un mensaje del chat del lobby. Quedan los últimos seis. */
+  addChat(name: string, color: string, text: string): void {
+    const log = el("chatLog");
+    const li = document.createElement("li");
+    const who = document.createElement("b");
+    who.textContent = `${name}: `;
+    who.style.color = color;
+    li.append(who, document.createTextNode(text));
+    log.append(li);
+    while (log.children.length > 6) log.firstElementChild?.remove();
+  }
+
+  clearChat(): void {
+    el("chatLog").replaceChildren();
   }
 
   /** El volumen guardado, para que el control arranque donde quedó. */

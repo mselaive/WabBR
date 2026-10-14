@@ -1538,6 +1538,38 @@ body.touch #consumables .consumable.empty {
   }
 }
 
+/* El chat del lobby: los últimos mensajes y una línea para escribir. */
+.lobby-chat {
+  display: grid;
+  gap: 6px;
+}
+
+.chat-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.chat-log:empty {
+  display: none;
+}
+
+.chat-form {
+  display: flex;
+  gap: 6px;
+}
+
+.chat-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+}
+
 /* La cuenta para la próxima partida, debajo de los botones del lobby. */
 .next-match {
   margin: 0;

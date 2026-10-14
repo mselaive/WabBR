@@ -151,6 +151,11 @@ apretar nada. El que quiere esperar se desmarca y se espera como siempre; el hos
 cambiar las opciones o forzar el arranque. El que tiene la conexión cortada no queda listo (si no,
 la siguiente lo dejaría afuera sin saberlo).
 
+**Chat del lobby.** Abajo de todo, una línea para escribirle a la sala ("¿otra?"), para cuando no
+están todos en una llamada. Sólo fuera de partida, hasta 80 caracteres, de a uno cada poco más de
+un segundo; el servidor saca los caracteres invisibles (los que sirven para hacerse pasar por otro
+o mandar mensajes vacíos) y se ven los últimos seis.
+
 **Tu color.** En tu fila, el cuadradito de color es un botón: tocarlo te pasa al siguiente color
 que nadie tenga. Se recuerda en el navegador y se pide al entrar a otra sala (si está libre).
 

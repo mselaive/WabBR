@@ -56,6 +56,24 @@ export function sanitizeName(raw: unknown): string {
   return cleaned.length > 0 ? cleaned : "Jugador";
 }
 
+/** Lo más largo que puede ser un mensaje del chat del lobby. */
+export const MAX_CHAT_LENGTH = 80;
+
+/**
+ * Un mensaje del chat del lobby: sin caracteres invisibles (los que se usan
+ * para hacerse pasar por otro o para mensajes "vacíos"), sin espacios de más
+ * y cortado. Vacío, null: no se manda.
+ */
+export function sanitizeChat(raw: unknown): string | null {
+  const s = typeof raw === "string" ? raw : "";
+  let cleaned = "";
+  for (const ch of s) {
+    if (!isInvisible(ch.codePointAt(0) ?? 0)) cleaned += ch;
+  }
+  cleaned = cleaned.replace(/\s+/g, " ").trim().slice(0, MAX_CHAT_LENGTH);
+  return cleaned.length > 0 ? cleaned : null;
+}
+
 /**
  * El token con el que una pestaña vuelve a su asiento si se le corta la
  * conexión. Lo genera el cliente; acá sólo se acepta algo con forma razonable.

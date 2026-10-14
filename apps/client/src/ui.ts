@@ -206,6 +206,12 @@ export class UI {
       const text = input.value.trim();
       if (text) this.cb.onChat(text);
       input.value = "";
+      // Mandado, el teclado vuelve a ser de la cámara (si no, las flechas y
+      // Espacio quedaban escribiendo).
+      input.blur();
+    });
+    el("deadChatInput").addEventListener("keydown", (e) => {
+      if (e.key === "Escape") (e.target as HTMLInputElement).blur();
     });
     this.btnPractice.addEventListener("click", () => {
       this.hideError();

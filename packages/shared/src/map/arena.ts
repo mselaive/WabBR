@@ -1091,11 +1091,21 @@ export function spawnBeside(
   /** Lugares ya ocupados (los otros del equipo): no se aparece encima. */
   taken: readonly { x: number; y: number }[] = [],
 ): { x: number; y: number } {
-  for (let k = 0; k < 8; k++) {
+  // Al lado (44 px) y, si está todo ocupado o tapado, un poco más afuera:
+  // encima del otro, sólo si no queda nada.
+  for (let k = 0; k < 16; k++) {
     // Empezando por `from`: así el tercero de un trío no cae encima del segundo.
     const angle = (((from + k) % 8) / 8) * Math.PI * 2;
-    const x = at.x + Math.cos(angle) * 44;
-    const y = at.y + Math.sin(angle) * 44;
+    const r = k < 8 ? 44 : 80;
+    const x = at.x + Math.cos(angle) * r;
+    const y = at.y + Math.sin(angle) * r;
+    if (spawnClear(x, y, arena) && !taken.some((t) => Math.hypot(t.x - x, t.y - y) < 30)) return { x, y };
+  }
+  // Pegado al muro y con todo tapado: hacia el centro, de a 30 px.
+  const toCenter = Math.atan2(WORLD_CENTER_Y - at.y, WORLD_CENTER_X - at.x);
+  for (let d = 30; d <= 300; d += 30) {
+    const x = at.x + Math.cos(toCenter) * d;
+    const y = at.y + Math.sin(toCenter) * d;
     if (spawnClear(x, y, arena) && !taken.some((t) => Math.hypot(t.x - x, t.y - y) < 30)) return { x, y };
   }
   return { ...at };

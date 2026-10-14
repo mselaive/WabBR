@@ -110,12 +110,13 @@ describe("dúos", () => {
     expect([...sizes.values()].sort()).toEqual([2, 2]);
   });
 
-  it("tríos: en ningún mapa ni semilla aparecen dos del equipo uno encima del otro", () => {
-    for (const seed of [1, 7, 42, 99, 1234, 4242]) {
+  it("tríos: en ninguna de cien semillas aparecen dos del equipo uno encima del otro", () => {
+    const arena = generateArena();
+    for (let seed = 1; seed <= 100; seed++) {
       const state = createGameState(3);
       state.teamSize = 3;
       for (let i = 1; i <= 12; i++) state.players.push(createPlayer(i));
-      startMatch(state, seed, generateArena());
+      startMatch(state, seed, arena);
       for (const a of state.players) {
         for (const b of state.players) {
           if (a.id < b.id && a.team === b.team) expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThan(20);

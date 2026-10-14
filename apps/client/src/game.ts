@@ -564,6 +564,8 @@ export class Game {
 
       case "start":
         // Arranca la ronda: el predictor se re-sincroniza con el primer snapshot.
+        // Un campo de texto del lobby con foco se tragaría las teclas del juego.
+        if (document.activeElement instanceof HTMLInputElement) document.activeElement.blur();
         this.sawStart = true;
         this.recorded = false;
         this.respawnAt = 0;
@@ -1145,7 +1147,11 @@ export class Game {
             // inputs de antes de morir (ver onSnapshot).
             this.spawned = false;
             // En dúos se sigue mirando al compañero, que sigue jugando por los dos.
-            const mate = [...this.mates()].find((id) => this.standings.get(id)?.alive);
+            // El compañero en pie antes que uno caído: con sus ojos te manda las
+            // cosas el servidor (eyesOf).
+            const latest = this.snapshots.latest?.players;
+            const mates = [...this.mates()].filter((id) => this.standings.get(id)?.alive);
+            const mate = mates.find((id) => !latest?.get(id)?.downed) ?? mates[0];
             this.spectateId = mate ?? ev.byId;
             this.sound.death();
           } else if (ev.byId === this.localId) {
@@ -1170,8 +1176,12 @@ export class Game {
       this.sound.heartbeat();
     }
 
-    // El chat de los muertos: muerto de verdad (sin segunda oportunidad por delante).
-    this.ui.setDeadChat(this.phase === "playing" && this.lastLocal !== null && !this.lastLocal.alive && this.respawnAt === 0);
+    // El chat de los muertos: muerto de verdad (sin segunda oportunidad por
+    // delante) y sin compañero en pie, como lo deja el servidor.
+    const mateAlive = [...this.mates()].some((id) => this.standings.get(id)?.alive);
+    this.ui.setDeadChat(
+      this.phase === "playing" && this.lastLocal !== null && !this.lastLocal.alive && this.respawnAt === 0 && !mateAlive,
+    );
 
     // La cuenta para la próxima partida, en el lobby.
     const left = this.nextMatchAt - performance.now();
@@ -1517,6 +1527,19 @@ export class Game {
         bet: this.betChoice(),
       });
       return;
+    }
+
+    // Si el compañero que mirás cae y hay otro en pie, se pasa a ese: el
+    // servidor te manda lo que ve el que está en pie (eyesOf), y mirando al
+    // caído aparecerían balas de rivales invisibles.
+    const current = alive[index];
+    const mateSet = this.mates();
+    if (current && mateSet.has(current.id) && current.downed) {
+      const standing = alive.findIndex((p) => mateSet.has(p.id) && !p.downed);
+      if (standing >= 0) {
+        index = standing;
+        this.spectateId = alive[index]!.id;
+      }
     }
 
     const target = alive[index] ?? null;

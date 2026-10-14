@@ -573,7 +573,11 @@ export class GameRoom extends Server<Env> {
           this.broadcast(out);
           return;
         }
-        const dead = (p: PlayerState | undefined): boolean => p !== undefined && !p.alive && p.respawnTick < 0;
+        // Muerto de verdad y sin compañero vivo: el que todavía tiene uno ve con
+        // sus ojos, y si leyera a otro muerto que ve todo el mapa se lo podría
+        // marcar al compañero.
+        const dead = (p: PlayerState | undefined): boolean =>
+          p !== undefined && !p.alive && p.respawnTick < 0 && this.seesAll(this.eyesOf(p));
         if (!dead(findPlayer(this.state, seat.playerId))) return;
         seat.lastChatAt = now;
         for (const c of this.getConnections<ConnState>()) {

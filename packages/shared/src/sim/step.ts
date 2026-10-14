@@ -17,6 +17,8 @@ import {
   REVIVE_RANGE,
   REVIVE_TICKS,
   RESPAWN_TICKS,
+  ZIP_RADIUS,
+  ZIP_SPEED,
   AIR_DIVE_TICKS,
   AIR_RESPAWN_TICKS,
   AIR_TICKS,
@@ -201,6 +203,7 @@ export function createPlayer(id: number, x = 0, y = 0): PlayerState {
     diedAtTick: -1,
     radarTicks: 0,
     airTicks: 0,
+    zip: false,
     backpack: false,
     respawnTick: -1,
     usedSecondChance: false,
@@ -463,6 +466,7 @@ function equipFresh(state: GameState, p: PlayerState): void {
   p.jumpTicks = 0;
   p.jumpVx = 0;
   p.jumpVy = 0;
+  p.zip = false;
   p.lastHurtTick = -1000;
   p.reviving = -1;
   p.reviveTicks = 0;
@@ -848,7 +852,10 @@ export function stepPlayerMovement(p: PlayerState, input: PlayerInput, arena: Ar
     clampToArena(p.x, p.y, PLAYER_RADIUS, scratch);
     p.x = scratch.x;
     p.y = scratch.y;
-    if (p.jumpTicks === 0) land(p, arena);
+    if (p.jumpTicks === 0) {
+      land(p, arena);
+      p.zip = false;
+    }
     p.aim = input.aim;
     p.lastSeq = input.seq;
     return;
@@ -862,9 +869,22 @@ export function stepPlayerMovement(p: PlayerState, input: PlayerInput, arena: Ar
     p.jumpTicks = JUMP_TICKS;
     p.jumpVx = dx * JUMP_SPEED;
     p.jumpVy = dy * JUMP_SPEED;
+    p.zip = false;
     // Cortar la curación: volando no se venda nadie.
     p.useCd = 0;
     p.useIndex = -1;
+  } else if (!p.downed && len2 > 0) {
+    // En un poste de tirolesa, caminando hacia el cable: te lleva al otro poste.
+    const inv = 1 / Math.sqrt(len2);
+    const ride = zipRide(arena, p.x, p.y, mx * inv, my * inv);
+    if (ride) {
+      p.jumpTicks = ride.ticks;
+      p.jumpVx = ride.vx;
+      p.jumpVy = ride.vy;
+      p.zip = true;
+      p.useCd = 0;
+      p.useIndex = -1;
+    }
   }
 
   // La adrenalina y el sprint son lo único que cambia la velocidad, y por eso
@@ -991,6 +1011,35 @@ function overlapsObstacle(x: number, y: number, arena: ArenaMap): boolean {
     if (circleHitsBox(x, y, PLAYER_RADIUS, arena.obstacles[nearby[i]!]!)) return true;
   }
   return false;
+}
+
+/**
+ * Si (x, y) está en un poste de tirolesa y la dirección (dx, dy) va hacia el
+ * cable (a menos de ~45°), el viaje: ticks y velocidad hasta el otro poste.
+ * Al llegar al otro, seguir caminando para el mismo lado no te devuelve: hay
+ * que darse vuelta.
+ */
+export function zipRide(
+  arena: ArenaMap,
+  x: number,
+  y: number,
+  dx: number,
+  dy: number,
+): { ticks: number; vx: number; vy: number } | null {
+  for (const z of arena.ziplines ?? []) {
+    for (const [fx, fy, tx, ty] of [
+      [z.ax, z.ay, z.bx, z.by],
+      [z.bx, z.by, z.ax, z.ay],
+    ] as const) {
+      if ((x - fx) * (x - fx) + (y - fy) * (y - fy) > ZIP_RADIUS * ZIP_RADIUS) continue;
+      const len = Math.hypot(tx - fx, ty - fy) || 1;
+      const ux = (tx - fx) / len;
+      const uy = (ty - fy) / len;
+      if (ux * dx + uy * dy < 0.7) continue;
+      return { ticks: Math.max(1, Math.round(len / (ZIP_SPEED * DT))), vx: ux * ZIP_SPEED, vy: uy * ZIP_SPEED };
+    }
+  }
+  return null;
 }
 
 /** ¿Está parado sobre un hongo saltarín? */

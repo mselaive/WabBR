@@ -192,6 +192,13 @@ export class Sound {
     this.tone(out, { freq: 1200, endFreq: 800, decay: caught ? 0.4 : 0.09, gain: 0.8, type: "square", delay: 0.08 });
   }
 
+  /** Una tirolesa: el roce de la polea por el cable, que sube y se aleja. */
+  zip(): void {
+    const out = this.voice(undefined, 0.35);
+    if (!out) return;
+    this.noiseBurst(out, { type: "bandpass", freq: 1800, endFreq: 3200, decay: 1.1, gain: 0.7 });
+  }
+
   /** Un hongo saltarín: un "boing" que sube. */
   jump(): void {
     const out = this.voice(undefined, 0.4);

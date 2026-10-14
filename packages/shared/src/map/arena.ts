@@ -136,6 +136,15 @@ export interface ArenaMap {
   campfires?: { x: number; y: number }[];
   /** Hongos saltarines: pisarlos te lanza (ver JUMP_*). */
   jumpPads?: { x: number; y: number }[];
+  /** Tirolesas: un cable entre dos postes (ver ZIP_*). */
+  ziplines?: Zipline[];
+}
+
+export interface Zipline {
+  ax: number;
+  ay: number;
+  bx: number;
+  by: number;
 }
 
 /** Los colliders de árboles/rocas son más chicos que el sprite: se camina "por debajo" de la copa. */
@@ -872,7 +881,60 @@ export function generateArena(seed = ARENA_SEED): ArenaMap {
 
   const campfires = placeCampfires(seed, districts, buildings, obstacles);
   const jumpPads = placeJumpPads(seed, buildings, obstacles, campfires);
-  return { obstacles, decor, buildings, paths, ponds, districts, grid: new ObstacleGrid(obstacles), campfires, jumpPads };
+  const ziplines = placeZiplines(seed, buildings, obstacles, [...campfires, ...jumpPads]);
+  return {
+    obstacles,
+    decor,
+    buildings,
+    paths,
+    ponds,
+    districts,
+    grid: new ObstacleGrid(obstacles),
+    campfires,
+    jumpPads,
+    ziplines,
+  };
+}
+
+/** Cuántas tirolesas hay en el mapa. */
+const ZIPLINES = 6;
+
+/**
+ * Las tirolesas: dos postes al aire libre, a 450-750 px, con lugar alrededor de
+ * cada uno y lejos de fogatas y hongos. Al final y con su propio azar, como
+ * los hongos: no mueven nada de lo que ya estaba.
+ */
+function placeZiplines(
+  seed: number,
+  buildings: readonly Building[],
+  obstacles: readonly Obstacle[],
+  avoid: readonly { x: number; y: number }[],
+): Zipline[] {
+  const rnd = makeRng(seed ^ 0x219e);
+  const clear = (x: number, y: number): boolean =>
+    Math.hypot(x - WORLD_CENTER_X, y - WORLD_CENTER_Y) < WORLD_RADIUS * 0.85 &&
+    !buildings.some((b) => x > b.x - 50 && x < b.x + b.w + 50 && y > b.y - 50 && y < b.y + b.h + 50) &&
+    !obstacles.some((o) => x > o.x - 45 && x < o.x + o.w + 45 && y > o.y - 45 && y < o.y + o.h + 45) &&
+    !avoid.some((f) => Math.hypot(f.x - x, f.y - y) < 120);
+  const lines: Zipline[] = [];
+  for (let i = 0; i < ZIPLINES; i++) {
+    for (let attempt = 0; attempt < 300; attempt++) {
+      // Un sector del mapa para cada una, así quedan repartidas.
+      const a = ((i + rnd()) / ZIPLINES) * Math.PI * 2;
+      const r = WORLD_RADIUS * (0.25 + rnd() * 0.55);
+      const ax = WORLD_CENTER_X + Math.cos(a) * r;
+      const ay = WORLD_CENTER_Y + Math.sin(a) * r;
+      const dir = rnd() * Math.PI * 2;
+      const len = 450 + rnd() * 300;
+      const bx = ax + Math.cos(dir) * len;
+      const by = ay + Math.sin(dir) * len;
+      if (!clear(ax, ay) || !clear(bx, by)) continue;
+      if (lines.some((l) => Math.hypot(l.ax - ax, l.ay - ay) < 200 || Math.hypot(l.bx - bx, l.by - by) < 200)) continue;
+      lines.push({ ax, ay, bx, by });
+      break;
+    }
+  }
+  return lines;
 }
 
 /** Cuántos hongos saltarines hay en el mapa. */

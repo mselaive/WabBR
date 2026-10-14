@@ -105,4 +105,39 @@ describe("salto predicho", () => {
     expect(server.x).toBeGreaterThan(wall.x + wall.w);
     expect(maxCorrection).toBeLessThan(0.5);
   });
+
+  it("en tirolesa, con 150 ms de ping, viaja y llega donde el servidor", () => {
+    const zipMap: ArenaMap = { ...map, jumpPads: [], ziplines: [{ ax: pad.x - 300, ay: pad.y + 120, bx: pad.x + 300, by: pad.y + 120 }] };
+    const latency = 3;
+    const server = createPlayer(1, pad.x - 340, pad.y + 120);
+    server.alive = true;
+    const client = new Predictor(1);
+    client.reset(server.x, server.y);
+
+    const toServer: { at: number; input: PlayerInput }[] = [];
+    const toClient: { at: number; snap: UnpackedPlayer }[] = [];
+    let sent = 0;
+    let received = 0;
+    let maxCorrection = 0;
+    for (let t = 0; t < 60; t++) {
+      const input: PlayerInput = { ...emptyInput(t + 1), moveX: 1 };
+      client.apply(input, zipMap);
+      toServer.push({ at: t + latency, input });
+      while (sent < toServer.length && toServer[sent]!.at <= t) {
+        stepPlayerMovement(server, toServer[sent]!.input, zipMap);
+        toClient.push({ at: t + latency, snap: unpackPlayer(packPlayer(server, true)) });
+        sent++;
+      }
+      while (received < toClient.length && toClient[received]!.at <= t) {
+        const before = { x: client.state.x, y: client.state.y };
+        client.reconcile(toClient[received]!.snap, zipMap);
+        received++;
+        maxCorrection = Math.max(maxCorrection, Math.hypot(before.x - client.state.x, before.y - client.state.y));
+      }
+    }
+    // Pasó por la tirolesa sin que la predicción corrija. Caminando, en 60 ticks
+    // llegaría a unos pad.x + 300; con los 600 px de cable, mucho más lejos.
+    expect(server.x).toBeGreaterThan(pad.x + 550);
+    expect(maxCorrection).toBeLessThan(0.5);
+  });
 });

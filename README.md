@@ -391,6 +391,19 @@ no puedan discrepar. Las acciones (recoger, cambiar de arma, curarse) viajan en
 el campo `act` del mensaje de input que ya se manda 20 veces por segundo: no
 agregan ni un mensaje nuevo, que es lo que importa para la factura de Cloudflare.
 
+## Tirolesas
+
+Seis por mapa: un cable entre dos postes de madera, de 450 a 750 px, con lugar alrededor de cada
+poste. Parado en un poste y **caminando hacia el cable**, te lleva al otro a 520 px/s por encima de
+lo que haya, y **se puede disparar** mientras tanto (como en Fortnite). Al llegar, seguir para el
+mismo lado no te devuelve: hay que darse vuelta. En el minimapa son una línea fina.
+
+Por dentro es el vuelo de los hongos (`jumpTicks` y su velocidad), con una bandera que dice que
+es una tirolesa: se dibuja colgado y no saltando, y suena la polea en vez del "boing". Se colocan
+al final del generador con su propio azar, así el resto del mapa no se movió. Cada tirolesa de
+cada mapa está probada de ida y de vuelta (llega a un lugar libre, cerca del otro poste), y la
+predicción del cliente viaja igual que el servidor con 150 ms de ping.
+
 ## Paracaídas
 
 La marca de los battle royale. Con la opción prendida (lo está de entrada; el host la puede

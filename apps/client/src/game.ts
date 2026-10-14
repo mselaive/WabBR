@@ -306,6 +306,9 @@ export class Game {
         gallina: () => this.snapshots.latest?.chicken ?? null,
         // Ticks de paracaídas que le quedan (predichos y del servidor).
         aire: () => ({ pred: this.predictor?.state.airTicks ?? -1, srv: this.snapshots.latest?.players.get(this.localId)?.airTicks ?? -1 }),
+        // Las tirolesas del mapa, para ir a probarlas.
+        tirolesas: () => this.arena.ziplines ?? [],
+        enTirolesa: () => this.predictor?.state.zip ?? false,
         // Un relámpago de mentira, para ver el destello.
         rayo: () => this.handleEvents([{ t: "lightning" }]),
         // Un tiro oído de mentira (detrás de una pared), para ver la marca.
@@ -1184,7 +1187,14 @@ export class Game {
       this.roster,
       this.localId,
       localPredicted
-        ? { ...localPredicted, aim, hidden, jump: this.predictor?.state.jumpTicks ?? 0, air: this.predictor?.state.airTicks ?? 0 }
+        ? {
+            ...localPredicted,
+            aim,
+            hidden,
+            jump: this.predictor?.state.jumpTicks ?? 0,
+            air: this.predictor?.state.airTicks ?? 0,
+            zip: this.predictor?.state.zip ?? false,
+          }
         : null,
       dt,
       mates,
@@ -1242,7 +1252,10 @@ export class Game {
     if (shot) this.onLocalShot(shot);
     // Pisó un hongo: el "boing" sale con el salto predicho, no un ping después.
     const jumping = this.predictor.state.jumpTicks > 0;
-    if (jumping && !this.wasJumping) this.sound.jump();
+    if (jumping && !this.wasJumping) {
+      if (this.predictor.state.zip) this.sound.zip();
+      else this.sound.jump();
+    }
     this.wasJumping = jumping;
     const thrown = this.predictor.takeThrow();
     if (thrown) this.grenades.throw(thrown.seq, thrown.kind, thrown.launch);

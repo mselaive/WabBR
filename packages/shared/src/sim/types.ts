@@ -146,6 +146,8 @@ export interface PlayerState {
    * planea sin chocar, no puede hacer otra cosa y nadie le puede pegar.
    */
   airTicks: number;
+  /** El vuelo de ahora (jumpTicks) es por una tirolesa, no por un hongo. */
+  zip: boolean;
   /** Lleva mochila: carga más curaciones y granadas (ver carryLimit). */
   backpack: boolean;
   /** Minas que lleva. */

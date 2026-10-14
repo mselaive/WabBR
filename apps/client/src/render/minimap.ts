@@ -262,6 +262,16 @@ export class Minimap {
     }
 
     // Hongos saltarines: un puntito rojo con borde blanco.
+    // Tirolesas: una línea fina entre los dos postes.
+    ctx.strokeStyle = "#e8dcc0aa";
+    ctx.lineWidth = 1;
+    for (const z of this.arena.ziplines ?? []) {
+      ctx.beginPath();
+      ctx.moveTo(this.tx(z.ax), this.ty(z.ay));
+      ctx.lineTo(this.tx(z.bx), this.ty(z.by));
+      ctx.stroke();
+    }
+
     for (const pad of this.arena.jumpPads ?? []) {
       ctx.fillStyle = "#d9483b";
       ctx.strokeStyle = "#ffffffaa";

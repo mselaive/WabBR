@@ -84,6 +84,27 @@ describe("los mapas de \"Nuevo cada partida\"", () => {
       const reached = crates.filter((c) => findPath(grid, WORLD_CENTER_X, WORLD_CENTER_Y, c.x + c.w / 2, c.y + c.h / 2));
       expect(reached.length / crates.length).toBeGreaterThanOrEqual(0.95);
 
+      // Cada tirolesa, de ida y de vuelta: se llega a un lugar libre.
+      expect(map.ziplines).toHaveLength(6);
+      for (const z of map.ziplines!) {
+        for (const [fx, fy, tx, ty] of [
+          [z.ax, z.ay, z.bx, z.by],
+          [z.bx, z.by, z.ax, z.ay],
+        ] as const) {
+          const p = createPlayer(1, fx, fy);
+          const len = Math.hypot(tx - fx, ty - fy);
+          const mx = Math.abs(tx - fx) > len * 0.38 ? Math.sign(tx - fx) : 0;
+          const my = Math.abs(ty - fy) > len * 0.38 ? Math.sign(ty - fy) : 0;
+          let t = 1;
+          // Ocho direcciones de teclado: alguna entra en el cono del cable.
+          stepPlayerMovement(p, { ...emptyInput(t++), moveX: mx, moveY: my }, map);
+          expect(p.zip, `tirolesa en ${Math.round(fx)},${Math.round(fy)}`).toBe(true);
+          while (p.jumpTicks > 0) stepPlayerMovement(p, emptyInput(t++), map);
+          expect(map.obstacles.some((o) => circleHitsBox(p.x, p.y, PLAYER_RADIUS - 1, o))).toBe(false);
+          expect(Math.hypot(p.x - tx, p.y - ty)).toBeLessThan(60);
+        }
+      }
+
       // Cada hongo, en 32 direcciones: nunca se cae adentro de algo.
       for (const pad of map.jumpPads!) {
         for (let k = 0; k < 32; k++) {

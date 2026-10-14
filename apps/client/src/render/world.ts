@@ -266,6 +266,7 @@ export class WorldView {
     this.buildObstacles();
     this.buildCampfires();
     this.buildJumpPads();
+    this.buildZiplines();
     this.buildDecor();
     this.drawCrosshair();
   }
@@ -591,6 +592,41 @@ export class WorldView {
   }
 
   /** Los hongos saltarines: un sprite cada uno, en la capa ordenada por Y. */
+  /**
+   * Las tirolesas: un poste de madera en cada punta y el cable entre los dos,
+   * en la capa del cielo (pasa por encima de todo, también de los que cuelgan).
+   */
+  private buildZiplines(): void {
+    const cable = new Graphics();
+    for (const z of this.arena.ziplines ?? []) {
+      // El cable cuelga un poco: una curva con el punto medio más abajo.
+      const mx = (z.ax + z.bx) / 2;
+      const my = (z.ay + z.by) / 2 + 14;
+      cable.moveTo(z.ax, z.ay - 34).quadraticCurveTo(mx, my - 34, z.bx, z.by - 34);
+      for (const [x, y] of [
+        [z.ax, z.ay],
+        [z.bx, z.by],
+      ] as const) {
+        const pole = new Graphics()
+          .ellipse(0, 2, 12, 5)
+          .fill({ color: 0x000000, alpha: 0.25 })
+          .rect(-3, -36, 6, 38)
+          .fill(0x6b4423)
+          .rect(-3, -36, 2, 38)
+          .fill(0x8a5a30)
+          .rect(-9, -38, 18, 4)
+          .fill(0x4e351a)
+          .circle(0, -34, 3)
+          .fill(0x9aa3ad);
+        pole.position.set(x, y);
+        pole.zIndex = y;
+        this.entityLayer.addChild(pole);
+      }
+    }
+    cable.stroke({ width: 2, color: 0x2a2420, alpha: 0.9 });
+    this.skyLayer.addChild(cable);
+  }
+
   private buildJumpPads(): void {
     for (const pad of this.arena.jumpPads ?? []) {
       const s = new Sprite(this.tex.jumpPad);
@@ -1178,7 +1214,7 @@ export class WorldView {
     frame: InterpolatedFrame,
     roster: Map<number, PlayerMeta>,
     localId: number,
-    localOverride: { x: number; y: number; aim: number; hidden: boolean; jump?: number; air?: number } | null,
+    localOverride: { x: number; y: number; aim: number; hidden: boolean; jump?: number; air?: number; zip?: boolean } | null,
     dt: number,
     /** Compañeros en dúos: su nombre va en verde. */
     mates: ReadonlySet<number> = new Set(),
@@ -1207,7 +1243,9 @@ export class WorldView {
       view.root.zIndex = y;
       // Volando de un hongo: más grande en el medio del salto, como si subiera.
       const jump = isLocal && localOverride ? (localOverride.jump ?? 0) : p.jumpTicks;
-      view.root.scale.set(jump > 0 ? 1 + 0.45 * Math.sin(Math.PI * (1 - jump / JUMP_TICKS)) : 1);
+      const zip = isLocal && localOverride ? (localOverride.zip ?? false) : p.zip;
+      // Saltando de un hongo, se agranda (sube); en tirolesa no: va colgado del cable.
+      view.root.scale.set(jump > 0 && !zip ? 1 + 0.45 * Math.sin(Math.PI * (1 - jump / JUMP_TICKS)) : 1);
       if (jump > 0) view.root.zIndex = y + 1000;
       // En paracaídas: grande (está más cerca de la cámara), con la tela arriba
       // y por encima de todo; los últimos ticks se achica hasta el piso.

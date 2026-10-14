@@ -172,6 +172,13 @@ export const GLIDE_SPEED = 360;
 export const AIR_DIVE_TICKS = 10;
 export const AIR_RESPAWN_TICKS = 50;
 
+/**
+ * Las tirolesas: parado en un poste (a menos de ZIP_RADIUS) y caminando hacia
+ * el cable, te lleva al otro poste a ZIP_SPEED, por encima de todo.
+ */
+export const ZIP_RADIUS = 20;
+export const ZIP_SPEED = 520;
+
 /** Cuánto se espera para volver con la segunda oportunidad: 8 s. */
 export const RESPAWN_TICKS = 160;
 

@@ -178,6 +178,7 @@ export class Predictor {
     s.mines = server.mines;
     // El salto de un hongo, igual que la estamina: cambia cómo se mueve.
     s.jumpTicks = server.jumpTicks;
+    s.zip = server.zip;
     s.airTicks = server.airTicks;
     s.jumpVx = server.jumpVx;
     s.jumpVy = server.jumpVy;

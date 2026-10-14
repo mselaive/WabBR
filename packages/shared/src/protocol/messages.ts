@@ -280,6 +280,8 @@ export const FLAG_CONNECTED = 4;
 export const FLAG_DOWNED = 8;
 /** Lleva mochila: se dibuja, así que la ven todos. */
 export const FLAG_BACKPACK = 16;
+/** El vuelo de ahora es por una tirolesa (se dibuja colgado, no saltando). */
+export const FLAG_ZIP = 32;
 
 export interface WelcomeMsg {
   t: "welcome";

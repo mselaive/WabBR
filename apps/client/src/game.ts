@@ -291,6 +291,8 @@ export class Game {
         cortar: () => this.net?.simulateDrop(),
         paquetes: () => [...(this.snapshots.latest?.airdrops.values() ?? [])],
         gallina: () => this.snapshots.latest?.chicken ?? null,
+        // Un tiro oído de mentira (detrás de una pared), para ver la marca.
+        oir: (x: number, y: number) => this.handleEvents([{ t: "heard", x, y, weapon: 2 }]),
         // Una pasada de radar de mentira, para ver cómo se dibuja.
         radar: (pings: [number, number][]) => {
           this.radarPings = pings.map(([x, y]) => ({ x, y, at: performance.now() }));

@@ -197,6 +197,11 @@ export class WorldView {
   private readonly damageArcs: { dir: number; life: number }[] = [];
   /** Tiros oídos detrás de paredes, en radianes. */
   private readonly soundArcs: { dir: number; life: number }[] = [];
+  /**
+   * Dónde está el jugador en la pantalla: las marcas de daño y de tiros oídos
+   * se dibujan alrededor suyo. No es el centro: la cámara se adelanta hacia la mira.
+   */
+  private arcCenter: { x: number; y: number } | null = null;
   private readonly markerLayer = new Graphics();
   /** Marcas de la pareja, en pantalla: un rombo encima del lugar o una flecha en el borde. */
   private readonly markLayer = new Graphics();
@@ -930,8 +935,8 @@ export class WorldView {
 
     // Flechas de dirección del daño, en un anillo alrededor del centro.
     this.arcLayer.clear();
-    const cx = this.app.screen.width / 2;
-    const cy = this.app.screen.height / 2;
+    const cx = this.arcCenter?.x ?? this.app.screen.width / 2;
+    const cy = this.arcCenter?.y ?? this.app.screen.height / 2;
     for (let i = this.damageArcs.length - 1; i >= 0; i--) {
       const arc = this.damageArcs[i]!;
       arc.life -= dt;
@@ -1216,6 +1221,7 @@ export class WorldView {
 
     this.updateBullets(frame);
     this.updateGrenades(frame);
+    this.arcCenter = localOverride ? this.worldToScreen(localOverride.x, localOverride.y) : null;
     this.updateSmokes(frame, localOverride);
     this.updateAirdrops(frame);
     this.updateStrikes(frame);

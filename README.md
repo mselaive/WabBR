@@ -478,7 +478,9 @@ también la levantan (y se arma lío).
 Seis por mapa: un cable entre dos postes de madera, de 450 a 750 px, con lugar alrededor de cada
 poste. Parado en un poste y **caminando hacia el cable**, te lleva al otro a 520 px/s por encima de
 lo que haya, y **se puede disparar** mientras tanto (como en Fortnite). Al llegar, seguir para el
-mismo lado no te devuelve: hay que darse vuelta. En el minimapa son una línea fina.
+mismo lado no te devuelve: hay que darse vuelta. En el minimapa son una línea fina. Los bots no
+las usan: no saben adónde llevan, y subirse sin querer los hacía ir y venir entre los dos postes;
+si el paso que van a dar los subiría a un cable, dan el más parecido que no.
 
 Por dentro es el vuelo de los hongos (`jumpTicks` y su velocidad), con una bandera que dice que
 es una tirolesa: se dibuja colgado y no saltando, y suena la polea en vez del "boing". Se colocan

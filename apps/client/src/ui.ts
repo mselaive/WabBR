@@ -34,6 +34,8 @@ export interface ResultRow {
   shots: number;
   /** Segundos que aguantó vivo. */
   survived: number;
+  /** La kill más lejana, en metros. */
+  longestKill: number;
 }
 
 /** Un premio del resultado: "más daño", "mejor puntería"... */
@@ -132,6 +134,8 @@ export class UI {
 
   private readonly resultTitle = el("resultTitle");
   private readonly resultSubtitle = el("resultSubtitle");
+  private readonly resultRecords = el("resultRecords");
+  private readonly myStats = el("myStats");
   private readonly podium = el("podium");
   private readonly awards = el("awards");
   private readonly standings = el("standings");
@@ -228,6 +232,12 @@ export class UI {
   }
 
   // ------------------------------------------------------------ pantallas
+
+  /** Tus números de siempre, abajo del nombre del juego. Vacío lo esconde. */
+  setMyStats(line: string): void {
+    this.myStats.hidden = line === "";
+    this.myStats.textContent = line;
+  }
 
   showScreen(name: ScreenName): void {
     for (const [key, node] of Object.entries(this.screens)) {
@@ -684,9 +694,11 @@ export class UI {
    * Pantalla final: un podio con los tres primeros y abajo la tabla completa.
    * `rows` viene ordenada por puesto y, dentro del mismo puesto, por kills.
    */
-  showResult(title: string, subtitle: string, rows: ResultRow[], awards: Award[]): void {
+  showResult(title: string, subtitle: string, rows: ResultRow[], awards: Award[], records: string[] = []): void {
     this.resultTitle.textContent = title;
     this.resultSubtitle.textContent = subtitle;
+    this.resultRecords.hidden = records.length === 0;
+    this.resultRecords.textContent = records.length > 0 ? `¡Récord personal! ${records.join(" · ")}` : "";
 
     // Segundo, primero, tercero: el ganador en el medio y más alto.
     const top = rows.slice(0, 3);

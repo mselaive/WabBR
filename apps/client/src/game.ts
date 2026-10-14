@@ -56,6 +56,7 @@ import { LocalShots } from "./net/shots.js";
 import { LocalGrenades } from "./net/grenades.js";
 import { InputController, type SpectateIntent } from "./input.js";
 import { TouchControls } from "./touch.js";
+import { PX_PER_METER, addMatch, recordsLine } from "./records.js";
 import { WorldView } from "./render/world.js";
 import { Minimap, type Mark } from "./render/minimap.js";
 import { causeIconUrl } from "./render/textures.js";
@@ -124,6 +125,8 @@ export class Game {
   private standings = new Map<number, { kills: number; alive: boolean; place: number; team: number }>();
   /** Modo de la sala: 1 todos contra todos, 2 dúos. */
   private teamSize = 1;
+  /** Si los récords de esta partida ya se sumaron. */
+  private recorded = false;
   /** Cómo te mataron, para mostrarlo mientras mirás el resto de la partida. */
   private deathNote = "";
   /** El más buscado y dónde se lo vio por última vez, o null. */
@@ -555,6 +558,7 @@ export class Game {
       this.spawned = false;
       this.spectateId = -1;
       this.deathNote = "";
+      this.recorded = false;
       this.freeCam = null;
       this.watched = null;
     this.freeCam = null;
@@ -584,6 +588,7 @@ export class Game {
         accuracy: shotAccuracy(results.get(id)),
         shots: results.get(id)?.shotsFired ?? 0,
         survived: (results.get(id)?.survivedTicks ?? 0) / TICK_RATE,
+        longestKill: Math.round((results.get(id)?.longestKill ?? 0) / PX_PER_METER),
       });
     }
     rows.sort((a, b) => a.place - b.place || b.kills - a.kills);
@@ -613,7 +618,14 @@ export class Game {
         : winners.length === 1
           ? `${winners[0]} quedó último en pie.`
           : `Ganaron ${winners.join(" y ")}.`;
-    this.ui.showResult(title, subtitle, rows, awardsFor(rows));
+    // Los récords se cuentan una vez por partida, aunque el resultado se muestre de nuevo.
+    let records: string[] = [];
+    if (mine && !this.recorded) {
+      this.recorded = true;
+      records = addMatch({ won: mine.place === 1 && msg.winner >= 0, kills: mine.kills, damage: mine.damage, longestKill: mine.longestKill });
+      this.ui.setMyStats(recordsLine());
+    }
+    this.ui.showResult(title, subtitle, rows, awardsFor(rows), records);
   }
 
   private handleEvents(events: SimEvent[]): void {
@@ -1431,6 +1443,10 @@ function awardsFor(rows: ResultRow[]): Award[] {
   );
   if (aim) {
     awards.push({ label: "MEJOR PUNTERÍA", name: aim.name, colorIndex: aim.colorIndex, value: `${Math.round((aim.accuracy ?? 0) * 100)}%` });
+  }
+  const far = best(rows, (r) => r.longestKill);
+  if (far && far.longestKill > 0) {
+    awards.push({ label: "TIRO MÁS LARGO", name: far.name, colorIndex: far.colorIndex, value: `${far.longestKill} m` });
   }
   return awards;
 }

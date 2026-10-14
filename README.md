@@ -420,6 +420,15 @@ impacto dice **cuánto** y **desde qué dirección**, y el de muerte dice **con 
 (índice de arma, o granada, o zona). Hay tests que lo verifican, porque son parte
 del contrato entre servidor y cliente.
 
+### Récords personales
+
+Sin cuentas: tus números se guardan en este navegador (`apps/client/src/records.ts`). En el
+menú aparece "12 partidas · 3 ganadas · récord: 6 kills · tiro más largo: 32 m", y al terminar
+una partida en la que superaste algo, el resultado lo dice: "¡Récord personal! 5 kills (antes
+3)". Si borrás los datos del navegador o cambiás de compu, empezás de cero. La primera partida
+no rompe récords: no había nada que romper. Los metros son 20 px cada uno (un muñeco mide
+~1,2 m).
+
 ### Cómo te mataron
 
 Al morir, arriba de la vista de espectador queda **quién te mató, con qué y cómo lo

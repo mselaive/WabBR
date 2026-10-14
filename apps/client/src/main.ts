@@ -1,6 +1,7 @@
 import { generateRoomCode, normalizeRoomCode } from "@wabbr/shared";
 import { Game } from "./game.js";
 import { UI } from "./ui.js";
+import { recordsLine } from "./records.js";
 
 let game!: Game;
 
@@ -38,6 +39,8 @@ const ui = new UI({
 });
 
 game = new Game(ui);
+// Tus números de siempre, guardados en este navegador.
+ui.setMyStats(recordsLine());
 
 /*
  * OJO: acá NO puede ir `await game.init()` en el nivel superior del módulo.

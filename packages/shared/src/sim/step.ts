@@ -137,6 +137,7 @@ export function createPlayer(id: number, x = 0, y = 0): PlayerState {
     downed: false,
     downedBy: -1,
     downedCause: 0,
+    longestKill: 0,
     reviving: -1,
     reviveTicks: 0,
     fireCd: 0,
@@ -307,6 +308,7 @@ export function startMatch(state: GameState, seed: number, arena: ArenaMap = get
     p.downed = false;
     p.downedBy = -1;
     p.downedCause = 0;
+    p.longestKill = 0;
     p.reviving = -1;
     p.reviveTicks = 0;
     p.fireCd = 0;
@@ -1081,7 +1083,11 @@ function killPlayer(
   }
 
   const killer = killerId >= 0 ? findPlayer(state, killerId) : undefined;
-  if (killer && killer.id !== victim.id) killer.kills++;
+  if (killer && killer.id !== victim.id) {
+    killer.kills++;
+    // Con un arma, no con la zona ni el bombardeo: el tiro más largo es un tiro.
+    if (cause >= 0) killer.longestKill = Math.max(killer.longestKill, Math.hypot(killer.x - victim.x, killer.y - victim.y));
+  }
 
   // La recompensa por el más buscado: el que lo mata se cura entero.
   if (state.wanted?.id === victim.id) {

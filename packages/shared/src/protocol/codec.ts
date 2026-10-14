@@ -379,6 +379,7 @@ export function packResults(state: GameState): SnapResult[] {
       p.shotsFired,
       p.shotsHit,
       p.diedAtTick >= 0 ? p.diedAtTick : state.tick,
+      Math.round(p.longestKill),
     ]);
 }
 
@@ -390,6 +391,8 @@ export interface UnpackedResult {
   shotsHit: number;
   /** Ticks que aguantó vivo desde que arrancó la partida. */
   survivedTicks: number;
+  /** La kill más lejana, en px. */
+  longestKill: number;
 }
 
 export function unpackResult(s: SnapResult): UnpackedResult {
@@ -400,6 +403,7 @@ export function unpackResult(s: SnapResult): UnpackedResult {
     shotsFired: s[3],
     shotsHit: s[4],
     survivedTicks: s[5],
+    longestKill: s[6] ?? 0,
   };
 }
 

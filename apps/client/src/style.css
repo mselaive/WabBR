@@ -1417,3 +1417,24 @@ body.touch #consumables .consumable {
     background: rgba(13, 16, 20, 0.92);
   }
 }
+
+/* Tus números de siempre, en el menú, y los récords que rompiste, en el resultado. */
+.my-stats {
+  margin: -6px 0 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.my-stats[hidden],
+.result-records[hidden] {
+  display: none;
+}
+
+.result-records {
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gold);
+}

@@ -106,6 +106,8 @@ export interface PlayerState {
   /** Quién lo tiró y con qué: si se desangra, la kill es de ése. */
   downedBy: number;
   downedCause: number;
+  /** La kill más lejana de la partida, en px (para el premio y los récords). */
+  longestKill: number;
   /** A quién está levantando (id), o -1. */
   reviving: number;
   /** Ticks que le faltan para terminar de levantarlo. */

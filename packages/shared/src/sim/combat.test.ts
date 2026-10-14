@@ -278,6 +278,8 @@ describe("eventos de combate", () => {
     // Y cómo quedó el que mató, para el "le quedaban 38 de vida".
     expect(kill.killerHp).toBe(38);
     expect(kill.killerShield).toBe(20);
+    // Y la distancia, para el premio al tiro más largo.
+    expect(shooter.longestKill).toBeCloseTo(90, 0);
   });
 
   it("morir por granada y por zona se distinguen del arma", () => {

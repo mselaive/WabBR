@@ -53,72 +53,98 @@ Ninguno está en `main`: un push a `main` despliega solo a wabbo.org.
 ## Segunda noche (14 de octubre de 2026), rama `noche2`
 
 Arranca de la rama `invitacion` (el botón grande de "Entrar a la sala" con link), que tampoco
-está en `main`.
+está en `main`. Protocolo **v3** (producción está en v2): al desplegar, primero el servidor.
 
-| Commit | Qué | Cómo se probó |
+### Cómo empieza y cómo termina una partida
+
+| Qué | Detalle | Cómo se probó |
 |---|---|---|
-| Bombardeo | La "zona roja" de PUBG: círculo marcado, aviso con sirena y bombas 5 s después; bajo techo no te alcanza | 5 tests + captura del círculo |
-| Lanzacohetes | Arma rara, sólo legendaria y sólo en ~1 de cada 8 paquetes; estalla donde pega, nunca mata de un tiro | 7 tests + capturas del cohete con su estela |
-| El más buscado | (De Warzone) Sólo si domina (4+ kills y 2 de ventaja) aparece en el mapa de todos cada 5 s; matarlo te cura entero | 6 tests |
+| Paracaídas | Se empieza cayendo: 8 s planeando para elegir dónde, E para bajar ya; en el aire nadie te pega; los bots eligen una caja. Opción del host (prendida) | 9 tests (con mutaciones) + predicción con ping + capturas |
+| Segunda oportunidad | (Warzone) Opción del host: el que muere temprano vuelve una vez a los 8 s, cayendo en paracaídas y lejos de los rivales; título "Gato" | 11 tests (con mutaciones) + partida en el navegador |
+| Mapa nuevo cada partida | Opción del host: 12 mapas con nombre, probados uno por uno; cambia en el lobby | Un test por mapa + bots del servidor en otro mapa + predicción sin correcciones |
+| La próxima arranca sola | Al volver, los que jugaron siguen listos y la siguiente arranca a los 12 s, salvo que alguien se desmarque | Partida por socket |
+| Títulos para todos | Cada uno se lleva uno: "Carnicero", "Ciego: no dio una bala", "Gato", "Adivino", "Turista"... | Tests + partidas |
+| Apuestas de espectador | Muerto, apostás quién gana (no por tu pareja); ✓/✗ al final y en el marcador de la sala | Test + partida en el navegador |
+| Récords y logros | Récords en el navegador; 11 logros que desbloquean gorros que todos ven | Tests + capturas |
+| "¡Quedan dos!" | Aviso cuando quedan los dos últimos (si arrancaron más de dos) | 2 tests + partida |
+
+### Cosas en el mapa
+
+| Qué | Detalle | Cómo se probó |
+|---|---|---|
+| Tirolesas | 6 por mapa: desde un poste, caminando hacia el cable, te lleva al otro (podés disparar) | 3 tests + los 12 mapas ida y vuelta + predicción con ping + captura |
+| Hongos saltarines | 10 por mapa: te lanzan por encima de lo que haya; al caer, siempre en un lugar libre | Tests en los 12 mapas, 32 direcciones + predicción con ping |
+| Gallina dorada | (Llama de Fortnite) Aparece con la primera zona, escapa; cazada suelta botín de caja dorada | 9 tests + captura |
+| Fogatas | 6 por mapa, curan de a poco al que está tranquilo | 4 tests + captura |
+| Caja dorada | 1 por partida, con botín de paquete aéreo; no sale en el minimapa | 3 tests + captura |
+| Bombardeo | (PUBG) Círculo rojo, sirena y bombas; bajo techo no alcanza | 5 tests + captura |
+| De noche, con tormenta | Ves poco; fuego, explosiones y fogonazos iluminan; relámpagos cada ~20 s | Test + capturas |
+
+### Armas y objetos
+
+| Qué | Detalle | Cómo se probó |
+|---|---|---|
+| Lanzacohetes | Sólo legendario y rarísimo (paquetes aéreos) | 7 tests + capturas |
+| Revólver y ametralladora | Dos armas más | Tests + íconos |
+| Molotov (`J`) | Charco de fuego 6 s | 7 tests + captura |
+| Minas (`K`) | Se tiran como granada, se arman donde se frenan; los rivales las ven sólo de cerca | 5 tests + captura |
+| Mochila | La mitad más de curaciones y granadas; se ve puesta | 5 tests + captura |
+| Radar | (UAV de Warzone) 10 s marcando a los rivales cercanos en el minimapa de tu equipo | 5 tests + capturas |
+| Bengala | Pide un paquete aéreo a tu lado, que todos ven venir | Test + captura |
 | Recoger al pasar | Curaciones y granadas se juntan solas si entran enteras | 3 tests |
-| Récords | En el navegador: partidas, ganadas, récord de kills, tiro más largo; "¡Récord personal!" en el resultado | 4 tests + capturas |
-| Títulos para todos | Cada jugador se lleva uno: "Carnicero", "Ciego: no dio una bala", "Pacifista", "Turista"... | 5 tests + partida real |
-| Caja dorada | 1 por partida, con botín de paquete aéreo; brilla pero no sale en el minimapa | 3 tests + captura |
-| Fogatas | 6 en el mapa, curan de a poco al que está tranquilo | 4 tests + captura |
-| Campeón de la sala | El que domina la noche (3+ ganadas y 2 de ventaja) aparece siempre en el minimapa de todos | `scripts/server-bots.mjs` |
-| Minimapa sin radar | Ya no muestra rivales fuera de la pantalla (lo de los puntitos desde el arbusto) | Captura |
-| Rachas | "¡Doble kill!", "¡Triple kill!", "¡Imparable!" | Captura del cartel |
-| Frases rápidas | 6-9: ¡GG!, Jajaja, ¡Cuidado!, Perdón, sólo para los que te ven | `scripts/marks.mjs` + captura |
-| Dificultad de los bots | Fácil / Normal / Difícil en el lobby: reacción, puntería y granadas | Test + captura del lobby |
-| Revólver y ametralladora | Dos armas más: la pistola pesada y la de 60 balas | Tests de todas las armas + íconos revisados |
-| De noche | Opción del host: ves poco alrededor; fogatas, fuego, explosiones y fogonazos iluminan | Capturas |
-| Reglas especiales | Normal / Todo legendario / Francotiradores / Relámpago / Caos / Escopetas, las elige el host | 4 tests + captura del lobby + 3 partidas de 16 bots en Caos |
-| Logros y gorros | 9 logros que desbloquean gorros que todos ven, sin cuentas | 4 tests + capturas del menú y del gorro en partida |
-| Hongos saltarines | 10 en el mapa: te lanzan por encima de lo que haya, predicho en el cliente | 6 tests (incluye predicción con ping) + capturas |
-| Molotov | `J`: charco de fuego 6 s que quema al que lo pisa | 7 tests + captura |
-| Mapa nuevo cada partida | Opción del host: 12 mapas con nombre, el de siempre es el primero; cambia en el lobby | Un test por mapa (casas, apariciones, cajas, saltos) + bots del servidor en otro mapa + predicción sin correcciones |
-| Segunda oportunidad | (De Warzone) Opción del host: el que muere temprano vuelve una vez a los 8 s, lejos de los rivales; título "Gato" | 9 tests (mutaciones incluidas) + partida en el navegador |
-| Opciones en una fila | Mapa nuevo, segunda oportunidad y noche como interruptores: el lobby entra en el teléfono | Capturas en PC y teléfono |
-| Gallina dorada | (Llama de Fortnite) Aparece con la primera zona, escapa corriendo, cazada suelta botín de caja dorada; pista en el minimapa; los bots la cazan | 7 tests + captura en partida |
-| Radar | (UAV de Warzone) Objeto raro: al levantarlo, 10 s marcando cada 2 s a los rivales cercanos en el minimapa de tu equipo; avisa al detectado | 5 tests + capturas del ícono y del minimapa |
-| Bots que festejan | Después de una kill, a veces "¡GG!" o "Jajaja" (sólo lo ve quien los ve) | Partida de bots por socket |
-| Apuestas de espectador | Muerto, apostás quién gana; al final ✓/✗, aciertos en el marcador de la sala y título "Adivino" | Test del título + partida en el navegador (apuesta y resultado) |
-| Mochila | Objeto que deja cargar la mitad más de curaciones y granadas; se ve sobre el muñeco | 5 tests + captura del muñeco |
-| Tiros que se oyen | (Sonidos visualizados de Fortnite) Un tiro detrás de una pared suena apagado y marca la dirección en pantalla, con el lugar redondeado | Partida por socket: 21 tiros oídos, todos en la grilla y a menos de 1150 px |
-| Volumen y silencio en el teléfono | Control de volumen en el menú; botón Sonido en los controles táctiles (no hay M) | Capturas + prueba con pantalla táctil |
-| Paracaídas | Se empieza cayendo: 8 s planeando para elegir dónde, E para bajar ya; invulnerable en el aire; los bots eligen caja | 7 tests (6 mutaciones) + predicción con ping + capturas |
-| Tormenta | De noche, relámpagos cada ~20 s que iluminan todo un instante, con trueno | Test de frecuencia + capturas antes y durante |
+| Reglas especiales | Normal / Todo legendario / Francotiradores / Relámpago / Caos / Escopetas | Tests + partidas de 16 bots en Caos |
+
+### Información y sonido
+
+| Qué | Detalle | Cómo se probó |
+|---|---|---|
+| Minimapa sin radar | No muestra rivales fuera de la pantalla (lo de los puntitos desde el arbusto) | Captura |
+| El más buscado | (Warzone) El que domina aparece en el mapa de todos; matarlo te cura | 6 tests |
+| Campeón de la sala | El que domina la noche aparece siempre en el minimapa | Script de bots |
+| Tiros que se oyen | Un tiro detrás de una pared suena apagado y marca la dirección (rumbo y distancia aproximados) | Partidas por socket |
+| Pasos que se oyen | El rival que corre cerca y no se ve se delata; caminar es silencioso | Partida por socket |
+| Rachas, frases rápidas, bots que festejan | "¡Doble kill!"; 6-9 frases; los bots a veces dicen "¡GG!" | Scripts + capturas |
+| Latido | Con menos de 30 de vida | Typecheck |
+
+### Lobby, teléfono y otros
+
+| Qué | Detalle | Cómo se probó |
+|---|---|---|
+| Opciones en una fila | Mapa nuevo, segunda oportunidad, noche y paracaídas como interruptores | Capturas en PC y teléfono |
+| Lo mejor de la noche + resumen | Quién ganó más, mató más y apostó mejor; "Copiar resumen" para el grupo | Tests + capturas |
+| Elegir tu color | Tocar tu cuadradito pasa al siguiente color libre; se recuerda | Prueba en el navegador |
+| Dificultad de los bots | Fácil / Normal / Difícil | Test + captura |
+| Teléfono | Ayuda de puntería con el stick; botón Sonido; botones de a dos y sin filas vacías | Tests + capturas emulando un teléfono |
+| Volumen | Control en el menú | Captura |
 | Ayuda del menú | "Qué hay en el mapa" y las teclas nuevas | Captura |
-| Minas | `K`: se tira como granada, se arma donde se frena y explota con un rival; los rivales la ven sólo de cerca | 5 tests + captura en partida |
-| Dos logros más | Cazador (la gallina) y Vidente (una apuesta), con cresta y turbante; los 12 gorros en una fila | Captura del menú en PC y teléfono |
-| Quinta revisión | Bots tirándole al que cae en paracaídas; desde el aire se veía a todos (también al volver); lo oído ubicaba a 80 px (ahora rumbo y distancia); el propio tiro se volvía "oído"; en el aire con la conexión cortada se quedaba colgado; seq de la partida anterior; apostar por la pareja | Tests nuevos con mutaciones + partidas por socket |
-| Bengala | Objeto raro: al levantarla pide un paquete aéreo a tu lado, que todos ven venir | Test + captura del ícono |
-| Latido y "¡Quedan dos!" | Con poca vida suena un latido; aviso cuando quedan los dos últimos | Typecheck (sin prueba en navegador) |
-| Ayuda de puntería en el teléfono | Con el stick, la mira se corre hacia un rival casi en la línea | 3 tests |
-| Elegir tu color | Tocar tu cuadradito en el lobby pasa al siguiente color libre; se recuerda | Prueba en el navegador (cambia, saltea los usados, vuelve en otra sala) |
-| Tirolesas | 6 por mapa: caminando hacia el cable desde un poste te lleva al otro, disparando | 3 tests + los 12 mapas ida y vuelta + predicción con ping + captura |
-| Regla Escopetas | Todos con escopeta y no aparece otra cosa | Test |
-| Copiar resumen de la noche | La tabla de la sala en texto, con el link, para el grupo | 2 tests + prueba en el navegador (portapapeles) |
-| Pasos que se oyen | El rival que corre cerca y no se ve se oye (rumbo aproximado); caminar es silencioso | Partida por socket (con el alcance agrandado a propósito: 615 pasos; con el real, casi nunca entre bots) |
-| Sexta revisión | "¡Quedan dos!" en un 2 contra 2 al empezar (ahora lo decide la simulación); un tick sin input en el aire adelantaba la caída; la bengala se anunciaba dos veces; los espectadores oían cada mina; los que se iban en partida aparecían en resultados siguientes | Tests nuevos + scripts |
-| La próxima arranca sola | Después de una partida seguís listo y la siguiente arranca a los 12 s, salvo que alguien se desmarque | Partida por socket: arrancó sola a los 11,7 s; desmarcado, no |
-| Lo mejor de la noche | En el lobby: más ganadas, más kills y mejor apostador de la sala | Captura después de una partida |
-| Cuarta revisión | El que esperaba la segunda oportunidad veía a todos; bots volándose con la gallina a cohetazos; el aviso de vuelta decía dónde; cortarse no la hacía perder; cohete a la gallina estallando donde estaba; la vuelta se deslizaba | Tests nuevos con mutaciones + partida en el navegador |
+
+### Revisiones
+
+Seis revisiones independientes (subagentes que leen el diff y prueban en una copia aparte). Lo
+más importante que encontraron y quedó arreglado: el que esperaba la segunda oportunidad veía a
+todos; los bots le tiraban al que caía en paracaídas y se volaban con la gallina a cohetazos; el
+tiro oído ubicaba al tirador a 80 px; el seq de la partida anterior hacía saltar la predicción al
+empezar; un tick sin input en el aire adelantaba la caída; "¡Quedan dos!" salía al empezar un 2
+contra 2; los que se iban en partida aparecían en los resultados siguientes. Cada arreglo tiene su
+test, y la mayoría se probó a la inversa (romper el arreglo y ver que el test falla).
 
 ## Ideas que quedaron, en el orden en que las haría
 
-La zona según cuántos juegan, la mira, el humo, los dúos con sus marcas y los
-controles táctiles ya están (arriba). De la lista anterior quedaron:
+1. **Killcam.** Ver los últimos segundos desde los ojos del que te mató. Al morir la cámara ya
+   sigue al que te mató; la repetición de verdad pide guardar historia de snapshots por jugador.
+2. **Bots que usan lo nuevo.** Hoy no tiran minas, no buscan tirolesas ni hongos a propósito y
+   no esquivan las minas que ven. Es lo que más haría que una partida contra bots se parezca a
+   una entre amigos.
+3. **Puestos de compra** (Warzone): plata por kills y cajas, para comprar chaleco, radar o la
+   vuelta de tu pareja. Es un sistema grande; vale la pena si las partidas se sienten repetidas.
+4. **Cascos.** Sin tiros a la cabeza (es vista de arriba) no tienen un efecto que no se pise con
+   el chaleco.
 
-1. **Cascos.** La mochila ya está; un casco sería otra capa de equipo, pero sin tiros a la
-   cabeza (es vista de arriba) no tiene un efecto que no se pise con el chaleco.
-2. **Killcam.** Ver los últimos segundos desde los ojos del que te mató. Ya al
-   morir la cámara sigue al que te mató, que da casi lo mismo; la repetición de
-   verdad pide guardar historia de snapshots por jugador.
+Para decidir: el paracaídas quedó **prendido** de entrada y la segunda oportunidad **apagada**.
+Si en la prueba con amigos el paracaídas se siente largo, son 8 s (`AIR_TICKS`).
 
-Y uno que descarté: **cuerpo a cuerpo**. Lo había anotado para "el que se queda sin
-balas", pero acá la munición es infinita (se recarga siempre) y nunca te quedás
-sin arma: arrancás con la pistola y al morir es cuando la soltás.
+Y uno que descarté: **cuerpo a cuerpo**. La munición es infinita (se recarga siempre) y nunca te
+quedás sin arma.
 
 ### Un detalle del mapa
 

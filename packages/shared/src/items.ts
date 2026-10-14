@@ -50,7 +50,16 @@ export function rarityAt(tier: number): RarityDef {
 
 // ---------------------------------------------------------------- armas
 
-export type WeaponId = "pistol" | "smg" | "rifle" | "shotgun" | "sniper" | "crossbow" | "rocket";
+export type WeaponId =
+  | "pistol"
+  | "smg"
+  | "rifle"
+  | "shotgun"
+  | "sniper"
+  | "crossbow"
+  | "rocket"
+  | "revolver"
+  | "lmg";
 
 export interface WeaponDef {
   readonly id: WeaponId;
@@ -208,10 +217,54 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     minTier: 4,
     explosive: true,
   },
+  /**
+   * La pistola pesada: lenta y precisa, para el que apunta bien. Tres tiros
+   * matan; en legendaria hace 57, sigue necesitando dos.
+   */
+  revolver: {
+    id: "revolver",
+    name: "Revólver",
+    damage: 38,
+    fireCd: 12,
+    magSize: 6,
+    reloadTicks: 36,
+    bulletSpeed: 820,
+    spread: 0.012,
+    lifeTicks: 20,
+    pellets: 1,
+    maxTier: 4,
+  },
+  /**
+   * La ametralladora: sesenta balas para tapar una puerta o una calle, a costa
+   * de una recarga eterna. Abre más que el rifle: de lejos tira al bulto.
+   */
+  lmg: {
+    id: "lmg",
+    name: "Ametralladora",
+    damage: 15,
+    fireCd: 3,
+    magSize: 60,
+    reloadTicks: 80,
+    bulletSpeed: 620,
+    spread: 0.11,
+    lifeTicks: 22,
+    pellets: 1,
+    maxTier: 4,
+  },
 };
 
 /** El orden importa: es lo que viaja por la red. Agregá al final. */
-export const WEAPON_IDS: readonly WeaponId[] = ["pistol", "smg", "rifle", "shotgun", "sniper", "crossbow", "rocket"];
+export const WEAPON_IDS: readonly WeaponId[] = [
+  "pistol",
+  "smg",
+  "rifle",
+  "shotgun",
+  "sniper",
+  "crossbow",
+  "rocket",
+  "revolver",
+  "lmg",
+];
 
 /** Con la que arrancás. Débil a propósito: es el motivo para buscar loot. */
 export const STARTING_WEAPON = 0;

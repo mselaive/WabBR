@@ -284,11 +284,14 @@ lista una vez al arrancar, más los eventos de "lo agarró tal", "se abrió la c
 7" y "se cayó esto". De las cajas ni siquiera viaja la posición: son parte del
 mapa, y su id es su orden de aparición.
 
-- **Siete armas** (`packages/shared/src/items.ts`): pistola, subfusil, rifle,
-  escopeta, francotirador, ballesta y lanzacohetes. Dos ranuras, así que hay que elegir. La escopeta es
+- **Nueve armas** (`packages/shared/src/items.ts`): pistola, subfusil, rifle,
+  escopeta, francotirador, ballesta, lanzacohetes, revólver y ametralladora. Dos ranuras, así que hay que elegir. La escopeta es
   para pelear de cerca: dos tiros matan hasta unos 100 px, y de ahí para afuera
   pierde contra el rifle. Su cono abría el doble y a 120 px entraban tres
   perdigones de ocho; hay tests que fijan las dos cosas.
+- **El revólver** es la pistola pesada: lento y preciso, tres tiros matan (dos con suerte en
+  legendario no: 57). **La ametralladora** tiene 60 balas para tapar una puerta o una calle, abre
+  más que el rifle y su recarga es eterna (4 segundos).
 - **El lanzacohetes** es el arma rara: **sólo existe legendario** y sólo lo trae uno de cada
   ~8 paquetes aéreos (en vez de la otra arma); nunca sale de una caja. El cohete es lento (se ve venir, con su estela de humo, y se esquiva) y no pega:
   estalla donde toca o al final de su alcance, con la misma explosión que la granada. De

@@ -643,6 +643,18 @@ function drawWeapon(ctx: Ctx, index: number): void {
       rect(ctx, 4, 7, 10, 1, steel);
       rect(ctx, 14, 6, 1, 3, steel);
       break;
+    case 7: // revólver: tambor redondo y caño largo
+      rect(ctx, 4, 6, 9, 2, steel);
+      ellipse(ctx, 6, 8, 2, 2, "#8a929b");
+      rect(ctx, 4, 9, 2, 3, wood);
+      break;
+    case 8: // ametralladora: caño largo, cajón de balas y bípode
+      rect(ctx, 2, 6, 12, 2, steel);
+      rect(ctx, 5, 8, 4, 3, "#4f5a3a");
+      rect(ctx, 2, 8, 2, 2, wood);
+      rect(ctx, 12, 8, 1, 3, steel);
+      rect(ctx, 14, 8, 1, 3, steel);
+      break;
     default: // lanzacohetes: el tubo verde con la punta del cohete asomando
       rect(ctx, 2, 6, 11, 4, "#4f6b3a");
       rect(ctx, 2, 6, 11, 1, "#6b8a50");

@@ -47,6 +47,7 @@ const GROUND_TABLE: readonly Entry[] = [
   { kind: ITEM_WEAPON, ref: 0, weight: 7, min: 1, max: 1, tier: 0 }, // pistola
   { kind: ITEM_WEAPON, ref: 1, weight: 4, min: 1, max: 1, tier: 0 }, // subfusil
   { kind: ITEM_WEAPON, ref: 3, weight: 2, min: 1, max: 1, tier: 0 }, // escopeta
+  { kind: ITEM_WEAPON, ref: 7, weight: 2, min: 1, max: 1, tier: 0 }, // revólver
   { kind: ITEM_GRENADE, ref: 0, weight: 6, min: 1, max: 1, tier: 2 }, // granadas
   { kind: ITEM_GRENADE, ref: 1, weight: 4, min: 1, max: 1, tier: 1 }, // humo
   { kind: ITEM_GRENADE, ref: 2, weight: 3, min: 1, max: 1, tier: 2 }, // molotov
@@ -59,6 +60,8 @@ const CRATE_TABLE: readonly Entry[] = [
   { kind: ITEM_WEAPON, ref: 3, weight: 11, min: 1, max: 1, tier: 0 }, // escopeta
   { kind: ITEM_WEAPON, ref: 4, weight: 6, min: 1, max: 1, tier: 0 }, // francotirador
   { kind: ITEM_WEAPON, ref: 5, weight: 7, min: 1, max: 1, tier: 0 }, // ballesta
+  { kind: ITEM_WEAPON, ref: 7, weight: 8, min: 1, max: 1, tier: 0 }, // revólver
+  { kind: ITEM_WEAPON, ref: 8, weight: 6, min: 1, max: 1, tier: 0 }, // ametralladora
   { kind: ITEM_ARMOR, ref: 0, weight: 11, min: 1, max: 1, tier: 1 }, // chaleco ligero
   { kind: ITEM_ARMOR, ref: 1, weight: 7, min: 1, max: 1, tier: 3 }, // chaleco pesado
   { kind: ITEM_CONSUMABLE, ref: 1, weight: 14, min: 1, max: 1, tier: 1 }, // botiquín
